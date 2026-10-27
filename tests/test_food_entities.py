@@ -1,5 +1,6 @@
 """A4-A5 behavior at the approval, transaction, policy and HTTP boundaries."""
 import json
+import re
 import sqlite3
 import tempfile
 import threading
@@ -19,11 +20,12 @@ from food_trends.contracts import require_operation, policy_for
 from food_trends.food_service import FoodService, FoodError
 from food_trends.instagram_graph import GraphError
 from food_trends.instagram_service import InstagramService
-from food_trends.migrations import migrate, schema_version, MIGRATIONS
+from food_trends.migrations import migrate, schema_version, MIGRATIONS, LATEST_VERSION
 from food_trends.naver_service import NaverService
 from food_trends.service import CollectionService
 from food_trends.storage import Storage
 from food_trends.youtube_storage import YouTubeStore
+from food_trends.migration_definitions import BASE_SQL
 from test_mvp import fixture
 
 
@@ -32,9 +34,10 @@ def key():
 
 
 def original_rows(storage):
+    original_tables = set(re.findall(r'CREATE TABLE IF NOT EXISTS (\w+)', BASE_SQL))
     with storage.reader() as db:
         return {r[0]: [tuple(row) for row in db.execute('SELECT * FROM "' + r[0] + '" ORDER BY rowid')]
-                for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'food_%' AND name!='schema_migrations'")}
+                for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'") if r[0] in original_tables}
 
 
 def snapshot(storage):
@@ -345,9 +348,9 @@ class FoodEntityTests(unittest.TestCase):
             migrate(path)
         with closing(sqlite3.connect(path)) as db:
             before = list(db.iterdump())
-        self.assertEqual(migrate(path)['applied'], [3])
+        self.assertEqual(migrate(path)['applied'], list(range(3, LATEST_VERSION + 1)))
         upgraded = Storage(path)
-        self.assertEqual(schema_version(path), 3)
+        self.assertEqual(schema_version(path), LATEST_VERSION)
         self.assertEqual(len(original_rows(upgraded)), 30)
         with upgraded.reader() as db:
             for statement in before:

@@ -1,0 +1,27 @@
+{
+  "files": [
+    "food_trends/api.py",
+    "food_trends/migrations.py",
+    "food_trends/tracking_access.py",
+    "food_trends/tracking_http.py",
+    "food_trends/tracking_schema.py",
+    "food_trends/tracking_service.py",
+    "reports/development-b1-b2-2026-10-27/B1.md",
+    "reports/development-b1-b2-2026-10-27/a4-precommit.json",
+    "reports/development-b1-b2-2026-10-27/b1-browser-summary.json",
+    "reports/development-b1-b2-2026-10-27/b1-copy-migration.json",
+    "reports/development-b1-b2-2026-10-27/b1-tests/test-summary.json",
+    "reports/development-b1-b2-2026-10-27/b1-tracking-mobile.png",
+    "reports/development-b1-b2-2026-10-27/baseline-tests/test-summary.json",
+    "reports/development-b1-b2-2026-10-27/baseline.json",
+    "static/foods.js",
+    "static/index.html",
+    "static/style.css",
+    "static/tracking.js",
+    "tests/test_food_entities.py",
+    "tests/test_foundations.py",
+    "tests/test_tracking.py",
+    "tests/tracking_browser_check.py"
+  ],
+  "secret_value_matches": 0
+}

@@ -20,7 +20,7 @@ from food_trends.config import InstagramConfig, NaverConfig, YouTubeConfig
 from food_trends.contracts import envelope, encode, policy_for, require_operation
 from food_trends.instagram_graph import GraphClient
 from food_trends.instagram_service import InstagramService
-from food_trends.migrations import migrate, schema_version, MigrationRequired
+from food_trends.migrations import migrate, schema_version, MigrationRequired, LATEST_VERSION
 from food_trends.naver_datalab import NaverClient
 from food_trends.naver_service import NaverService
 from food_trends.service import CollectionService
@@ -222,7 +222,7 @@ class FoundationTests(unittest.TestCase):
                     self.assertEqual(result['version'], 0)
                     self.assertFalse(path.exists())
                 else:
-                    self.assertEqual(result['applied'], [1, 2, 3])
+                    self.assertEqual(result['applied'], list(range(1, LATEST_VERSION + 1)))
             before = snapshot(path)
             with patch('sys.argv', ['food_trends', '--youtube-status']), redirect_stdout(io.StringIO()), \
                     self.assertRaises(SystemExit) as exit_code:

@@ -132,6 +132,7 @@
         type = field(form, '관계', 'relation_type', 'RELATED_TO', [['RELATED_TO', '서로 연관'], ['VARIANT_OF', '현재 음식은 선택한 음식의 파생']]);
       }));
     }
+    if (window.mountFoodTracking) await window.mountFoodTracking(f, body);
     const pre = el('pre', JSON.stringify(f, null, 2)); const details = el('details'); details.append(el('summary', '추적 시스템 전달용 음식 정보'), pre); body.append(details);
     await history(id, body);
   }
