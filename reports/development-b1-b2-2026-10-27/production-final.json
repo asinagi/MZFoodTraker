@@ -1,0 +1,150 @@
+{
+  "schema_version": 0,
+  "new_tracking_or_planner_tables": 0,
+  "integrity": "ok",
+  "original_tables_compared": 30,
+  "changed_tables_between_readonly_observations": {
+    "runs": {
+      "before": {
+        "rows": 84,
+        "sha256": "87df558c151633b94918b9c8bbfad9efd6cb43d8c0a8b5b1a2e93fc84a6ac690"
+      },
+      "after": {
+        "rows": 85,
+        "sha256": "a717fecacf6a8c253d2df96dfbfffe7b6d255ba8c2ca0226c9a675284bc35ebd"
+      }
+    },
+    "items": {
+      "before": {
+        "rows": 317,
+        "sha256": "3d670c4e04a74ad7e7b8a2c19c1581a39e4c224bba543544b59e1d819f2554cc"
+      },
+      "after": {
+        "rows": 317,
+        "sha256": "47d7a03078033bfb2ffe2e616355b5a4fcf45351bb9d675954eb9339607aa4e2"
+      }
+    },
+    "observations": {
+      "before": {
+        "rows": 790,
+        "sha256": "5769c592fe83f84845f8212146386ec777a988cf8121cfe6f72137c5fc4e767b"
+      },
+      "after": {
+        "rows": 800,
+        "sha256": "4587d990d32805992508fbcee0ab01d43f737ff5b1ba828d962a3d13b79e68b6"
+      }
+    },
+    "candidates": {
+      "before": {
+        "rows": 317,
+        "sha256": "40de4143d2039f9f672fa13d79dcbb7539e7176e3991ff74212e396e29a1908e"
+      },
+      "after": {
+        "rows": 317,
+        "sha256": "f93d06d9fbb5d5eb9d60c3d853f678fa82c3c5baa6cdb1f563aa7d98ce7acf1c"
+      }
+    },
+    "instagram_media": {
+      "before": {
+        "rows": 125,
+        "sha256": "670d8510f284db54892f10ddc677568e05e64cd42978aa4d66e3c1d60da0188f"
+      },
+      "after": {
+        "rows": 129,
+        "sha256": "8d83067ef4ea5e4f775bf43c12ebf560f9235b09ba0e535e0bd5492a2252d8c4"
+      }
+    },
+    "instagram_hashtag_media": {
+      "before": {
+        "rows": 125,
+        "sha256": "d28625076d78e927c850b87b0eea9a4d991f498fb11b800f720748d61a0ad1b9"
+      },
+      "after": {
+        "rows": 129,
+        "sha256": "227fdd98440a2f54a6efaddec37b434d4ff49dc3d47ab6f5861496999ebaa7f3"
+      }
+    },
+    "instagram_runs": {
+      "before": {
+        "rows": 9,
+        "sha256": "d14de74c89574d0101d6e7b564d534f90826e41794b7c348df7ec710ab21cd5f"
+      },
+      "after": {
+        "rows": 10,
+        "sha256": "4d84491068c95a0b09de5ca8ab5b66aef6c2a88fec351564a0929806732dde26"
+      }
+    },
+    "instagram_metrics": {
+      "before": {
+        "rows": 7,
+        "sha256": "a50f1b3fe8d4e9e39aa1eb137ebd14847acecc113ee7ade69765cc720d2c1bdb"
+      },
+      "after": {
+        "rows": 8,
+        "sha256": "d07a6bda819c26ae9be9fe9376877022608a0250aef2a780ed28d41cbee71c2d"
+      }
+    },
+    "instagram_state": {
+      "before": {
+        "rows": 5,
+        "sha256": "996f922a4f42d2b2e367efe82ad9278f435089456277466bf2c556e5f0ffe6e6"
+      },
+      "after": {
+        "rows": 5,
+        "sha256": "fdcb76ce891cce48b0b22c682124d554301194edfceedf6b126cbe55a0fe0502"
+      }
+    },
+    "instagram_caption_analysis": {
+      "before": {
+        "rows": 125,
+        "sha256": "5b5615a91ba617fb08a18c0c68ab9ef7d630ad0c182eaa8ea8921d44d8a94ceb"
+      },
+      "after": {
+        "rows": 129,
+        "sha256": "e57d12622257263d5483e98272bfd016a72720353162e32f23332a29e183e18d"
+      }
+    },
+    "instagram_caption_tags": {
+      "before": {
+        "rows": 462,
+        "sha256": "46774017eb0bd5d4ae41492dc2cb040013c0a968b45e2adf7677632de8e96bef"
+      },
+      "after": {
+        "rows": 470,
+        "sha256": "0e61cbb26ab1bfaa01686826c392ede8171474e869fba5132a26ab40de617801"
+      }
+    },
+    "instagram_analysis_observations": {
+      "before": {
+        "rows": 364,
+        "sha256": "b679a38a159c363b1d9f31bb6213d9c9da1ded1dda0e30b720c22cfb822449b8"
+      },
+      "after": {
+        "rows": 419,
+        "sha256": "7b6e99e50183d9bd8fc406c9f2b5025c965bd32c15e3dacf62d5b90329a3fe1f"
+      }
+    },
+    "instagram_observation_tags": {
+      "before": {
+        "rows": 1268,
+        "sha256": "402d9488addfe0f7ea0a565115283825276739426e974b2e457014941b5766ac"
+      },
+      "after": {
+        "rows": 1470,
+        "sha256": "c92812065d9b20b58acd895b9652c146ec62ed5377ffc6889fc8350376fbe580"
+      }
+    }
+  },
+  "running_records_at_check": {
+    "runs": 0,
+    "instagram_runs": 0,
+    "youtube_runs": 0,
+    "naver_calls": 0,
+    "youtube_calls": 0
+  },
+  "production_migration_performed": false,
+  "source_opened_readonly": true,
+  "existing_writers_stopped_or_restarted": false,
+  "development_provider_calls": 0,
+  "cause_of_other_changes": "not attributed; existing processes left running"
+}

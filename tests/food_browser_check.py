@@ -4,6 +4,7 @@ Run: py -3.12 -B tests/food_browser_check.py
 No existing browser, server, credentials or production database is used.
 """
 import base64
+import argparse
 import hashlib
 import json
 import os
@@ -111,7 +112,10 @@ class CDP:
 
 
 def main():
-    output = ROOT / 'reports/development-a4-a5-2026-10-27'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', default='reports/development-a4-a5-2026-10-27')
+    args = parser.parse_args()
+    output = ROOT / args.output
     output.mkdir(parents=True, exist_ok=True)
     chrome = Path(os.environ.get('PROGRAMFILES', 'C:/Program Files')) / 'Google/Chrome/Application/chrome.exe'
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as directory:

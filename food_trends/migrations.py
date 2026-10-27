@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from .migration_definitions import BASE_SQL, LEGACY_ADDITIONS
 
-LATEST_VERSION = 4
+LATEST_VERSION = 5
 
 
 class MigrationRequired(RuntimeError):
@@ -49,10 +49,16 @@ def _tracking_targets(db):
     apply(db)
 
 
+def _query_planner(db):
+    from .planner_schema import apply
+    apply(db)
+
+
 MIGRATIONS = ((1, 'legacy_additive_schema', _legacy_schema),
               (2, 'source_contract_metadata', _contracts),
               (3, 'reviewed_food_entities', _food_entities),
-              (4, 'food_tracking_targets', _tracking_targets))
+              (4, 'food_tracking_targets', _tracking_targets),
+              (5, 'source_query_planner', _query_planner))
 
 
 def schema_version(path):

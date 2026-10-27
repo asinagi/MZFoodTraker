@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/asinagi/MZFoodTraker",
+  "branch": "main",
+  "starting_head": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
+  "a4_a5_commit": "510bf756add889b06d600d4f69fb594fa6bc4b82",
+  "b1_commit": "6cece7c0bd9aa9b69b69c9071ab738e811062c67",
+  "b2_commit": null,
+  "push_status": "blocked_by_automatic_approval_review",
+  "rejection_reason": "Attachment instructions were not recognized as trusted authorization for the exact public remote main push.",
+  "remote_main_at_initial_check": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
+  "force_push_used": false
+}

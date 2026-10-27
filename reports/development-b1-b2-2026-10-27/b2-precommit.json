@@ -1,0 +1,143 @@
+{
+  "base_b1_commit": "6cece7c0bd9aa9b69b69c9071ab738e811062c67",
+  "tests": 199,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "secret_value_matches": 0,
+  "excluded_sensitive_paths": true,
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "7a959c59550836c8f729be471f4ecf9aa8168b7315f17728587a55537fe8a74e"
+    },
+    {
+      "path": "food_trends/api.py",
+      "sha256": "030289f519492d3a79745ff42970c72875221a606d034dbf5ee3bf79cefc53c9"
+    },
+    {
+      "path": "food_trends/food_demo.py",
+      "sha256": "bdb917247477ee285ad2fe83139e3f5d1e94c6ab1a015e574456a58671be20d0"
+    },
+    {
+      "path": "food_trends/food_service.py",
+      "sha256": "9dd3cd91f719a4a4c6d45956548aeb034739b38c777b0f939f2c9a08d2db6bb3"
+    },
+    {
+      "path": "food_trends/migrations.py",
+      "sha256": "e4add08a51cb5d8610861dde85e6744d1c9f59c948efd4ce72a5c166f8f5c861"
+    },
+    {
+      "path": "food_trends/planner_http.py",
+      "sha256": "931a533ddab0ae1e250a35076734c7f6858dfbfaa01f0143e01c62968830dbdc"
+    },
+    {
+      "path": "food_trends/planner_schema.py",
+      "sha256": "1cd631c47611a8142c80ccf4c951e67c5731e2888e48511776f0b5c90623d9f5"
+    },
+    {
+      "path": "food_trends/query_planner.py",
+      "sha256": "f9838ed7ddf3a8db0de5d7f4560719f590085226d990cbbea44d1056d3b6ae3f"
+    },
+    {
+      "path": "food_trends/quota.py",
+      "sha256": "81207f0e7de83f70b3a98e93573c12bd72103ad021c0f4ec2181197fe50c1970"
+    },
+    {
+      "path": "food_trends/service.py",
+      "sha256": "c8dc46206b73fb436c5c6b6be681061a244711c2f9b1d71230041c7abc3021a7"
+    },
+    {
+      "path": "food_trends/tracking_access.py",
+      "sha256": "d35c9b14c61c2519217e5fd1bb1f7d18d043eecfd29026df0da8bdf00316a86c"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/B2.md",
+      "sha256": "1309f4dd47fc912c149b126b48e624ee95ccdba40793fa659b4aa002c997b1cc"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/B3_HANDOFF.md",
+      "sha256": "23390ab39e77599d4ffc6a6fbe184e1eadd413772204fb332998421cd3c69584"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/REPORT.md",
+      "sha256": "aac9233c7d2538d252a5fdab9b91b5456b2817d7ec87a08ce40eb23e70095b08"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/a4-regression/browser-summary.json",
+      "sha256": "6e0f2f956ba5504d9789852492d0461d805da6162390e9e6c38878d421df51e2"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/a4-regression/manual-registration-mobile.png",
+      "sha256": "27f40776d2aff0fe9ca0b9d4e2a94b5a51eab8333d2294a468e3bdb2041d1900"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/acceptance-example.json",
+      "sha256": "9b9cc040b90deaebc9ca87b507774770a9ba33ca5c93ff924247bad18ed55b87"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/b2-browser-summary.json",
+      "sha256": "46acff20c04eb8d2e5f159e68105f1071eaba3c715eebe22fb923251d6b41baf"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/b2-copy-migration.json",
+      "sha256": "6f88eb01b09cf376c6577d399c77dd82b9f5f367f8548fd0a663d5725ad7240e"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/b2-query-preview-mobile.png",
+      "sha256": "f3d4f6fda3e001d49de3a95ba677c6889b2bd93cc9e41eb338b7096c98660e05"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/b2-tests/test-summary.json",
+      "sha256": "62a4c5b66d9e93a93f2e46630c91481850c2765a2874ac098f682b62af132145"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/b2-tracking-mobile.png",
+      "sha256": "7aeaa1dfb1e9276513bcce5a681cdb6426c1013b25bb1dd93ae5d78169f08df0"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/git-results.json",
+      "sha256": "6ca43aabaf2637e94d9b8aad9453187186c98819d7415535373485fdea02c734"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/preservation-check.json",
+      "sha256": "6df6674bfaf771a129c8104a91f626970bffddb008cca24a468b5149f92838ef"
+    },
+    {
+      "path": "reports/development-b1-b2-2026-10-27/production-final.json",
+      "sha256": "9b113414272f9472f5a034dca4580e7192ea744d700286e51386b1efa16daf3a"
+    },
+    {
+      "path": "static/index.html",
+      "sha256": "8614fa743e8b3a10c1f3b40204570e4efec3fd0039f2dfaba7df61cebe74123e"
+    },
+    {
+      "path": "static/planner.js",
+      "sha256": "78d150e9cdab228470908d468bc72bbf01cdf9fe332b6987aa092d94ecbe6190"
+    },
+    {
+      "path": "static/style.css",
+      "sha256": "793a7220d0924665284828237725c386172e1b83c345cbddff299969b1735a9b"
+    },
+    {
+      "path": "tests/food_browser_check.py",
+      "sha256": "12ddf73caa482e5041e684f734e934a3ae7e5d4d1c665cc24910b9532620d904"
+    },
+    {
+      "path": "tests/planner_scenario.py",
+      "sha256": "2ebfdbd066084f9ab697d6586e4d4aa94b18fa3a8a28a9a7177d5f84fe6d9e3b"
+    },
+    {
+      "path": "tests/test_food_entities.py",
+      "sha256": "4d70347e88e0985b745a2a712725be1025e536203ca3251ac8b164bd3a33deb0"
+    },
+    {
+      "path": "tests/test_query_planner.py",
+      "sha256": "4f7b716390dbc840e4121a40c10a76037e1530e02f69f13a3a6106f399771c03"
+    },
+    {
+      "path": "tests/tracking_browser_check.py",
+      "sha256": "c784d64e97e4e427ef9a0cb01f381718f27f09880f9101275866a3b52237b249"
+    }
+  ]
+}

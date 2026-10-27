@@ -9,6 +9,7 @@ from .storage import Storage
 def main():
     parser = argparse.ArgumentParser(description='격리 음식 등록 UI; 외부 API·환경 파일을 사용하지 않습니다.')
     parser.add_argument('--port', type=int, default=8010)
+    parser.add_argument('--mock-tracking', action='store_true', help='Mock 계정의 추적·요청 계획만 허용; 외부 실행 없음')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     # Fixed disposable-demo destination: never the configured DATABASE_PATH.
@@ -22,12 +23,15 @@ def main():
         raise RuntimeError('격리 데모에서는 외부 수집이 비활성화되어 있습니다.')
 
     service = CollectionService(storage, fetcher=disabled)
-    server = make_server(service, port=args.port)
+    from .tracking_access import mock_accounts
+    from .tracking_service import TrackingService
+    tracking = TrackingService(storage, mock_accounts()) if args.mock_tracking else None
+    server = make_server(service, port=args.port, tracking=tracking)
     base_handler = server.RequestHandlerClass
 
     class DemoHandler(base_handler):
         def do_POST(self):
-            if not self.path.startswith('/api/foods/'):
+            if not self.path.startswith(('/api/foods/', '/api/tracking/', '/api/planner/')):
                 return self.send(403, {'error': '격리 데모에서는 음식 등록·검토만 사용할 수 있습니다.'})
             return super().do_POST()
 

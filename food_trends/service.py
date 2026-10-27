@@ -23,6 +23,13 @@ class CollectionService:
             raw, status = self.fetcher(self.timeout)
             items, warnings = collector.parse(raw)
             summary = self.storage.finish(run_id, items, raw, status, warnings=warnings)
+            # Local identity preparation only. A failed bridge must not rewrite a successful RSS run.
+            from .food_service import FoodService
+            try:
+                summary['entity_resolution'] = FoodService(self.storage).import_rss_run(run_id)
+            except Exception:
+                logging.warning('RSS entity resolution pending retry; source collection is preserved')
+                summary['entity_resolution'] = {'state': 'pending_retry', 'run_id': run_id}
             return {'accepted': True, 'success': True, 'run_id': run_id, 'item_count': len(items), **summary}
         except Exception as exc:
             logging.exception('Collection failed')

@@ -33,6 +33,15 @@ class Account:
         if not isinstance(self.options, dict) or set(self.options) - allowed:
             raise ValueError('Unsupported planning configuration')
         validate_metadata(self.options)
+        numeric={'max_pages':(1,100 if self.source_id=='instagram_graph' else 5),'soft_limit':(1,30),
+                 'daily_search_limit':(1,100),'daily_video_limit':(1,10000),'daily_limit':(1,100),'rss_interval':(1,366*86400)}
+        for key,(minimum,maximum) in numeric.items():
+            if key in self.options and (type(self.options[key]) is not int or not minimum<=self.options[key]<=maximum):
+                raise ValueError('Planning limit exceeds existing MVP configuration')
+        if 'discovery_queries' in self.options:
+            queries=self.options['discovery_queries']
+            if not isinstance(queries,list) or not 1<=len(queries)<=20 or any(not isinstance(q,str) or not q.strip() or len(q)>100 for q in queries):
+                raise ValueError('Invalid configured discovery queries')
         object.__setattr__(self, 'options', copy.deepcopy(self.options))
 
     def blockers(self):

@@ -1,0 +1,861 @@
+{
+  "successful": true,
+  "food_descriptor": {
+    "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+    "canonical_name": "두바이 쫀득 쿠키",
+    "entity_kind": "PRODUCT",
+    "status": "ACTIVE",
+    "revision": 4,
+    "default_scope": "food:ko",
+    "merged_into": null,
+    "created_at": "2026-10-27T07:35:07.959099+00:00",
+    "updated_at": "2026-10-27T07:35:07.960118+00:00",
+    "entity_status": "ACTIVE",
+    "resolution_version": "approved-exact-alias-v1",
+    "approval_status": "APPROVED",
+    "tracking_eligible": true,
+    "approved_aliases": [
+      {
+        "alias_id": "ALIAS_adda784a0d2b4021b37ec47aaddd75b6",
+        "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+        "surface_form": "두바이 쫀득 쿠키",
+        "normalized_form": "두바이 쫀득 쿠키",
+        "scope": "food:ko",
+        "normalization_version": "food-nfc-space-v1",
+        "status": "ACTIVE",
+        "revision": 1,
+        "created_at": "2026-10-27T07:35:07.960118+00:00",
+        "updated_at": "2026-10-27T07:35:07.960118+00:00"
+      },
+      {
+        "alias_id": "ALIAS_0bc3126c55d54681b6e6e52af0d1c395",
+        "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+        "surface_form": "두바이쫀득쿠키",
+        "normalized_form": "두바이쫀득쿠키",
+        "scope": "food:ko",
+        "normalization_version": "food-nfc-space-v1",
+        "status": "ACTIVE",
+        "revision": 1,
+        "created_at": "2026-10-27T07:35:07.960118+00:00",
+        "updated_at": "2026-10-27T07:35:07.960118+00:00"
+      },
+      {
+        "alias_id": "ALIAS_847cfec7d19042ee857cf1eca39c10c6",
+        "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+        "surface_form": "두쫀쿠",
+        "normalized_form": "두쫀쿠",
+        "scope": "food:ko",
+        "normalization_version": "food-nfc-space-v1",
+        "status": "ACTIVE",
+        "revision": 1,
+        "created_at": "2026-10-27T07:35:07.960118+00:00",
+        "updated_at": "2026-10-27T07:35:07.960118+00:00"
+      }
+    ],
+    "revoked_aliases": [],
+    "relations": []
+  },
+  "tracking_targets": [
+    {
+      "target_id": "TARGET_38431433b6d344248832f62c8b2c3ec7",
+      "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+      "source_id": "instagram_graph",
+      "account_scope": "local-default",
+      "alias_scope": "food:ko",
+      "status": "ACTIVE",
+      "generation": 2,
+      "interval_seconds": 3600,
+      "next_due_at": "2026-10-27T00:00:00.000000+00:00",
+      "last_success_at": null,
+      "origin": "user",
+      "registration_method": "MANUAL",
+      "candidate_id": null,
+      "food_revision": 4,
+      "revision": 2,
+      "created_at": "2026-10-27T00:00:00.000000+00:00",
+      "updated_at": "2026-10-27T00:00:00.000000+00:00",
+      "blockers": [],
+      "effective_status": "ACTIVE",
+      "planning_eligible": true,
+      "execution_enabled": false
+    },
+    {
+      "target_id": "TARGET_bc8276123de24abca1040884ca09e711",
+      "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+      "source_id": "youtube",
+      "account_scope": "local-default",
+      "alias_scope": "food:ko",
+      "status": "ACTIVE",
+      "generation": 2,
+      "interval_seconds": 21600,
+      "next_due_at": "2026-10-27T00:00:00.000000+00:00",
+      "last_success_at": null,
+      "origin": "user",
+      "registration_method": "MANUAL",
+      "candidate_id": null,
+      "food_revision": 4,
+      "revision": 2,
+      "created_at": "2026-10-27T00:00:00.000000+00:00",
+      "updated_at": "2026-10-27T00:00:00.000000+00:00",
+      "blockers": [],
+      "effective_status": "ACTIVE",
+      "planning_eligible": true,
+      "execution_enabled": false
+    },
+    {
+      "target_id": "TARGET_d77e92e7e8f34ca7bb903838b2260333",
+      "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+      "source_id": "naver_datalab",
+      "account_scope": "local-default",
+      "alias_scope": "food:ko",
+      "status": "ACTIVE",
+      "generation": 2,
+      "interval_seconds": 86400,
+      "next_due_at": "2026-10-27T00:00:00.000000+00:00",
+      "last_success_at": null,
+      "origin": "user",
+      "registration_method": "MANUAL",
+      "candidate_id": null,
+      "food_revision": 4,
+      "revision": 2,
+      "created_at": "2026-10-27T00:00:00.000000+00:00",
+      "updated_at": "2026-10-27T00:00:00.000000+00:00",
+      "blockers": [],
+      "effective_status": "ACTIVE",
+      "planning_eligible": true,
+      "execution_enabled": false
+    }
+  ],
+  "query_examples": {
+    "instagram_graph": {
+      "source_id": "instagram_graph",
+      "account_scope": "local-default",
+      "query_kind": "TRACKING",
+      "canonical_query": {
+        "endpoint": "ig_hashtag_search_then_recent_media",
+        "parameters": {
+          "q": "두쫀쿠",
+          "api_version": "v26.0",
+          "limit": 50,
+          "fields": [
+            "id",
+            "caption",
+            "timestamp",
+            "media_type",
+            "permalink"
+          ]
+        },
+        "max_pages": 20,
+        "pagination": {
+          "next_page_token": "B3_RUNTIME_ONLY",
+          "on_page_cap": "PARTIAL_LIMITED",
+          "on_error": "PARTIAL_OR_FAILED"
+        }
+      },
+      "planner_version": "source-planner-v1",
+      "contract_version": "source-envelope-v1",
+      "adapter_version": "instagram-adapter-v1",
+      "policy_version": "instagram-existing-v1",
+      "cost_version": "youtube-doc-2026-10-15-v1",
+      "query_kinds": [
+        "TRACKING"
+      ],
+      "query_id": "QUERY_1eae6f08d339f368fd0877e830a0132f49b4b48166e0f5b4f7687f854aac5310",
+      "plan_id": "PLAN_bfdabcf2e5f9b4dbde1bbc71d657a9825a32a8eeecbc37d68f999a8a2cfd33f3",
+      "spec_hash": "1eae6f08d339f368fd0877e830a0132f49b4b48166e0f5b4f7687f854aac5310",
+      "due_slot": "2026-10-27T00:00:00.000000+00:00",
+      "mapping_hash": "b66fb316e32171e53752c8960bedf8d8e19a5e5b24ef09312ce741b410307978",
+      "account_fingerprint": "a4901b4e1e68144fadd94a39e0889c638f668588dcb94803373a636e3f21c38d",
+      "account_options": {},
+      "targets": [
+        {
+          "target_id": "TARGET_38431433b6d344248832f62c8b2c3ec7",
+          "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+          "generation": 2,
+          "food_revision": 4,
+          "due_at": "2026-10-27T00:00:00.000000+00:00",
+          "alias_ids": [
+            "ALIAS_847cfec7d19042ee857cf1eca39c10c6"
+          ],
+          "group_name": null
+        }
+      ],
+      "food_group_mapping": {
+        "FOOD_144194a5bfb94398aba9e63bc12207bd": null
+      },
+      "policy_status": "ALLOWED",
+      "effective_window": {
+        "basis": "provider_recent_media",
+        "exact_content_coverage_known": false
+      },
+      "contract": {
+        "adapter_version": "instagram-adapter-v1",
+        "collected_at": "2026-10-27T00:00:00.000000+00:00",
+        "contract_version": "source-envelope-v1",
+        "data_type": "hashtag_media",
+        "field_evidence": "not_recorded",
+        "field_states": {},
+        "metric_units": {
+          "co_tag_rate": "percent_of_observed_posts",
+          "observed_posts": "unique_observed_post"
+        },
+        "missing_fields": [],
+        "observation_conditions": {
+          "plan_only": true,
+          "planner_version": "source-planner-v1",
+          "query_id": "QUERY_1eae6f08d339f368fd0877e830a0132f49b4b48166e0f5b4f7687f854aac5310"
+        },
+        "origin": "mock",
+        "policy": {
+          "derived_operations": [
+            "existing_caption_hashtags"
+          ],
+          "expand_retention_allowed": false,
+          "long_term_retention_verified": false,
+          "response_cache": false,
+          "response_storage": false,
+          "retention_days": 30,
+          "version": "instagram-existing-v1"
+        },
+        "policy_version": "instagram-existing-v1",
+        "provided_fields": [],
+        "published_at": null,
+        "request_conditions": {
+          "api_version": "v26.0",
+          "fields": [
+            "id",
+            "caption",
+            "timestamp",
+            "media_type",
+            "permalink"
+          ],
+          "hashtag": "두쫀쿠",
+          "limit": 50,
+          "max_pages": 20
+        },
+        "source_code": "instagram_graph"
+      },
+      "created_at": "2026-10-27T00:00:00.000000+00:00",
+      "execution_enabled": false,
+      "mapping_semantics": "search_provenance_only; not verified food mentions",
+      "budget": {
+        "status": "READY_LOCAL",
+        "lines": [
+          {
+            "resource": "instagram.unique_tags",
+            "cost": 1,
+            "local_limit": 28,
+            "provider_limit": 30,
+            "distinct_key": "두쫀쿠",
+            "window_start": "2026-10-27T00:00:00.000000+00:00",
+            "window_end": "2026-11-03T00:00:00.000000+00:00",
+            "reset_timezone": "rolling-7d",
+            "estimated_cost": 1,
+            "reserved_cost": 0,
+            "observed_usage": 0,
+            "remaining_budget": 28,
+            "budget_status": "READY_LOCAL",
+            "provider_observed_usage": null,
+            "provider_remaining_budget": null,
+            "provider_usage_verified": false,
+            "cost_version": "youtube-doc-2026-10-15-v1",
+            "quota_type": "instagram.unique_tags",
+            "provider_reset_timezone": "rolling-7d",
+            "effective_window": {
+              "start": "2026-10-27T00:00:00.000000+00:00",
+              "end": "2026-11-03T00:00:00.000000+00:00"
+            },
+            "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+            "actual_new_http_attempts": null,
+            "reservation_status": "PREVIEW_ONLY",
+            "source_id": "instagram_graph",
+            "account_scope": "local-default"
+          },
+          {
+            "resource": "instagram.lookup_calls",
+            "cost": 1,
+            "local_limit": null,
+            "provider_limit": null,
+            "distinct_key": null,
+            "window_start": "2026-10-27T00:00:00.000000+00:00",
+            "window_end": "2026-10-28T00:00:00.000000+00:00",
+            "reset_timezone": "UTC",
+            "estimated_cost": 1,
+            "reserved_cost": 0,
+            "observed_usage": 0,
+            "remaining_budget": null,
+            "budget_status": "READY_LOCAL",
+            "provider_observed_usage": null,
+            "provider_remaining_budget": null,
+            "provider_usage_verified": false,
+            "cost_version": "youtube-doc-2026-10-15-v1",
+            "quota_type": "instagram.lookup_calls",
+            "provider_reset_timezone": "UTC",
+            "effective_window": {
+              "start": "2026-10-27T00:00:00.000000+00:00",
+              "end": "2026-10-28T00:00:00.000000+00:00"
+            },
+            "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+            "actual_new_http_attempts": null,
+            "reservation_status": "PREVIEW_ONLY",
+            "source_id": "instagram_graph",
+            "account_scope": "local-default"
+          },
+          {
+            "resource": "instagram.media_calls",
+            "cost": 20,
+            "local_limit": null,
+            "provider_limit": null,
+            "distinct_key": null,
+            "window_start": "2026-10-27T00:00:00.000000+00:00",
+            "window_end": "2026-10-28T00:00:00.000000+00:00",
+            "reset_timezone": "UTC",
+            "estimated_cost": 20,
+            "reserved_cost": 0,
+            "observed_usage": 0,
+            "remaining_budget": null,
+            "budget_status": "READY_LOCAL",
+            "provider_observed_usage": null,
+            "provider_remaining_budget": null,
+            "provider_usage_verified": false,
+            "cost_version": "youtube-doc-2026-10-15-v1",
+            "quota_type": "instagram.media_calls",
+            "provider_reset_timezone": "UTC",
+            "effective_window": {
+              "start": "2026-10-27T00:00:00.000000+00:00",
+              "end": "2026-10-28T00:00:00.000000+00:00"
+            },
+            "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+            "actual_new_http_attempts": null,
+            "reservation_status": "PREVIEW_ONLY",
+            "source_id": "instagram_graph",
+            "account_scope": "local-default"
+          }
+        ],
+        "remote_debit_confirmed": false
+      },
+      "estimated_cost": [
+        {
+          "resource": "instagram.unique_tags",
+          "cost": 1
+        },
+        {
+          "resource": "instagram.lookup_calls",
+          "cost": 1
+        },
+        {
+          "resource": "instagram.media_calls",
+          "cost": 20
+        }
+      ],
+      "budget_status": "READY_LOCAL",
+      "decision": "READY_FOR_B3_RECHECK"
+    },
+    "youtube": {
+      "source_id": "youtube",
+      "account_scope": "local-default",
+      "query_kind": "TRACKING",
+      "canonical_query": {
+        "endpoint": "search",
+        "parameters": {
+          "part": "snippet",
+          "type": "video",
+          "q": "두쫀쿠",
+          "regionCode": "KR",
+          "relevanceLanguage": "ko",
+          "order": "date",
+          "publishedAfter": "2026-10-20T00:00:00.000000+00:00",
+          "publishedBefore": "2026-10-27T00:00:00.000000+00:00",
+          "maxResults": 50
+        },
+        "max_pages": 1,
+        "pagination": {
+          "next_page_token": "B3_RUNTIME_ONLY",
+          "on_page_cap": "PARTIAL_LIMITED"
+        },
+        "dependent_requests": [
+          {
+            "query_kind": "VIDEO_DETAILS",
+            "endpoint": "videos",
+            "parameters": {
+              "part": "snippet,statistics,contentDetails,status"
+            },
+            "id_source": "public_video_ids_from_search",
+            "batch_size": 50,
+            "requires_runtime_materialization": true
+          }
+        ]
+      },
+      "planner_version": "source-planner-v1",
+      "contract_version": "source-envelope-v1",
+      "adapter_version": "youtube-adapter-v1",
+      "policy_version": "youtube-existing-v1",
+      "cost_version": "youtube-doc-2026-10-15-v1",
+      "query_kinds": [
+        "TRACKING"
+      ],
+      "query_id": "QUERY_0eadc7fdeebb5958db74bd6717ee35b47b785fd6487dc3a8e316c3108eb6c465",
+      "plan_id": "PLAN_d8e6faadeb573a5a85a046f1b1b8c9d57ac071c2396b701d48b9789939afefe3",
+      "spec_hash": "0eadc7fdeebb5958db74bd6717ee35b47b785fd6487dc3a8e316c3108eb6c465",
+      "due_slot": "2026-10-27T00:00:00.000000+00:00",
+      "mapping_hash": "36c6468f9b08b25447dd0bdf0d3d39f01604b8c672cdef88bdafe322174963c8",
+      "account_fingerprint": "3bad59cba49220c5becdc6b320d15f83aecc8cd8d4bb8640653e60a7fca51525",
+      "account_options": {},
+      "targets": [
+        {
+          "target_id": "TARGET_bc8276123de24abca1040884ca09e711",
+          "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+          "generation": 2,
+          "food_revision": 4,
+          "due_at": "2026-10-27T00:00:00.000000+00:00",
+          "alias_ids": [
+            "ALIAS_847cfec7d19042ee857cf1eca39c10c6"
+          ],
+          "group_name": null
+        }
+      ],
+      "food_group_mapping": {
+        "FOOD_144194a5bfb94398aba9e63bc12207bd": null
+      },
+      "policy_status": "ALLOWED",
+      "effective_window": {
+        "start": "2026-10-20T00:00:00.000000+00:00",
+        "end": "2026-10-27T00:00:00.000000+00:00",
+        "basis": "publication_time"
+      },
+      "contract": {
+        "adapter_version": "youtube-adapter-v1",
+        "collected_at": "2026-10-27T00:00:00.000000+00:00",
+        "contract_version": "source-envelope-v1",
+        "data_type": "video_metadata",
+        "field_evidence": "not_recorded",
+        "field_states": {},
+        "metric_units": {
+          "comment_count": "video_comment_count_snapshot",
+          "like_count": "video_like_count_snapshot",
+          "view_count": "video_view_count_snapshot"
+        },
+        "missing_fields": [],
+        "observation_conditions": {
+          "plan_only": true,
+          "planner_version": "source-planner-v1",
+          "query_id": "QUERY_0eadc7fdeebb5958db74bd6717ee35b47b785fd6487dc3a8e316c3108eb6c465"
+        },
+        "origin": "mock",
+        "policy": {
+          "derived_operations": [],
+          "expand_retention_allowed": false,
+          "long_term_retention_verified": false,
+          "response_cache": false,
+          "response_storage": false,
+          "retention_days": 29,
+          "version": "youtube-existing-v1"
+        },
+        "policy_version": "youtube-existing-v1",
+        "provided_fields": [],
+        "published_at": null,
+        "request_conditions": {
+          "maxResults": 50,
+          "order": "date",
+          "part": "snippet",
+          "publishedAfter": "2026-10-20T00:00:00.000000+00:00",
+          "publishedBefore": "2026-10-27T00:00:00.000000+00:00",
+          "q": "두쫀쿠",
+          "regionCode": "KR",
+          "relevanceLanguage": "ko",
+          "type": "video"
+        },
+        "source_code": "youtube"
+      },
+      "created_at": "2026-10-27T00:00:00.000000+00:00",
+      "execution_enabled": false,
+      "mapping_semantics": "search_provenance_only; not verified food mentions",
+      "budget": {
+        "status": "READY_LOCAL",
+        "lines": [
+          {
+            "resource": "youtube.search_calls",
+            "cost": 1,
+            "local_limit": 40,
+            "provider_limit": 100,
+            "distinct_key": null,
+            "window_start": "2026-10-26T07:00:00.000000+00:00",
+            "window_end": "2026-10-27T07:00:00.000000+00:00",
+            "reset_timezone": "America/Los_Angeles",
+            "estimated_cost": 1,
+            "reserved_cost": 0,
+            "observed_usage": 0,
+            "remaining_budget": 40,
+            "budget_status": "READY_LOCAL",
+            "provider_observed_usage": null,
+            "provider_remaining_budget": null,
+            "provider_usage_verified": false,
+            "cost_version": "youtube-doc-2026-10-15-v1",
+            "quota_type": "youtube.search_calls",
+            "provider_reset_timezone": "America/Los_Angeles",
+            "effective_window": {
+              "start": "2026-10-26T07:00:00.000000+00:00",
+              "end": "2026-10-27T07:00:00.000000+00:00"
+            },
+            "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+            "actual_new_http_attempts": null,
+            "reservation_status": "PREVIEW_ONLY",
+            "source_id": "youtube",
+            "account_scope": "local-default"
+          },
+          {
+            "resource": "youtube.video_calls",
+            "cost": 1,
+            "local_limit": 1000,
+            "provider_limit": 10000,
+            "distinct_key": null,
+            "window_start": "2026-10-26T07:00:00.000000+00:00",
+            "window_end": "2026-10-27T07:00:00.000000+00:00",
+            "reset_timezone": "America/Los_Angeles",
+            "estimated_cost": 1,
+            "reserved_cost": 0,
+            "observed_usage": 0,
+            "remaining_budget": 1000,
+            "budget_status": "READY_LOCAL",
+            "provider_observed_usage": null,
+            "provider_remaining_budget": null,
+            "provider_usage_verified": false,
+            "cost_version": "youtube-doc-2026-10-15-v1",
+            "quota_type": "youtube.video_calls",
+            "provider_reset_timezone": "America/Los_Angeles",
+            "effective_window": {
+              "start": "2026-10-26T07:00:00.000000+00:00",
+              "end": "2026-10-27T07:00:00.000000+00:00"
+            },
+            "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+            "actual_new_http_attempts": null,
+            "reservation_status": "PREVIEW_ONLY",
+            "source_id": "youtube",
+            "account_scope": "local-default"
+          }
+        ],
+        "remote_debit_confirmed": false
+      },
+      "estimated_cost": [
+        {
+          "resource": "youtube.search_calls",
+          "cost": 1
+        },
+        {
+          "resource": "youtube.video_calls",
+          "cost": 1
+        }
+      ],
+      "budget_status": "READY_LOCAL",
+      "decision": "READY_FOR_B3_RECHECK"
+    },
+    "naver_datalab": {
+      "source_id": "naver_datalab",
+      "account_scope": "local-default",
+      "query_kind": "TRACKING",
+      "canonical_query": {
+        "endpoint": "search-trend/v1/search",
+        "parameters": {
+          "startDate": "2026-09-27",
+          "endDate": "2026-10-26",
+          "timeUnit": "date",
+          "keywordGroups": [
+            {
+              "groupName": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+              "keywords": [
+                "두바이 쫀득 쿠키",
+                "두바이쫀득쿠키",
+                "두쫀쿠"
+              ]
+            }
+          ]
+        }
+      },
+      "planner_version": "source-planner-v1",
+      "contract_version": "source-envelope-v1",
+      "adapter_version": "naver-adapter-v1",
+      "policy_version": "naver-no-response-storage-v1",
+      "cost_version": "youtube-doc-2026-10-15-v1",
+      "query_kinds": [
+        "TRACKING"
+      ],
+      "query_id": "QUERY_93bf6677b6809f76fe80762662ce83dd00f7975b18c6c4d11216d54e5b656b37",
+      "plan_id": "PLAN_657104e78c9858c4e1d77eeabeff234c202fc65cc43d5713a5b0d8dc934b1ccd",
+      "spec_hash": "93bf6677b6809f76fe80762662ce83dd00f7975b18c6c4d11216d54e5b656b37",
+      "due_slot": "2026-10-26T15:00:00.000000+00:00",
+      "mapping_hash": "c5f8b545f6bf735b653954f29f8b5314c6ebd7abfd0b5b3b059f305ecbcf4d87",
+      "account_fingerprint": "be61c4fa032c0641256cf2aeda063ee7d52e39bf892e2d928eec62838faa3d34",
+      "account_options": {},
+      "targets": [
+        {
+          "target_id": "TARGET_d77e92e7e8f34ca7bb903838b2260333",
+          "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+          "generation": 2,
+          "food_revision": 4,
+          "due_at": "2026-10-27T00:00:00.000000+00:00",
+          "alias_ids": [
+            "ALIAS_0bc3126c55d54681b6e6e52af0d1c395",
+            "ALIAS_847cfec7d19042ee857cf1eca39c10c6",
+            "ALIAS_adda784a0d2b4021b37ec47aaddd75b6"
+          ],
+          "group_name": "FOOD_144194a5bfb94398aba9e63bc12207bd"
+        }
+      ],
+      "food_group_mapping": {
+        "FOOD_144194a5bfb94398aba9e63bc12207bd": "FOOD_144194a5bfb94398aba9e63bc12207bd"
+      },
+      "policy_status": "ALLOWED",
+      "effective_window": {
+        "start": "2026-09-27",
+        "end": "2026-10-26",
+        "timeUnit": "date",
+        "timezone": "Asia/Seoul",
+        "context_hash": "586f91d24a073c338a17282bd744e43fcb2a770b21cc51475ed1d1b8ebf8c052"
+      },
+      "contract": {
+        "adapter_version": "naver-adapter-v1",
+        "collected_at": "2026-10-27T00:00:00.000000+00:00",
+        "contract_version": "source-envelope-v1",
+        "data_type": "relative_search_series",
+        "field_evidence": "not_recorded",
+        "field_states": {},
+        "metric_units": {
+          "relative_search_index": "relative_search_index_0_100"
+        },
+        "missing_fields": [],
+        "observation_conditions": {
+          "plan_only": true,
+          "planner_version": "source-planner-v1",
+          "query_id": "QUERY_93bf6677b6809f76fe80762662ce83dd00f7975b18c6c4d11216d54e5b656b37"
+        },
+        "origin": "mock",
+        "policy": {
+          "derived_operations": [],
+          "expand_retention_allowed": false,
+          "long_term_retention_verified": false,
+          "response_cache": false,
+          "response_storage": false,
+          "retention_days": 0,
+          "version": "naver-no-response-storage-v1"
+        },
+        "policy_version": "naver-no-response-storage-v1",
+        "provided_fields": [],
+        "published_at": null,
+        "request_conditions": {
+          "endDate": "2026-10-26",
+          "keywordGroups": [
+            {
+              "groupName": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+              "keywords": [
+                "두바이 쫀득 쿠키",
+                "두바이쫀득쿠키",
+                "두쫀쿠"
+              ]
+            }
+          ],
+          "startDate": "2026-09-27",
+          "timeUnit": "date"
+        },
+        "source_code": "naver_datalab"
+      },
+      "created_at": "2026-10-27T00:00:00.000000+00:00",
+      "execution_enabled": false,
+      "mapping_semantics": "search_provenance_only; not verified food mentions",
+      "budget": {
+        "status": "READY_LOCAL",
+        "lines": [
+          {
+            "resource": "naver.calls",
+            "cost": 1,
+            "local_limit": 100,
+            "provider_limit": null,
+            "distinct_key": null,
+            "window_start": "2026-10-26T15:00:00.000000+00:00",
+            "window_end": "2026-10-27T15:00:00.000000+00:00",
+            "reset_timezone": "Asia/Seoul",
+            "estimated_cost": 1,
+            "reserved_cost": 0,
+            "observed_usage": 0,
+            "remaining_budget": 100,
+            "budget_status": "READY_LOCAL",
+            "provider_observed_usage": null,
+            "provider_remaining_budget": null,
+            "provider_usage_verified": false,
+            "cost_version": "youtube-doc-2026-10-15-v1",
+            "quota_type": "naver.calls",
+            "provider_reset_timezone": "Asia/Seoul",
+            "effective_window": {
+              "start": "2026-10-26T15:00:00.000000+00:00",
+              "end": "2026-10-27T15:00:00.000000+00:00"
+            },
+            "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+            "actual_new_http_attempts": null,
+            "reservation_status": "PREVIEW_ONLY",
+            "source_id": "naver_datalab",
+            "account_scope": "local-default"
+          }
+        ],
+        "remote_debit_confirmed": false
+      },
+      "estimated_cost": [
+        {
+          "resource": "naver.calls",
+          "cost": 1
+        }
+      ],
+      "budget_status": "READY_LOCAL",
+      "decision": "READY_FOR_B3_RECHECK"
+    }
+  },
+  "rss_discovery_example": {
+    "source_id": "google_trends_rss",
+    "account_scope": "feed:KR",
+    "query_kind": "DISCOVERY",
+    "canonical_query": {
+      "endpoint": "trending/rss",
+      "parameters": {
+        "geo": "KR"
+      },
+      "interval_seconds": 1800
+    },
+    "planner_version": "source-planner-v1",
+    "contract_version": "source-envelope-v1",
+    "adapter_version": "rss-adapter-v1",
+    "policy_version": "rss-existing-v1",
+    "cost_version": "youtube-doc-2026-10-15-v1",
+    "query_kinds": [
+      "DISCOVERY"
+    ],
+    "query_id": "QUERY_db84c56b0187c719d8c17e8070bfbbed98232082996d92c3a0474897df7f7347",
+    "plan_id": "PLAN_2ad5068dbe017ac294111c8ab5ca0e74f313dd5c30077ef1adce94398c0ac8e6",
+    "spec_hash": "db84c56b0187c719d8c17e8070bfbbed98232082996d92c3a0474897df7f7347",
+    "due_slot": "2026-10-27T00:00:00.000000+00:00",
+    "mapping_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "account_fingerprint": "ebd536c1de5d0dd5b87b958af937b26538d923541db69b7d51e5ea2ec3499048",
+    "account_options": {
+      "rss_interval": 1800
+    },
+    "targets": [],
+    "food_group_mapping": {},
+    "policy_status": "ALLOWED",
+    "effective_window": {
+      "basis": "fixed_discovery_feed",
+      "food_count_zero_is_success": true,
+      "candidate_resolution": "local A4 bridge after collection; no automatic tracking"
+    },
+    "contract": {
+      "adapter_version": "rss-adapter-v1",
+      "collected_at": "2026-10-27T00:00:00.000000+00:00",
+      "contract_version": "source-envelope-v1",
+      "data_type": "trend_item",
+      "field_evidence": "not_recorded",
+      "field_states": {},
+      "metric_units": {
+        "approx_traffic": "approximate_search_traffic_text"
+      },
+      "missing_fields": [],
+      "observation_conditions": {
+        "plan_only": true,
+        "planner_version": "source-planner-v1",
+        "query_id": "QUERY_db84c56b0187c719d8c17e8070bfbbed98232082996d92c3a0474897df7f7347"
+      },
+      "origin": "user",
+      "policy": {
+        "derived_operations": [
+          "existing_food_rules"
+        ],
+        "expand_retention_allowed": false,
+        "long_term_retention_verified": false,
+        "response_cache": false,
+        "response_storage": true,
+        "retention_days": null,
+        "version": "rss-existing-v1"
+      },
+      "policy_version": "rss-existing-v1",
+      "provided_fields": [],
+      "published_at": null,
+      "request_conditions": {
+        "endpoint": "trending/rss",
+        "geo": "KR"
+      },
+      "source_code": "google_trends_rss"
+    },
+    "created_at": "2026-10-27T00:00:00.000000+00:00",
+    "execution_enabled": false,
+    "mapping_semantics": "search_provenance_only; not verified food mentions",
+    "budget": {
+      "status": "READY_LOCAL",
+      "lines": [
+        {
+          "resource": "rss.feed_calls",
+          "cost": 1,
+          "local_limit": null,
+          "provider_limit": null,
+          "distinct_key": null,
+          "window_start": "2026-10-27T00:00:00.000000+00:00",
+          "window_end": "2026-10-28T00:00:00.000000+00:00",
+          "reset_timezone": "UTC",
+          "estimated_cost": 1,
+          "reserved_cost": 0,
+          "observed_usage": 0,
+          "remaining_budget": null,
+          "budget_status": "READY_LOCAL",
+          "provider_observed_usage": null,
+          "provider_remaining_budget": null,
+          "provider_usage_verified": false,
+          "cost_version": "youtube-doc-2026-10-15-v1",
+          "quota_type": "rss.feed_calls",
+          "provider_reset_timezone": "UTC",
+          "effective_window": {
+            "start": "2026-10-27T00:00:00.000000+00:00",
+            "end": "2026-10-28T00:00:00.000000+00:00"
+          },
+          "observed_usage_basis": "legacy_local_calls_plus_recorded_workflow_upper_bounds",
+          "actual_new_http_attempts": null,
+          "reservation_status": "PREVIEW_ONLY",
+          "source_id": "google_trends_rss",
+          "account_scope": "feed:KR"
+        }
+      ],
+      "remote_debit_confirmed": false
+    },
+    "estimated_cost": [
+      {
+        "resource": "rss.feed_calls",
+        "cost": 1
+      }
+    ],
+    "budget_status": "READY_LOCAL",
+    "decision": "READY_FOR_B3_RECHECK"
+  },
+  "paused_target": {
+    "target_id": "TARGET_bc8276123de24abca1040884ca09e711",
+    "food_id": "FOOD_144194a5bfb94398aba9e63bc12207bd",
+    "source_id": "youtube",
+    "account_scope": "local-default",
+    "alias_scope": "food:ko",
+    "status": "PAUSED",
+    "generation": 3,
+    "interval_seconds": 21600,
+    "next_due_at": null,
+    "last_success_at": null,
+    "origin": "user",
+    "registration_method": "MANUAL",
+    "candidate_id": null,
+    "food_revision": 4,
+    "revision": 3,
+    "created_at": "2026-10-27T00:00:00.000000+00:00",
+    "updated_at": "2026-10-27T00:00:00.000000+00:00",
+    "blockers": [],
+    "effective_status": "PAUSED",
+    "planning_eligible": false,
+    "execution_enabled": false
+  },
+  "preserved_plans": 6,
+  "preview_writes": 0,
+  "preview_reservations": 0,
+  "internal_reservation_contract_tested": true,
+  "late_result_food_mappings": 0,
+  "http_requests": 0,
+  "production_database_used": false
+}

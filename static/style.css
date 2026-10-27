@@ -8,6 +8,7 @@ dialog{overflow-wrap:anywhere}.instagram-panel{min-width:0}.ig-chart{min-width:0
 :root { --food-border: #dbe5dc; }
 .tracking-panel { border-top: 1px solid var(--food-border); margin-top: 20px; padding-top: 12px; }
 .tracking-panel .food-card button { margin: 4px; }
+.query-preview pre { padding: 12px; background: #f4f6f3; max-height: 300px; overflow: auto; }
 .food-heading { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
 .food-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 16px 0; }
 .food-form label { display: flex; flex-direction: column; gap: 6px; }

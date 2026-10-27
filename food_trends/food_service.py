@@ -207,6 +207,7 @@ class FoodService:
         candidate_key = hashlib.sha256(dump(material).encode()).hexdigest()
         old = db.execute('SELECT candidate_id FROM food_candidates WHERE candidate_key=?', (candidate_key,)).fetchone()
         if old:
+            self._resolve(db, old[0], ctx)
             return self._candidate(db, old[0])
         candidate_id, stamp = identity('CAND'), utcnow()
         gate = 'BLOCKED_NON_FOOD' if kind in ('BRAND', 'STORE', 'NON_FOOD') else 'REQUIRES_TYPE_APPROVAL' if kind == 'UNKNOWN' else 'FOOD'
@@ -255,9 +256,35 @@ class FoodService:
                             fields={'keyword': item['keyword']}, request={'geo': 'KR', 'endpoint': 'trending/rss'},
                             observation={'source_item_id': item['id'], 'classification_version': classification['classifier_version'],
                                          'resolution_input': True, 'source_collected_at': prior['collected_at'] if prior else None})
+        kind = candidate_kind(classification['entity_type'], classification['classification'])
+        existing = db.execute('SELECT * FROM food_candidates WHERE source_code=? AND source_item_id=?', (source, item['id'])).fetchone()
+        if existing and existing['proposed_kind'] != kind and existing['status'] != 'REJECTED':
+            before = dict(existing)
+            if existing['status'] == 'RESOLVED':
+                self._transition(db, existing['candidate_id'], 'NEEDS_REVIEW', ctx)
+            gate = 'BLOCKED_NON_FOOD' if kind in ('BRAND','STORE','NON_FOOD') else 'REQUIRES_TYPE_APPROVAL' if kind == 'UNKNOWN' else 'FOOD'
+            db.execute('''UPDATE food_candidates SET proposed_kind=?,type_gate=?,revision=revision+1,updated_at=?
+                WHERE candidate_id=?''', (kind, gate, utcnow(), existing['candidate_id']))
+            after = self._row(db, 'food_candidates', 'candidate_id', existing['candidate_id'])
+            self._event(db, 'candidate', existing['candidate_id'], 'SOURCE_TYPE_CHANGED', before,
+                        dict(after, source_classifier_version=classification['classifier_version']), ctx)
         return self._submit(db, ctx, source=source, item_id=item['id'], origin=origin, name=text(item['keyword']),
-                            kind=candidate_kind(classification['entity_type'], classification['classification']),
+                            kind=kind,
                             aliases=[], description='', relations=[], scope=DEFAULT_SCOPE, contract=contract)
+
+    def import_rss_run(self, run_id):
+        """Local post-collection bridge. Each item is replayable; never creates foods or tracking targets."""
+        require_operation('google_trends_rss', 'existing_food_rules')
+        with self.storage.reader() as db:
+            run = self._row(db, 'runs', 'id', run_id)
+            if not run['success']:
+                return {'state': 'skipped_failed_run', 'candidates': 0}
+            ids = [r[0] for r in db.execute('''SELECT o.item_id FROM observations o JOIN candidates c ON c.item_id=o.item_id
+                WHERE o.run_id=? AND c.classification IN ('FOOD','REVIEW') ORDER BY o.item_id''', (run_id,))]
+        for item_id in ids:
+            self.command('import', {'request_key': f'rss-resolution:{run_id}:{item_id}',
+                                   'source_code': 'google_trends_rss', 'source_item_id': item_id})
+        return {'state': 'completed', 'candidates': len(ids)}
 
     def _transition(self, db, candidate_id, status, ctx, food_id=None, alias_id=None, method=None):
         before = self._row(db, 'food_candidates', 'candidate_id', candidate_id)

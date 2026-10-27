@@ -295,7 +295,9 @@ class FoodEntityTests(unittest.TestCase):
         self.assertEqual(approved['resolution']['entity_kind'], 'PRODUCT')
 
     def test_unknown_legacy_origin_is_never_promoted(self):
-        self.rss.collect()
+        # Simulate rows created before the local post-collection identity bridge existed.
+        with patch('food_trends.food_service.FoodService.import_rss_run', return_value={'state': 'legacy_fixture'}):
+            self.rss.collect()
         with self.storage.connect() as db:
             db.execute('UPDATE observations SET contract_json=NULL')
         c = self.cmd('import', source_code='google_trends_rss', source_item_id=1)
