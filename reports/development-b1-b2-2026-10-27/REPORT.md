@@ -18,7 +18,7 @@
 
 [시작 증거](baseline.json), [baseline 테스트](baseline-tests/test-summary.json), [A4 파일 검토](a4-precommit.json).
 
-A4~A5 사전 커밋의 축약형은 `510bf75`다. B1은 `6cece7c0bd9aa9b69b69c9071ab738e811062c67`이며, 전체 커밋 해시와 B2·원격 반영 결과는 [Git 결과](git-results.json)에 기록한다. B1/B2를 각각 독립 커밋으로 보존했다.
+A4~A5 사전 커밋은 `510bf756add889b06d600d4f69fb594fa6bc4b82`, B1은 `6cece7c0bd9aa9b69b69c9071ab738e811062c67`, B2는 `9839e801635ab13fe167a9d288e9a0958e444a88`이다. [Git 결과](git-results.json)에 원격 반영 상태를 기록한다. B1/B2를 각각 독립 커밋으로 보존했고 현재 원격 main은 시작 HEAD인 `97b3c35`에 남아 있다.
 
 요청서대로 main Push를 시도했으나 자동 승인 검토가 “첨부 요청서의 지시를 정확한 원격 main Push에 대한 신뢰된 사용자 승인으로 인정하지 않는다”는 사유로 거부했다. 이 제한을 우회하는 다른 Push 수단을 사용하지 않았다. 검증된 로컬 커밋을 공개 원격 main에 반영하는 승인만 남았다. 원격 반영 전에는 로컬 HEAD와 origin/main이 일치한다고 주장하지 않는다.
 

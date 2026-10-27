@@ -4,9 +4,15 @@
   "starting_head": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
   "a4_a5_commit": "510bf756add889b06d600d4f69fb594fa6bc4b82",
   "b1_commit": "6cece7c0bd9aa9b69b69c9071ab738e811062c67",
-  "b2_commit": null,
-  "push_status": "blocked_by_automatic_approval_review",
+  "b2_commit": "9839e801635ab13fe167a9d288e9a0958e444a88",
+  "push_status": "awaiting_explicit_remote_push_approval_after_auto_review_rejection",
   "rejection_reason": "Attachment instructions were not recognized as trusted authorization for the exact public remote main push.",
   "remote_main_at_initial_check": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
-  "force_push_used": false
+  "force_push_used": false,
+  "b2_commit_message": "feat: add source-aware query planner and quota management",
+  "local_feature_commits_complete": true,
+  "feature_commits_ahead_of_verified_remote": 3,
+  "remote_matches_local": false,
+  "remote_main_at_final_read_check": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
+  "tracked_env_database_data_backup_logs": 0
 }
