@@ -8,6 +8,7 @@ from .naver_service import keyword_group
 from .storage import utcnow
 from .youtube import YouTubeError
 from .contracts import envelope, encode
+from .entity_types import can_track_legacy
 
 
 def pacific_day():
@@ -58,8 +59,10 @@ class YouTubeStore:
         with self.storage.connect() as db:
             db.execute('UPDATE youtube_queries SET active=0')
             db.execute('DELETE FROM youtube_candidate_foods')
-            rows = db.execute("SELECT item_id,normalized_name FROM candidates WHERE classification='FOOD'").fetchall()
+            rows = db.execute("SELECT item_id,normalized_name,entity_type FROM candidates WHERE classification='FOOD'").fetchall()
             for row in rows:
+                if not can_track_legacy(row['entity_type']):
+                    continue
                 group = keyword_group(row['normalized_name'])
                 db.execute('INSERT OR IGNORE INTO youtube_foods(name) VALUES (?)', (group['groupName'],))
                 food_id = db.execute('SELECT id FROM youtube_foods WHERE name=?', (group['groupName'],)).fetchone()[0]

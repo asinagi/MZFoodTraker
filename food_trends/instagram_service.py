@@ -3,6 +3,7 @@ import hashlib
 import threading
 import time
 import unicodedata
+from .entity_types import can_track_legacy
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlsplit
@@ -114,8 +115,13 @@ class InstagramService:
             raise GraphError('disabled')
         name = self.normalize(name)
         if candidate_id is not None:
-            if type(candidate_id) is not int or not self.storage.trends(item_id=candidate_id):
+            if type(candidate_id) is not int:
                 raise GraphError('not_found')
+            candidates = self.storage.trends(item_id=candidate_id)
+            if not candidates:
+                raise GraphError('not_found')
+            if not can_track_legacy(candidates[0]['entity_type']):
+                raise GraphError('validation')
         with self.operation():
             existing = next((h for h in self.store.tags() if h['name'] == name), None)
             tag = self.store.register(name, candidate_id)

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from .migration_definitions import BASE_SQL, LEGACY_ADDITIONS
 
-LATEST_VERSION = 2
+LATEST_VERSION = 3
 
 
 class MigrationRequired(RuntimeError):
@@ -39,8 +39,14 @@ def _contracts(db):
         })
 
 
+def _food_entities(db):
+    from .entity_schema import apply_entities
+    apply_entities(db)
+
+
 MIGRATIONS = ((1, 'legacy_additive_schema', _legacy_schema),
-              (2, 'source_contract_metadata', _contracts))
+              (2, 'source_contract_metadata', _contracts),
+              (3, 'reviewed_food_entities', _food_entities))
 
 
 def schema_version(path):

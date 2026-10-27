@@ -9,7 +9,10 @@ from .youtube import YouTubeError
 
 STATIC = Path(__file__).parent.parent / 'static'
 
-def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None, youtube=None):
+def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None, youtube=None, foods=None):
+    from .food_service import FoodService
+    from . import food_http
+    foods = foods or FoodService(service.storage)
     class Handler(BaseHTTPRequestHandler):
         def send(self, status, data, mime='application/json; charset=utf-8', download=None):
             body = json.dumps(data, ensure_ascii=False).encode() if mime.startswith('application/json') else data
@@ -27,6 +30,8 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
             url = urlsplit(self.path)
             params = parse_qs(url.query)
             try:
+                if url.path.startswith(('/api/foods', '/api/food-candidates', '/api/food-events')):
+                    return food_http.get(self, foods, url.path, params)
                 if url.path == '/api/youtube':
                     return self.send(200, youtube.status()) if youtube else self.send(503, {'error': 'YouTube 서비스 미연결'})
                 if url.path == '/api/naver':
@@ -83,16 +88,20 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
                     return self.send(200, (STATIC / 'naver.js').read_bytes(), 'text/javascript; charset=utf-8')
                 if url.path == '/youtube.js':
                     return self.send(200, (STATIC / 'youtube.js').read_bytes(), 'text/javascript; charset=utf-8')
+                if url.path == '/foods.js':
+                    return self.send(200, (STATIC / 'foods.js').read_bytes(), 'text/javascript; charset=utf-8')
                 self.send(404, {'error': '경로 없음'})
             except Exception:
                 self.send(500, {'error': '저장 데이터 조회 실패. 서버 로그를 확인하세요.'})
 
         def do_POST(self):
-            if self.path != '/api/collect' and not self.path.startswith(('/api/instagram/', '/api/naver/', '/api/youtube/')):
+            if self.path != '/api/collect' and not self.path.startswith(('/api/instagram/', '/api/naver/', '/api/youtube/', '/api/foods/')):
                 return self.send(404, {'error': '경로 없음'})
             origin = self.headers.get('Origin')
             if origin and urlsplit(origin).netloc != self.headers.get('Host'):
                 return self.send(403, {'error': '같은 로컬 페이지에서 요청하세요'})
+            if self.path.startswith('/api/foods/'):
+                return food_http.post(self, foods)
             if self.path.startswith('/api/youtube/'):
                 if youtube is None:
                     return self.send(503, {'error': 'YouTube 서비스 미연결'})

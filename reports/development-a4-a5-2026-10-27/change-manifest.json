@@ -1,0 +1,105 @@
+{
+  "base_head": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
+  "files": [
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "766786dd74271e0ce4732bd2c1555606cda5a4c490a42a9142dad1fa24edcf97"
+    },
+    {
+      "path": "food_trends/api.py",
+      "status": "modified",
+      "sha256": "e54d0e40c43406aacb1be1fafc34b33b6767bed6f16ab16a76c3f115c9017eec"
+    },
+    {
+      "path": "food_trends/contracts.py",
+      "status": "modified",
+      "sha256": "8030ad4fd296833a9a4d45c0d2220226433b92bb29a532825996e572231d8504"
+    },
+    {
+      "path": "food_trends/entity_schema.py",
+      "status": "added",
+      "sha256": "9bc7a05cc23990c83fa68aae997ff1e68d9192261f7d4a270a3ae2a4871f6b55"
+    },
+    {
+      "path": "food_trends/entity_types.py",
+      "status": "added",
+      "sha256": "b0eec210edae3712356bada5e492a1425edbe3fdc90ada921012a71d901d5368"
+    },
+    {
+      "path": "food_trends/food_demo.py",
+      "status": "added",
+      "sha256": "c04631512bc3011776617a0d4ad6320096c481cd521c30e2f910e723b3acf636"
+    },
+    {
+      "path": "food_trends/food_http.py",
+      "status": "added",
+      "sha256": "a16619c8b1d8a8ec7a736946bcdb92a20cd7f107662ee286c48ed71713750182"
+    },
+    {
+      "path": "food_trends/food_service.py",
+      "status": "added",
+      "sha256": "3da80ad8b9e3408261a52fb7b254e844e98d4bf60b50e7c7f4a2ff365176cb04"
+    },
+    {
+      "path": "food_trends/instagram_service.py",
+      "status": "modified",
+      "sha256": "36a885d0b3d7efc8cfd3ed255edfc1916fad821c5ac7d4bae519162a3972d3ae"
+    },
+    {
+      "path": "food_trends/migrations.py",
+      "status": "modified",
+      "sha256": "30c71464d2e647fde285022ae4e24e7d9a16e84bdb2c14c0a5cfd69216c28448"
+    },
+    {
+      "path": "food_trends/naver_service.py",
+      "status": "modified",
+      "sha256": "e4edbf9a8ad1c0ece46357b190be39b19cbcf96b5367c9ec1aa2603506840007"
+    },
+    {
+      "path": "food_trends/youtube_storage.py",
+      "status": "modified",
+      "sha256": "f134c2b940794b856447e29c40792ca19bb2617bd610ce9552efcb8f34ed399d"
+    },
+    {
+      "path": "reports/development-a4-a5-2026-10-27/API_EXAMPLE.md",
+      "status": "added",
+      "sha256": "ffc2443fc6d306e19deb79c773b2a6032c8198d957ab268ba7bb92d0de2c1f0c"
+    },
+    {
+      "path": "reports/development-a4-a5-2026-10-27/REPORT.md",
+      "status": "added",
+      "sha256": "c9fefa68bb8d8d97ed5a906043eccc26f8d6389e1697caf131d65c9d58a9bfaf"
+    },
+    {
+      "path": "static/foods.js",
+      "status": "added",
+      "sha256": "2cc9afb0b5abda3fb13875e2356525d689278d1ec00af7f1aeb97afc47337d68"
+    },
+    {
+      "path": "static/index.html",
+      "status": "modified",
+      "sha256": "e535f1d01d989428ec4b3b2d2b6d7a2475b3e7daeb48ac4de58ca9a9ca7884ca"
+    },
+    {
+      "path": "static/style.css",
+      "status": "modified",
+      "sha256": "6c65b6dbf32c02c4870ebac3d95ce304a72646d8753c0ed071275c0c3af28b48"
+    },
+    {
+      "path": "tests/food_browser_check.py",
+      "status": "added",
+      "sha256": "a035437dd42c9d816a11e48ada9945c27ca70d448ecd35b1d27b0f0c22339848"
+    },
+    {
+      "path": "tests/test_food_entities.py",
+      "status": "added",
+      "sha256": "ea214503fa638d1c126ad1ef9f5ee603933f04ec23bab22cc0a69e93299aa6a1"
+    },
+    {
+      "path": "tests/test_foundations.py",
+      "status": "modified",
+      "sha256": "c7fe37f6b4dbefc810d90f4eb27a26951f85e0860bf035ac459fc1167f1ea307"
+    }
+  ]
+}

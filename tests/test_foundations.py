@@ -222,7 +222,7 @@ class FoundationTests(unittest.TestCase):
                     self.assertEqual(result['version'], 0)
                     self.assertFalse(path.exists())
                 else:
-                    self.assertEqual(result['applied'], [1, 2])
+                    self.assertEqual(result['applied'], [1, 2, 3])
             before = snapshot(path)
             with patch('sys.argv', ['food_trends', '--youtube-status']), redirect_stdout(io.StringIO()), \
                     self.assertRaises(SystemExit) as exit_code:

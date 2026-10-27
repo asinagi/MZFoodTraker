@@ -15,6 +15,15 @@ _SECRET_KEYS = frozenset(('authorization', 'accesstoken', 'inputtoken', 'fbexcha
                           'naverdatalabclientid', 'naverdatalabclientsecret'))
 
 SOURCES = {
+    # Local application input, not an additional external API collector.
+    'user_input': {
+        'adapter_version': 'food-input-v1', 'data_type': 'food_candidate_input',
+        'fields': ('name', 'aliases', 'entity_kind', 'description', 'relations'),
+        'metrics': {}, 'request_fields': (),
+        'policy': {'version': 'local-food-input-v1', 'response_storage': False, 'response_cache': False,
+                   'retention_days': None, 'long_term_retention_verified': False,
+                   'expand_retention_allowed': False, 'derived_operations': ('candidate_resolution',)},
+    },
     'google_trends_rss': {
         'adapter_version': 'rss-adapter-v1', 'data_type': 'trend_item',
         'fields': ('keyword', 'published_at', 'published_raw', 'traffic', 'news', 'related_queries'),

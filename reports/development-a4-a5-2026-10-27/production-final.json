@@ -1,0 +1,62 @@
+{
+  "schema_version": 0,
+  "food_tables": 0,
+  "original_tables_compared": 30,
+  "original_columns_and_rows_unchanged": false,
+  "integrity": "ok",
+  "production_migration_performed": false,
+  "existing_servers_restarted_or_stopped": false,
+  "listeners_at_initial_check": [
+    {
+      "port": 8000,
+      "pid": 50584
+    },
+    {
+      "port": 8002,
+      "pid": 51280
+    }
+  ],
+  "changed_tables_between_readonly_checks": {
+    "runs": {
+      "before": {
+        "rows": 82,
+        "sha256": "b8674acafa53c772da93a875028aac3b109224b428950265981d0fb6b4878b96"
+      },
+      "after": {
+        "rows": 83,
+        "sha256": "e812cdcb62acf38bb2f7e629555eb23203169400da0eac2d0308f5e4a141a314"
+      }
+    },
+    "items": {
+      "before": {
+        "rows": 302,
+        "sha256": "dffd971ca48435ff2b4522f2a6ee456c104d428b78b5f2c31e66b9cb47c17206"
+      },
+      "after": {
+        "rows": 307,
+        "sha256": "d6afdefb0c89339c0fb4e2a38328071dea9e1615d49d4463a93503bb949fe922"
+      }
+    },
+    "observations": {
+      "before": {
+        "rows": 770,
+        "sha256": "a2b0e8c53eaee34561a1ce02964832d31c892921c903e3994cb4fda1d3fa66f8"
+      },
+      "after": {
+        "rows": 780,
+        "sha256": "90cc1025c8d69786a1550dd57941065b6a8560b572fd051c3b33a6ffbb952384"
+      }
+    },
+    "candidates": {
+      "before": {
+        "rows": 302,
+        "sha256": "d1256c5312390a705516018eb57f34d6d20158f72c10c11b9aed50deee0307a0"
+      },
+      "after": {
+        "rows": 307,
+        "sha256": "ee084b078b6abe443e58a799046abb39c34b3a7874d743ba40f824a4db92e126"
+      }
+    }
+  },
+  "observation": "Existing processes remained running. Test runner blocks production DB; inspection used mode=ro and query_only. Cause of concurrent changes not attributed."
+}

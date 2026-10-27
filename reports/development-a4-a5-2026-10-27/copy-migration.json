@@ -1,0 +1,24 @@
+{
+  "source": "data\\a4-a5-preservation-20261027T061551Z\\before.sqlite3",
+  "migration": {
+    "version": 3,
+    "applied": [
+      1,
+      2,
+      3
+    ]
+  },
+  "original_tables_compared": 30,
+  "original_columns_and_rows_preserved": true,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "legacy_rows_promoted": {
+    "runs": 0,
+    "instagram_runs": 0,
+    "instagram_media": 0,
+    "naver_calls": 0
+  },
+  "constructors_and_reads_unchanged": true,
+  "second_migration_applied": [],
+  "source_database_written": false
+}

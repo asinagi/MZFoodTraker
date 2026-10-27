@@ -1,12 +1,32 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>음식 트렌드 탐지</title><link rel="stylesheet" href="/style.css"><script src="/instagram.js" defer></script><script src="/naver.js" defer></script><script src="/youtube.js" defer></script><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>음식 트렌드 탐지</title><link rel="stylesheet" href="/style.css"><script src="/instagram.js" defer></script><script src="/naver.js" defer></script><script src="/youtube.js" defer></script><script src="/app.js" defer></script><script src="/foods.js" defer></script></head>
 <body><main>
 <header><div><span class="eyebrow">GOOGLE TRENDS · KR</span><h1>음식 트렌드 탐지</h1><p>급상승 검색어에서 새로운 음식의 단서를 발견합니다.</p></div><button id="collect">지금 수집</button></header>
 <section id="summary" class="summary" aria-label="수집 요약"></section>
 <p id="status" role="status" aria-live="polite">저장 데이터를 불러오는 중…</p>
 <section id="recent-summary" class="summary" aria-label="최근 수집 통계"></section>
 <p id="freshness" class="note"></p>
+<section id="food-registry" class="instagram-panel" aria-labelledby="food-heading">
+<div class="food-heading"><div><span class="eyebrow">음식 사전 · 검토와 승인</span><h2 id="food-heading">음식을 등록하고 이름을 연결하세요</h2></div><button id="food-reload" type="button">목록 새로고침</button></div>
+<p class="note">RSS 후보가 없어도 등록할 수 있습니다. 새 음식과 별칭은 승인 후 연결되며, 외부 API 수집은 시작하지 않습니다.</p>
+<p class="note">같은 이름·범위의 재등록은 기존 후보를 반환합니다. 승인된 음식의 별칭 추가는 음식 상세에서 처리하세요.</p>
+<form id="food-register" class="food-form">
+<label>음식명 <input name="name" required maxlength="200" placeholder="두쫀쿠"></label>
+<label>유형 <select name="entity_kind"><option value="PRODUCT">음식 상품</option><option value="DISH">요리</option><option value="INGREDIENT">식재료</option><option value="FOOD_CONCEPT">음식 범주</option><option value="BRAND">브랜드 (음식 승인 불가)</option><option value="STORE">매장 (음식 승인 불가)</option><option value="UNKNOWN">유형 검토 필요</option></select></label>
+<label class="food-wide">제안할 정확 별칭 (쉼표로 구분) <input name="aliases" placeholder="두바이 쫀득 쿠키, 두바이쫀득쿠키"></label>
+<label class="food-wide">설명 (선택) <input name="description" maxlength="2000"></label>
+<details class="food-wide"><summary>동형어 범위·관계 정보 (선택)</summary>
+<label>별칭 범위 <input name="scope" value="food:ko" maxlength="100" pattern="[A-Za-z0-9_.:\-]+"></label>
+<label>관계 음식 ID <input name="relation_food_id" placeholder="FOOD_…"></label>
+<label>관계 <select name="relation_type"><option value="VARIANT_OF">다른 음식의 파생</option><option value="RELATED_TO">연관 음식</option></select></label></details>
+<button type="submit">검토 후보 등록</button>
+</form>
+<p id="food-message" role="status" aria-live="polite"></p>
+<details><summary>기존 RSS 항목을 공통 검토 후보로 가져오기</summary><form id="food-import" class="tools"><label>RSS 항목 ID <input name="source_item_id" type="number" min="1" required></label><button>검토 후보 생성</button></form></details>
+<div class="food-columns"><div><h3>후보 검토</h3><div id="food-candidate-list"></div></div><div><h3>승인된 음식</h3><div id="food-entity-list"></div></div></div>
+<dialog id="food-dialog"><div class="detail-head"><h2 id="food-dialog-title"></h2><button id="food-dialog-close" type="button">닫기</button></div><div id="food-dialog-body"></div></dialog>
+</section>
 <section id="instagram-overview" class="instagram-panel" aria-label="Instagram 해시태그 분석"><h2>Instagram 해시태그 분석</h2><p>관측 데이터와 공동 출현 태그를 불러오고 있습니다.</p></section>
 <div class="tools"><label>분류 <select id="filter"><option value="FOOD">음식 후보 (FOOD)</option><option value="REVIEW">검토 필요 (REVIEW)</option><option value="NON_FOOD">비음식 (NON_FOOD)</option><option value="ALL">전체 검색어</option></select></label><label>키워드 검색 <input id="search" type="search" placeholder="검색어 입력"></label><span id="count"></span><a href="/api/export" download="trends-audit.json" id="export">감사용 전체 JSON 내보내기</a></div>
 <p class="note">최신 최초 발견순 · 시간은 한국 시간(KST)입니다. 트래픽은 RSS의 대략적 원본 값이며 정확한 검색량이나 전체 언급량이 아닙니다.</p>

@@ -1,0 +1,20 @@
+{
+  "preservation_directory": "data\\a4-a5-preservation-20261027T061551Z",
+  "git_head": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
+  "git_branch": "main",
+  "git_status_initial": "clean",
+  "database": {
+    "schema_version": 0,
+    "tables": 30,
+    "rss_food_count": 0,
+    "running": {
+      "runs": 0,
+      "instagram_runs": 0,
+      "youtube_runs": 0,
+      "naver_calls": 0,
+      "youtube_calls": 0
+    },
+    "instagram_leases": 0,
+    "integrity": "ok"
+  }
+}

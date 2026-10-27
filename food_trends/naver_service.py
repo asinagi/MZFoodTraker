@@ -9,6 +9,7 @@ from .classifier import normalize
 from .naver_datalab import NaverClient, NaverError, request_body, today
 from .storage import utcnow
 from .contracts import envelope, encode
+from .entity_types import can_track_legacy
 
 # Explicit, exact aliases only. No fuzzy matching or generated food associations.
 ALIASES = {'두쫀쿠': ['두쫀쿠', '두바이 쫀득 쿠키', '두바이쫀득쿠키']}
@@ -32,20 +33,22 @@ class NaverService:
     def targets(self):
         """Pure read projection; absent persisted target rows remain pending."""
         with self.storage.reader() as db:
-            rows = db.execute('''SELECT c.item_id,c.normalized_name,t.last_attempt_at,
+            rows = db.execute('''SELECT c.item_id,c.normalized_name,c.entity_type,t.last_attempt_at,
                 t.last_success_at,coalesce(t.status,'pending') AS status FROM candidates c
                 LEFT JOIN naver_targets t ON t.candidate_id=c.item_id
                 WHERE c.classification='FOOD' ORDER BY c.item_id''').fetchall()
         return [dict(candidate_id=r['item_id'], topic=keyword_group(r['normalized_name'])['groupName'],
                      keywords=keyword_group(r['normalized_name'])['keywords'], source='naver_datalab',
                      last_attempt_at=r['last_attempt_at'], last_success_at=r['last_success_at'], status=r['status'])
-                for r in rows]
+                for r in rows if can_track_legacy(r['entity_type'])]
 
     def sync_targets(self):
         """Explicit write preparation, called only by collection/query operations."""
         with self.storage.connect() as db:
-            rows = db.execute("SELECT item_id,normalized_name FROM candidates WHERE classification='FOOD' ORDER BY item_id").fetchall()
+            rows = db.execute("SELECT item_id,normalized_name,entity_type FROM candidates WHERE classification='FOOD' ORDER BY item_id").fetchall()
             for row in rows:
+                if not can_track_legacy(row['entity_type']):
+                    continue
                 group = keyword_group(row['normalized_name'])
                 db.execute('''INSERT INTO naver_targets(candidate_id,topic,keywords_json) VALUES (?,?,?)
                     ON CONFLICT(candidate_id) DO UPDATE SET topic=excluded.topic,keywords_json=excluded.keywords_json''',

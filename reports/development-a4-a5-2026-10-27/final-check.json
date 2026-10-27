@@ -1,0 +1,9 @@
+{
+  "head": "97b3c350fb780ac9c177d653bfc1f5ad88d07ff7",
+  "branch": "main",
+  "head_unchanged": true,
+  "changed_files_match_manifest": true,
+  "production_schema_version": 0,
+  "patch_reverse_check": "passed; check only, no changes applied",
+  "committed_or_staged": false
+}
