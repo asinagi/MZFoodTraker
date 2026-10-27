@@ -1,0 +1,2650 @@
+{
+  "snapshot_utc": "2026-10-26T06:47:41.277140+00:00",
+  "database_bytes": 6676480,
+  "sqlite_version": "3.43.1",
+  "journal_mode": "wal",
+  "integrity": "ok",
+  "foreign_key_violations": [],
+  "counts": {
+    "candidates": 264,
+    "classification_history": 242,
+    "instagram_analysis_observations": 167,
+    "instagram_candidate_hashtags": 0,
+    "instagram_caption_analysis": 72,
+    "instagram_caption_tags": 268,
+    "instagram_hashtag_media": 72,
+    "instagram_hashtags": 1,
+    "instagram_leases": 0,
+    "instagram_media": 72,
+    "instagram_metrics": 3,
+    "instagram_observation_tags": 545,
+    "instagram_runs": 4,
+    "instagram_searches": 1,
+    "instagram_state": 5,
+    "items": 264,
+    "naver_calls": 10,
+    "naver_guards": 5,
+    "naver_targets": 0,
+    "observations": 700,
+    "runs": 75,
+    "youtube_calls": 17,
+    "youtube_candidate_foods": 0,
+    "youtube_foods": 0,
+    "youtube_matches": 277,
+    "youtube_queries": 6,
+    "youtube_runs": 1,
+    "youtube_state": 4,
+    "youtube_video_provenance": 5,
+    "youtube_videos": 253
+  },
+  "schema": {
+    "candidates": {
+      "sql": "CREATE TABLE candidates (\n                    item_id INTEGER PRIMARY KEY REFERENCES items(id), normalized_name TEXT NOT NULL,\n                    classification TEXT NOT NULL, reasons TEXT NOT NULL, classifier_version TEXT NOT NULL, entity_type TEXT NOT NULL DEFAULT 'UNKNOWN', rule_score INTEGER, score_basis TEXT, evidence_news TEXT NOT NULL DEFAULT '[]', classified_at TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "item_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "normalized_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "classification",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "reasons",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "classifier_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "entity_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'UNKNOWN'",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "rule_score",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "score_basis",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "evidence_news",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "classified_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "items",
+          "from": "item_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": []
+    },
+    "classification_history": {
+      "sql": "CREATE TABLE classification_history (\n                    id INTEGER PRIMARY KEY, item_id INTEGER REFERENCES items(id),\n                    recorded_at TEXT NOT NULL, result_json TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "item_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "recorded_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "result_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "items",
+          "from": "item_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": []
+    },
+    "instagram_analysis_observations": {
+      "sql": "CREATE TABLE instagram_analysis_observations (\n                    id INTEGER PRIMARY KEY, hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),\n                    media_id TEXT NOT NULL REFERENCES instagram_media(id),\n                    run_id INTEGER REFERENCES instagram_runs(id), observed_at TEXT NOT NULL,\n                    caption_state TEXT NOT NULL, caption_hash TEXT, hashtag_count INTEGER NOT NULL,\n                    extractor_version TEXT NOT NULL, evidence_kind TEXT NOT NULL,\n                    UNIQUE(hashtag_id,media_id,observed_at))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "hashtag_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "media_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "run_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "observed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "caption_state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "caption_hash",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "hashtag_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "extractor_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "evidence_kind",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_runs",
+          "from": "run_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "instagram_media",
+          "from": "media_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 2,
+          "seq": 0,
+          "table": "instagram_hashtags",
+          "from": "hashtag_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "instagram_analysis_window",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_instagram_analysis_observations_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_candidate_hashtags": {
+      "sql": "CREATE TABLE instagram_candidate_hashtags (\n                    candidate_id INTEGER NOT NULL REFERENCES candidates(item_id),\n                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),\n                    PRIMARY KEY(candidate_id,hashtag_id))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "hashtag_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_hashtags",
+          "from": "hashtag_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "candidates",
+          "from": "candidate_id",
+          "to": "item_id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_candidate_hashtags_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_caption_analysis": {
+      "sql": "CREATE TABLE instagram_caption_analysis (\n                    media_id TEXT PRIMARY KEY REFERENCES instagram_media(id),\n                    caption_state TEXT NOT NULL, caption_hash TEXT,\n                    extractor_version TEXT NOT NULL, analyzed_at TEXT NOT NULL,\n                    hashtag_count INTEGER NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "media_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "caption_state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "caption_hash",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "extractor_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "analyzed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "hashtag_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_media",
+          "from": "media_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_caption_analysis_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_caption_tags": {
+      "sql": "CREATE TABLE instagram_caption_tags (\n                    media_id TEXT NOT NULL REFERENCES instagram_media(id),\n                    normalized_name TEXT NOT NULL, original_names TEXT NOT NULL,\n                    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,\n                    PRIMARY KEY(media_id,normalized_name))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "media_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "normalized_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "original_names",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "first_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "last_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_media",
+          "from": "media_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_caption_tags_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_hashtag_media": {
+      "sql": "CREATE TABLE instagram_hashtag_media (\n                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),\n                    media_id TEXT NOT NULL REFERENCES instagram_media(id),\n                    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,\n                    PRIMARY KEY(hashtag_id,media_id))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "hashtag_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "media_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "first_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "last_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_media",
+          "from": "media_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "instagram_hashtags",
+          "from": "hashtag_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_hashtag_media_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_hashtags": {
+      "sql": "CREATE TABLE instagram_hashtags (\n                    id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,\n                    instagram_id TEXT, created_at TEXT NOT NULL, last_searched_at TEXT,\n                    active INTEGER NOT NULL DEFAULT 0, approved_at TEXT,\n                    UNIQUE(user_id,name))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "instagram_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "last_searched_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "approved_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_hashtags_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_leases": {
+      "sql": "CREATE TABLE instagram_leases (\n                    user_id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires_at TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "owner",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "expires_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_leases_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_media": {
+      "sql": "CREATE TABLE instagram_media (\n                    id TEXT PRIMARY KEY, published_at TEXT, first_seen TEXT NOT NULL,\n                    last_seen TEXT NOT NULL, media_type TEXT, permalink TEXT,\n                    source TEXT NOT NULL DEFAULT 'instagram_graph', caption TEXT, caption_captured_at TEXT, caption_purged_at TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "published_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "first_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "last_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "media_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "permalink",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'instagram_graph'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "caption",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "caption_captured_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "caption_purged_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_media_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_metrics": {
+      "sql": "CREATE TABLE instagram_metrics (\n                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),\n                    grain TEXT NOT NULL, bucket TEXT NOT NULL, new_count INTEGER NOT NULL,\n                    run_count INTEGER NOT NULL, successful_runs INTEGER NOT NULL,\n                    PRIMARY KEY(hashtag_id,grain,bucket))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "hashtag_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "grain",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "bucket",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "new_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "run_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "successful_runs",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_hashtags",
+          "from": "hashtag_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_metrics_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_observation_tags": {
+      "sql": "CREATE TABLE instagram_observation_tags (\n                    observation_id INTEGER NOT NULL REFERENCES instagram_analysis_observations(id),\n                    normalized_name TEXT NOT NULL, original_names TEXT NOT NULL,\n                    active INTEGER NOT NULL DEFAULT 1,\n                    PRIMARY KEY(observation_id,normalized_name))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "observation_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "normalized_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "original_names",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_analysis_observations",
+          "from": "observation_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "instagram_observed_tag",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_instagram_observation_tags_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_runs": {
+      "sql": "CREATE TABLE instagram_runs (\n                    id INTEGER PRIMARY KEY, hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),\n                    started_at TEXT NOT NULL, finished_at TEXT, status TEXT NOT NULL DEFAULT 'running',\n                    request_count INTEGER NOT NULL DEFAULT 0, returned_count INTEGER NOT NULL DEFAULT 0,\n                    new_count INTEGER NOT NULL DEFAULT 0, duplicate_count INTEGER NOT NULL DEFAULT 0,\n                    error_type TEXT, error_code INTEGER, error_subcode INTEGER,\n                    truncated INTEGER NOT NULL DEFAULT 0)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "hashtag_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "started_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "finished_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'running'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "request_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "returned_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "new_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "duplicate_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "error_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "error_code",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "error_subcode",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "truncated",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "instagram_hashtags",
+          "from": "hashtag_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "instagram_run_tag",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_searches": {
+      "sql": "CREATE TABLE instagram_searches (\n                    id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,\n                    instagram_id TEXT, searched_at TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "instagram_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "searched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "instagram_search_window",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        }
+      ]
+    },
+    "instagram_state": {
+      "sql": "CREATE TABLE instagram_state (\n                    user_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL,\n                    PRIMARY KEY(user_id,key))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_instagram_state_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "items": {
+      "sql": "CREATE TABLE items (\n                    id INTEGER PRIMARY KEY, source_id TEXT UNIQUE NOT NULL, keyword TEXT NOT NULL,\n                    published_at TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, payload TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "keyword",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "published_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "first_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "last_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "payload",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "items_keyword",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_items_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        }
+      ]
+    },
+    "naver_calls": {
+      "sql": "CREATE TABLE naver_calls (\n                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, fingerprint TEXT NOT NULL,\n                    requested_at TEXT NOT NULL, finished_at TEXT, status TEXT NOT NULL,\n                    http_status INTEGER, request_json TEXT NOT NULL, candidate_ids TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "day",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "fingerprint",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "requested_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "finished_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "http_status",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "request_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "candidate_ids",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "naver_calls_day",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        }
+      ]
+    },
+    "naver_guards": {
+      "sql": "CREATE TABLE naver_guards (\n                    fingerprint TEXT PRIMARY KEY, owner TEXT NOT NULL, until_epoch REAL NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "fingerprint",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "owner",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "until_epoch",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_naver_guards_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "naver_targets": {
+      "sql": "CREATE TABLE naver_targets (\n                    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(item_id),\n                    topic TEXT NOT NULL, keywords_json TEXT NOT NULL,\n                    last_attempt_at TEXT, last_success_at TEXT, status TEXT NOT NULL DEFAULT 'pending')",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "topic",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "keywords_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "last_attempt_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "last_success_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'pending'",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "candidates",
+          "from": "candidate_id",
+          "to": "item_id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": []
+    },
+    "observations": {
+      "sql": "CREATE TABLE observations (\n                    run_id INTEGER REFERENCES runs(id), item_id INTEGER REFERENCES items(id),\n                    payload TEXT NOT NULL, classification_json TEXT, PRIMARY KEY(run_id,item_id))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "run_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "item_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "payload",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "classification_json",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "items",
+          "from": "item_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "runs",
+          "from": "run_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_observations_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "runs": {
+      "sql": "CREATE TABLE runs (\n                    id INTEGER PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,\n                    success INTEGER, error TEXT, http_status INTEGER, item_count INTEGER DEFAULT 0,\n                    new_count INTEGER DEFAULT 0, warnings TEXT, raw_response BLOB, food_count INTEGER, review_count INTEGER, new_food_count INTEGER, new_review_count INTEGER, classifier_version TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "started_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "finished_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "success",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "error",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "http_status",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "item_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "new_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "warnings",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "raw_response",
+          "type": "BLOB",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "food_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "review_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "new_food_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "new_review_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "classifier_version",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": []
+    },
+    "youtube_calls": {
+      "sql": "CREATE TABLE youtube_calls (\n                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, endpoint TEXT NOT NULL,\n                    query_id INTEGER REFERENCES youtube_queries(id), started_at TEXT NOT NULL,\n                    finished_at TEXT, status TEXT NOT NULL, http_status INTEGER, origin TEXT NOT NULL DEFAULT 'legacy_unknown', run_id TEXT, result_count INTEGER)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "day",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "endpoint",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "query_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "started_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "finished_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "http_status",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "origin",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'legacy_unknown'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "run_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "result_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "youtube_queries",
+          "from": "query_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "youtube_calls_day",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_candidate_foods": {
+      "sql": "CREATE TABLE youtube_candidate_foods (\n                    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(item_id) ON DELETE CASCADE,\n                    food_id INTEGER NOT NULL REFERENCES youtube_foods(id))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "food_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "youtube_foods",
+          "from": "food_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "candidates",
+          "from": "candidate_id",
+          "to": "item_id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": []
+    },
+    "youtube_foods": {
+      "sql": "CREATE TABLE youtube_foods (\n                    id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_youtube_foods_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_matches": {
+      "sql": "CREATE TABLE youtube_matches (\n                    query_id INTEGER REFERENCES youtube_queries(id) ON DELETE CASCADE,\n                    video_id TEXT REFERENCES youtube_videos(video_id) ON DELETE CASCADE,\n                    matched_at TEXT NOT NULL, PRIMARY KEY(query_id,video_id))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "query_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "video_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "matched_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "youtube_videos",
+          "from": "video_id",
+          "to": "video_id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "youtube_queries",
+          "from": "query_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_youtube_matches_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_queries": {
+      "sql": "CREATE TABLE youtube_queries (\n                    id INTEGER PRIMARY KEY, query TEXT NOT NULL, mode TEXT NOT NULL,\n                    food_id INTEGER REFERENCES youtube_foods(id), active INTEGER NOT NULL DEFAULT 1,\n                    after_at TEXT, before_at TEXT, page_token TEXT, token_at TEXT, last_attempt TEXT,\n                    UNIQUE(query,mode))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "query",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "mode",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "food_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "after_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "before_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "page_token",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "token_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "last_attempt",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "youtube_foods",
+          "from": "food_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_youtube_queries_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_runs": {
+      "sql": "CREATE TABLE youtube_runs (\n                    id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,\n                    trigger TEXT NOT NULL, origin TEXT NOT NULL, status TEXT NOT NULL,\n                    result_json TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "started_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "finished_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "trigger",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "origin",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "result_json",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_youtube_runs_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_state": {
+      "sql": "CREATE TABLE youtube_state (\n                    key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_youtube_state_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_video_provenance": {
+      "sql": "CREATE TABLE youtube_video_provenance (\n                    video_id TEXT PRIMARY KEY REFERENCES youtube_videos(video_id) ON DELETE CASCADE,\n                    origin TEXT NOT NULL, verified_at TEXT NOT NULL, run_id TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "video_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "origin",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "verified_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "run_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "youtube_videos",
+          "from": "video_id",
+          "to": "video_id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_youtube_video_provenance_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "youtube_videos": {
+      "sql": "CREATE TABLE youtube_videos (\n                    video_id TEXT PRIMARY KEY, payload TEXT NOT NULL, collected_at TEXT NOT NULL,\n                    refreshed_at TEXT NOT NULL, expires_at TEXT NOT NULL)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "video_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "payload",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "collected_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "refreshed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "expires_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "youtube_expiry",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_youtube_videos_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    }
+  },
+  "queries": {
+    "rss_classes": {
+      "sql": "SELECT classification,count(*) n FROM candidates GROUP BY classification",
+      "rows": [
+        {
+          "classification": "NON_FOOD",
+          "n": 263
+        },
+        {
+          "classification": "REVIEW",
+          "n": 1
+        }
+      ]
+    },
+    "rss_runs": {
+      "sql": "SELECT success,http_status,count(*) n,sum(item_count) returned,sum(new_count) new_items FROM runs GROUP BY success,http_status",
+      "rows": [
+        {
+          "success": 0,
+          "http_status": null,
+          "n": 4,
+          "returned": 0,
+          "new_items": 0
+        },
+        {
+          "success": 0,
+          "http_status": 200,
+          "n": 1,
+          "returned": 0,
+          "new_items": 0
+        },
+        {
+          "success": 1,
+          "http_status": 200,
+          "n": 70,
+          "returned": 700,
+          "new_items": 264
+        }
+      ]
+    },
+    "rss_times": {
+      "sql": "SELECT min(first_seen) first_seen,max(last_seen) last_seen,min(published_at) first_published,max(published_at) last_published,count(DISTINCT keyword) distinct_keywords FROM items",
+      "rows": [
+        {
+          "first_seen": "2026-10-13T05:30:13.383395+00:00",
+          "last_seen": "2026-10-26T06:34:23.812037+00:00",
+          "first_published": "2026-10-13T02:50:00+00:00",
+          "last_published": "2026-10-26T05:30:00+00:00",
+          "distinct_keywords": 259
+        }
+      ]
+    },
+    "rss_missing": {
+      "sql": "SELECT sum(published_at IS NULL) missing_publication,sum(keyword='') empty_keyword,sum(first_seen>last_seen) reversed_time FROM items",
+      "rows": [
+        {
+          "missing_publication": 0,
+          "empty_keyword": 0,
+          "reversed_time": 0
+        }
+      ]
+    },
+    "rss_history": {
+      "sql": "SELECT count(*) total,sum(classification_json IS NULL) missing_classification FROM observations",
+      "rows": [
+        {
+          "total": 700,
+          "missing_classification": 530
+        }
+      ]
+    },
+    "rss_unclassified": {
+      "sql": "SELECT count(*) n FROM items i LEFT JOIN candidates c ON c.item_id=i.id WHERE c.item_id IS NULL",
+      "rows": [
+        {
+          "n": 0
+        }
+      ]
+    },
+    "rss_keyword_repeats": {
+      "sql": "SELECT count(*) repeated_names,sum(n-1) extra_items FROM (SELECT keyword,count(*) n FROM items GROUP BY keyword HAVING count(*)>1)",
+      "rows": [
+        {
+          "repeated_names": 4,
+          "extra_items": 5
+        }
+      ]
+    },
+    "rss_failures": {
+      "sql": "SELECT id,http_status,item_count,new_count,raw_response IS NOT NULL has_raw FROM runs WHERE success=0",
+      "rows": [
+        {
+          "id": 1,
+          "http_status": null,
+          "item_count": 0,
+          "new_count": 0,
+          "has_raw": 0
+        },
+        {
+          "id": 2,
+          "http_status": null,
+          "item_count": 0,
+          "new_count": 0,
+          "has_raw": 0
+        },
+        {
+          "id": 55,
+          "http_status": null,
+          "item_count": 0,
+          "new_count": 0,
+          "has_raw": 0
+        },
+        {
+          "id": 56,
+          "http_status": null,
+          "item_count": 0,
+          "new_count": 0,
+          "has_raw": 0
+        },
+        {
+          "id": 60,
+          "http_status": 200,
+          "item_count": 0,
+          "new_count": 0,
+          "has_raw": 1
+        }
+      ]
+    },
+    "ig_runs": {
+      "sql": "SELECT status,error_type,truncated,count(*) n,sum(returned_count) returned,sum(new_count) new_rows,sum(duplicate_count) duplicate_rows,sum(request_count) requests FROM instagram_runs GROUP BY status,error_type,truncated",
+      "rows": [
+        {
+          "status": "limited",
+          "error_type": null,
+          "truncated": 1,
+          "n": 4,
+          "returned": 217,
+          "new_rows": 72,
+          "duplicate_rows": 145,
+          "requests": 26
+        }
+      ]
+    },
+    "ig_times": {
+      "sql": "SELECT min(first_seen) first_seen,max(last_seen) last_seen,min(published_at) first_published,max(published_at) last_published FROM instagram_media",
+      "rows": [
+        {
+          "first_seen": "2026-10-26T05:27:22.013495+00:00",
+          "last_seen": "2026-10-26T06:28:07.468548+00:00",
+          "first_published": "2026-10-25T05:57:03+00:00",
+          "last_published": "2026-10-26T06:22:29+00:00"
+        }
+      ]
+    },
+    "ig_missing": {
+      "sql": "SELECT count(*) total,sum(caption IS NULL) missing_caption,sum(published_at IS NULL) missing_publication,sum(permalink IS NULL) missing_link,sum(media_type IS NULL) missing_type,sum(caption_purged_at IS NOT NULL) purged FROM instagram_media",
+      "rows": [
+        {
+          "total": 72,
+          "missing_caption": 1,
+          "missing_publication": 0,
+          "missing_link": 0,
+          "missing_type": 0,
+          "purged": 0
+        }
+      ]
+    },
+    "ig_caption_states": {
+      "sql": "SELECT caption_state,count(*) n FROM instagram_caption_analysis GROUP BY caption_state",
+      "rows": [
+        {
+          "caption_state": "missing",
+          "n": 1
+        },
+        {
+          "caption_state": "no_tags",
+          "n": 19
+        },
+        {
+          "caption_state": "parsed",
+          "n": 52
+        }
+      ]
+    },
+    "ig_evidence": {
+      "sql": "SELECT evidence_kind,count(*) n FROM instagram_analysis_observations GROUP BY evidence_kind",
+      "rows": [
+        {
+          "evidence_kind": "api",
+          "n": 100
+        },
+        {
+          "evidence_kind": "legacy_snapshot",
+          "n": 67
+        }
+      ]
+    },
+    "ig_tags": {
+      "sql": "SELECT id,name,active,(SELECT count(*) FROM instagram_candidate_hashtags ch WHERE ch.hashtag_id=h.id) linked_candidates FROM instagram_hashtags h",
+      "rows": [
+        {
+          "id": 1,
+          "name": "두쫀쿠",
+          "active": 1,
+          "linked_candidates": 0
+        }
+      ]
+    },
+    "ig_co_tags": {
+      "sql": "SELECT count(DISTINCT normalized_name) n FROM instagram_observation_tags WHERE active=1",
+      "rows": [
+        {
+          "n": 186
+        }
+      ]
+    },
+    "ig_multi_tags": {
+      "sql": "SELECT count(*) n FROM (SELECT media_id FROM instagram_hashtag_media GROUP BY media_id HAVING count(*)>1)",
+      "rows": [
+        {
+          "n": 0
+        }
+      ]
+    },
+    "ig_metric_totals": {
+      "sql": "SELECT grain,sum(new_count) new_count,sum(run_count) runs,sum(successful_runs) successful FROM instagram_metrics GROUP BY grain",
+      "rows": [
+        {
+          "grain": "day",
+          "new_count": 72,
+          "runs": 4,
+          "successful": 0
+        },
+        {
+          "grain": "hour",
+          "new_count": 72,
+          "runs": 4,
+          "successful": 0
+        }
+      ]
+    },
+    "naver_calls": {
+      "sql": "SELECT status,http_status,count(*) n FROM naver_calls GROUP BY status,http_status",
+      "rows": [
+        {
+          "status": "network",
+          "http_status": null,
+          "n": 3
+        },
+        {
+          "status": "success",
+          "http_status": 200,
+          "n": 7
+        }
+      ]
+    },
+    "naver_times": {
+      "sql": "SELECT min(requested_at) first_attempt,max(requested_at) last_attempt FROM naver_calls",
+      "rows": [
+        {
+          "first_attempt": "2026-10-26T05:22:09.412780+00:00",
+          "last_attempt": "2026-10-26T05:54:59.085987+00:00"
+        }
+      ]
+    },
+    "naver_user_queries": {
+      "sql": "SELECT candidate_ids,count(*) n FROM naver_calls GROUP BY candidate_ids",
+      "rows": [
+        {
+          "candidate_ids": "[]",
+          "n": 10
+        }
+      ]
+    },
+    "yt_calls": {
+      "sql": "SELECT endpoint,origin,status,http_status,count(*) n,sum(result_count) result_rows FROM youtube_calls GROUP BY endpoint,origin,status,http_status",
+      "rows": [
+        {
+          "endpoint": "search",
+          "origin": "legacy_unknown",
+          "status": "network",
+          "http_status": null,
+          "n": 3,
+          "result_rows": null
+        },
+        {
+          "endpoint": "search",
+          "origin": "legacy_unknown",
+          "status": "success",
+          "http_status": 200,
+          "n": 6,
+          "result_rows": null
+        },
+        {
+          "endpoint": "search",
+          "origin": "live_api",
+          "status": "success",
+          "http_status": 200,
+          "n": 1,
+          "result_rows": 5
+        },
+        {
+          "endpoint": "videos",
+          "origin": "legacy_unknown",
+          "status": "success",
+          "http_status": 200,
+          "n": 6,
+          "result_rows": null
+        },
+        {
+          "endpoint": "videos",
+          "origin": "live_api",
+          "status": "success",
+          "http_status": 200,
+          "n": 1,
+          "result_rows": 5
+        }
+      ]
+    },
+    "yt_queries": {
+      "sql": "SELECT mode,active,count(*) n,sum(food_id IS NOT NULL) linked_food FROM youtube_queries GROUP BY mode,active",
+      "rows": [
+        {
+          "mode": "discovery",
+          "active": 1,
+          "n": 6,
+          "linked_food": 0
+        }
+      ]
+    },
+    "yt_runs": {
+      "sql": "SELECT origin,status,count(*) n FROM youtube_runs GROUP BY origin,status",
+      "rows": [
+        {
+          "origin": "live_api",
+          "status": "success",
+          "n": 1
+        }
+      ]
+    },
+    "yt_provenance": {
+      "sql": "SELECT coalesce(p.origin,'legacy_unknown') origin,count(*) n FROM youtube_videos v LEFT JOIN youtube_video_provenance p USING(video_id) GROUP BY coalesce(p.origin,'legacy_unknown')",
+      "rows": [
+        {
+          "origin": "legacy_unknown",
+          "n": 248
+        },
+        {
+          "origin": "live_api",
+          "n": 5
+        }
+      ]
+    },
+    "yt_times": {
+      "sql": "SELECT min(collected_at) first_collected,max(refreshed_at) last_refreshed,min(expires_at) earliest_expiry FROM youtube_videos",
+      "rows": [
+        {
+          "first_collected": "2026-10-26T06:22:29.151861+00:00",
+          "last_refreshed": "2026-10-26T06:31:13.408617+00:00",
+          "earliest_expiry": "2026-11-24T06:22:29.151861+00:00"
+        }
+      ]
+    },
+    "yt_expired": {
+      "sql": "SELECT count(*) n FROM youtube_videos WHERE expires_at<=?",
+      "rows": [
+        {
+          "n": 0
+        }
+      ]
+    },
+    "yt_matches": {
+      "sql": "SELECT q.mode,count(*) matches,count(DISTINCT m.video_id) unique_videos FROM youtube_matches m JOIN youtube_queries q ON q.id=m.query_id GROUP BY q.mode",
+      "rows": [
+        {
+          "mode": "discovery",
+          "matches": 277,
+          "unique_videos": 253
+        }
+      ]
+    },
+    "ig_duplicate_ids": {
+      "sql": "SELECT count(*)-count(DISTINCT id) n FROM instagram_media",
+      "rows": [
+        {
+          "n": 0
+        }
+      ]
+    },
+    "rss_duplicate_ids": {
+      "sql": "SELECT count(*)-count(DISTINCT source_id) n FROM items",
+      "rows": [
+        {
+          "n": 0
+        }
+      ]
+    },
+    "yt_duplicate_ids": {
+      "sql": "SELECT count(*)-count(DISTINCT video_id) n FROM youtube_videos",
+      "rows": [
+        {
+          "n": 0
+        }
+      ]
+    }
+  },
+  "items_payload_quality": {
+    "denominator": 264,
+    "invalid_json": 0,
+    "missing_or_empty": {
+      "keyword": 0,
+      "published_at": 0,
+      "traffic": 0,
+      "news": 7,
+      "related_queries": 264
+    }
+  },
+  "youtube_videos_payload_quality": {
+    "denominator": 253,
+    "invalid_json": 0,
+    "missing_or_empty": {
+      "video_id": 0,
+      "title": 0,
+      "description": 44,
+      "published_at": 0,
+      "channel_id": 0,
+      "view_count": 0,
+      "like_count": 10,
+      "comment_count": 5,
+      "duration": 0,
+      "privacy_status": 0
+    }
+  },
+  "rss_raw_reconciliation": {
+    "success_runs": 70,
+    "parse_errors": 0,
+    "observation_mismatches": 0,
+    "raw_missing": 0,
+    "response_rows": 700,
+    "response_duplicate_ids": 0
+  }
+}

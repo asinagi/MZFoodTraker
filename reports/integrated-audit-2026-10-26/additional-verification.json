@@ -1,0 +1,40 @@
+{
+  "candidate_replace_cascade": {
+    "fixture_food_links_before": 1,
+    "after_identical_rss_collection": 0,
+    "production_loss_observed": false,
+    "cause": "INSERT OR REPLACE candidates + ON DELETE CASCADE youtube_candidate_foods",
+    "scope": "synthetic temporary database only"
+  },
+  "file_and_child_environment_config": {
+    "instagram": {
+      "configured": true,
+      "enabled": true,
+      "version": "v26.0",
+      "interval_minutes": 60.0,
+      "max_pages": 20,
+      "caption_retention_days": 30
+    },
+    "naver": {
+      "configured": true,
+      "enabled": true,
+      "interval_seconds": 86400,
+      "daily_limit": 100
+    },
+    "youtube": {
+      "configured": true,
+      "enabled": true,
+      "interval_seconds": 21600,
+      "daily_search_limit": 40,
+      "daily_video_limit": 1000,
+      "max_pages": 1
+    },
+    "note": "does not establish running server environment"
+  },
+  "oracledb_installed_in_audit_python": false,
+  "known_secret_scan": {
+    "files_scanned": 86,
+    "matched_paths": [],
+    "scope": "known current and root data secret values only; browser profiles and historic backups excluded; no secret values output"
+  }
+}

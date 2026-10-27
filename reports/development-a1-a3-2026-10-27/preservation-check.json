@@ -1,0 +1,19 @@
+{
+  "original_database_changed_tables": [
+    "instagram_runs",
+    "instagram_leases"
+  ],
+  "original_database_migrated": false,
+  "env_unchanged": true,
+  "git_during_task": {
+    "root": "D:\\mz 제조기",
+    "branch_observed": "main",
+    "head_at_last_check": "unborn",
+    "created_by_this_task": false
+  },
+  "external_root_changes_preserved": [
+    "README.md",
+    ".env.example",
+    ".gitignore"
+  ]
+}

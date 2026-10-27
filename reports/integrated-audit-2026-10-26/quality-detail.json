@@ -1,0 +1,174 @@
+{
+  "rss_classifiers": [
+    {
+      "classifier_version": "target-context-rules-v2",
+      "classification": "NON_FOOD",
+      "n": 263
+    },
+    {
+      "classifier_version": "target-context-rules-v2",
+      "classification": "REVIEW",
+      "n": 1
+    }
+  ],
+  "rss_review": [
+    {
+      "id": 89,
+      "name": "호박",
+      "entity_type": "UNKNOWN",
+      "rule_score": 25
+    }
+  ],
+  "rss_food_terms": {
+    "literal_dujjonku_keyword_matches": 0,
+    "literal_dubai_keyword_matches": 0,
+    "method": "SQLite instr(keyword, term)>0; no reclassification"
+  },
+  "ig_related_tag_count_excluding_base": 185,
+  "ig_unique_quality": [
+    {
+      "total": 72,
+      "caption_available": 71,
+      "extractable": 52,
+      "base_confirmed": 46
+    }
+  ],
+  "yt_overlap": [
+    {
+      "overlapping_videos": 23,
+      "redundant_match_rows": 24
+    }
+  ],
+  "rss_run_raw_size": [
+    {
+      "bytes": 1424970,
+      "average_bytes": 20356.714285714286
+    }
+  ],
+  "table_nulls": {
+    "items": {
+      "id": 0,
+      "source_id": 0,
+      "keyword": 0,
+      "published_at": 0,
+      "first_seen": 0,
+      "last_seen": 0,
+      "payload": 0
+    },
+    "observations": {
+      "run_id": 0,
+      "item_id": 0,
+      "payload": 0,
+      "classification_json": 530
+    },
+    "candidates": {
+      "item_id": 0,
+      "normalized_name": 0,
+      "classification": 0,
+      "reasons": 0,
+      "classifier_version": 0,
+      "entity_type": 0,
+      "rule_score": 0,
+      "score_basis": 0,
+      "evidence_news": 0,
+      "classified_at": 0
+    },
+    "instagram_media": {
+      "id": 0,
+      "published_at": 0,
+      "first_seen": 0,
+      "last_seen": 0,
+      "media_type": 0,
+      "permalink": 0,
+      "source": 0,
+      "caption": 1,
+      "caption_captured_at": 1,
+      "caption_purged_at": 72
+    },
+    "instagram_runs": {
+      "id": 0,
+      "hashtag_id": 0,
+      "started_at": 0,
+      "finished_at": 0,
+      "status": 0,
+      "request_count": 0,
+      "returned_count": 0,
+      "new_count": 0,
+      "duplicate_count": 0,
+      "error_type": 4,
+      "error_code": 4,
+      "error_subcode": 4,
+      "truncated": 0
+    },
+    "instagram_analysis_observations": {
+      "id": 0,
+      "hashtag_id": 0,
+      "media_id": 0,
+      "run_id": 67,
+      "observed_at": 0,
+      "caption_state": 0,
+      "caption_hash": 3,
+      "hashtag_count": 0,
+      "extractor_version": 0,
+      "evidence_kind": 0
+    },
+    "naver_calls": {
+      "id": 0,
+      "day": 0,
+      "fingerprint": 0,
+      "requested_at": 0,
+      "finished_at": 0,
+      "status": 0,
+      "http_status": 3,
+      "request_json": 0,
+      "candidate_ids": 0
+    },
+    "youtube_videos": {
+      "video_id": 0,
+      "payload": 0,
+      "collected_at": 0,
+      "refreshed_at": 0,
+      "expires_at": 0
+    },
+    "youtube_matches": {
+      "query_id": 0,
+      "video_id": 0,
+      "matched_at": 0
+    },
+    "youtube_calls": {
+      "id": 0,
+      "day": 0,
+      "endpoint": 0,
+      "query_id": 0,
+      "started_at": 0,
+      "finished_at": 0,
+      "status": 0,
+      "http_status": 3,
+      "origin": 0,
+      "run_id": 15,
+      "result_count": 15
+    }
+  },
+  "rss_error_categories": {
+    "TimeoutError": 2,
+    "URLError": 2,
+    "OperationalError": 1
+  },
+  "unfinished": {
+    "runs": 0,
+    "instagram_runs": 0,
+    "naver_calls": 0,
+    "youtube_calls": 0,
+    "youtube_runs": 0
+  },
+  "schema_table_count": 30,
+  "youtube_publication_range_utc": {
+    "min": "2026-10-19T08:30:14+00:00",
+    "max": "2026-10-26T05:46:18+00:00"
+  },
+  "youtube_privacy": {
+    "public": 253,
+    "private": 0,
+    "unlisted": 0
+  }
+}

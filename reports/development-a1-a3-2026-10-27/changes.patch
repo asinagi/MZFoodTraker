@@ -1,0 +1,2040 @@
+--- before/food_trends\instagram_analysis.py
++++ after/food_trends\instagram_analysis.py
+@@ -56,40 +56,6 @@
+ class HashtagAnalysis:
+     def __init__(self, storage, user_id, retention_days=30):
+         self.storage, self.user_id, self.retention_days = storage, user_id, retention_days
+-        with storage.connect() as db:
+-            db.executescript('''
+-                CREATE TABLE IF NOT EXISTS instagram_caption_analysis (
+-                    media_id TEXT PRIMARY KEY REFERENCES instagram_media(id),
+-                    caption_state TEXT NOT NULL, caption_hash TEXT,
+-                    extractor_version TEXT NOT NULL, analyzed_at TEXT NOT NULL,
+-                    hashtag_count INTEGER NOT NULL);
+-                CREATE TABLE IF NOT EXISTS instagram_caption_tags (
+-                    media_id TEXT NOT NULL REFERENCES instagram_media(id),
+-                    normalized_name TEXT NOT NULL, original_names TEXT NOT NULL,
+-                    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+-                    PRIMARY KEY(media_id,normalized_name));
+-                CREATE TABLE IF NOT EXISTS instagram_analysis_observations (
+-                    id INTEGER PRIMARY KEY, hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
+-                    media_id TEXT NOT NULL REFERENCES instagram_media(id),
+-                    run_id INTEGER REFERENCES instagram_runs(id), observed_at TEXT NOT NULL,
+-                    caption_state TEXT NOT NULL, caption_hash TEXT, hashtag_count INTEGER NOT NULL,
+-                    extractor_version TEXT NOT NULL, evidence_kind TEXT NOT NULL,
+-                    UNIQUE(hashtag_id,media_id,observed_at));
+-                CREATE TABLE IF NOT EXISTS instagram_observation_tags (
+-                    observation_id INTEGER NOT NULL REFERENCES instagram_analysis_observations(id),
+-                    normalized_name TEXT NOT NULL, original_names TEXT NOT NULL,
+-                    active INTEGER NOT NULL DEFAULT 1,
+-                    PRIMARY KEY(observation_id,normalized_name));
+-                CREATE INDEX IF NOT EXISTS instagram_analysis_window ON instagram_analysis_observations(hashtag_id,observed_at,media_id);
+-                CREATE INDEX IF NOT EXISTS instagram_observed_tag ON instagram_observation_tags(normalized_name,observation_id);
+-            ''')
+-            db.execute('BEGIN IMMEDIATE')
+-            columns = {r['name'] for r in db.execute('PRAGMA table_info(instagram_media)')}
+-            for column in ('caption_captured_at', 'caption_purged_at'):
+-                if column not in columns:
+-                    db.execute(f'ALTER TABLE instagram_media ADD COLUMN {column} TEXT')
+-            db.execute('UPDATE instagram_media SET caption_captured_at=first_seen WHERE caption IS NOT NULL AND caption_captured_at IS NULL')
+-        self.reprocess()
+ 
+     @staticmethod
+     def digest(caption):
+@@ -136,6 +102,8 @@
+         count = 0
+         with self.storage.connect() as db:
+             db.execute('BEGIN IMMEDIATE')
++            db.execute('''UPDATE instagram_media SET caption_captured_at=first_seen
++                WHERE caption IS NOT NULL AND caption_captured_at IS NULL''')
+             rows = db.execute('''SELECT DISTINCT m.* FROM instagram_media m JOIN instagram_hashtag_media hm ON hm.media_id=m.id
+                                  JOIN instagram_hashtags h ON h.id=hm.hashtag_id WHERE h.user_id=?''', (self.user_id,)).fetchall()
+             for row in rows:
+@@ -158,8 +126,8 @@
+     def purge_expired(self, db):
+         cutoff = (datetime.now(timezone.utc)-timedelta(days=self.retention_days)).isoformat()
+         return db.execute('''UPDATE instagram_media SET caption=NULL,caption_purged_at=?
+-                             WHERE caption IS NOT NULL AND caption_captured_at<? AND id IN
+-                             (SELECT media_id FROM instagram_caption_analysis)''', (utcnow(), cutoff)).rowcount
++                             WHERE caption IS NOT NULL AND coalesce(caption_captured_at,first_seen)<?''',
++                          (utcnow(), cutoff)).rowcount
+ 
+     def summary(self, tag, days=7, limit=30):
+         now = datetime.now(timezone.utc)
+@@ -169,7 +137,7 @@
+         where = 'o.hashtag_id=? AND o.observed_at>=? AND o.observed_at<=?'
+         args = (tag['id'], start, end)
+         base = normalize_tag(tag['name'])
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             quality = db.execute(f'''SELECT count(*) AS total,
+                 coalesce(sum(available),0) AS available,coalesce(sum(extractable),0) AS extractable,
+                 coalesce(sum(base_confirmed),0) AS base_confirmed FROM (
+@@ -213,9 +181,12 @@
+                     originals.update(json.loads(form[0]))
+                 item['original_names'] = sorted(originals)
+                 ranking.append(item)
+-            raw = db.execute(f'''SELECT count(DISTINCT CASE WHEN m.caption IS NOT NULL THEN m.id END),
++            retention_cutoff = (now-timedelta(days=self.retention_days)).isoformat()
++            raw = db.execute(f'''SELECT count(DISTINCT CASE WHEN m.caption IS NOT NULL
++                AND coalesce(m.caption_captured_at,m.first_seen)>? THEN m.id END),
+                 count(DISTINCT CASE WHEN m.caption IS NULL AND m.caption_purged_at IS NOT NULL THEN m.id END)
+-                FROM instagram_analysis_observations o JOIN instagram_media m ON m.id=o.media_id WHERE {where}''', args).fetchone()
++                FROM instagram_analysis_observations o JOIN instagram_media m ON m.id=o.media_id WHERE {where}''',
++                (retention_cutoff, *args)).fetchone()
+             missing_observations = db.execute(f"SELECT count(*) FROM instagram_analysis_observations o WHERE {where} AND caption_state='missing'", args).fetchone()[0]
+             legacy = db.execute(f"SELECT count(*) FROM instagram_analysis_observations o WHERE {where} AND evidence_kind='legacy_snapshot'", args).fetchone()[0]
+         return {'days': days, 'period_start': start, 'period_end': end, 'time_basis': 'observation_time_kst',
+--- before/food_trends\instagram_graph.py
++++ after/food_trends\instagram_graph.py
+@@ -40,6 +40,7 @@
+     def __init__(self, config, transport=None, sleeper=time.sleep):
+         self.config = config
+         self.transport = transport or build_opener(NoRedirect()).open
++        self.origin = 'live_api' if transport is None else 'mock'
+         self.sleeper = sleeper
+         self.request_count = 0
+         self.before_request = lambda: None
+--- before/food_trends\instagram_service.py
++++ after/food_trends\instagram_service.py
+@@ -15,15 +15,29 @@
+     def __init__(self, storage, config, client=None):
+         self.storage, self.config = storage, config
+         self.store = InstagramStorage(storage, config.user_id, config.caption_retention_days)
+-        if config.configured:
+-            fingerprint = hashlib.sha256(config.token.encode()).hexdigest()
++        self.client = client or GraphClient(config)
++        self.stop_event = threading.Event()
++        self.thread = None
++
++    def credential_changed(self):
++        saved = self.store.state('credential_fingerprint')
++        return bool(self.config.configured and saved is not None and
++                    saved != hashlib.sha256(self.config.token.encode()).hexdigest())
++
++    def prepare_credentials(self):
++        """Write preparation for collection/management, never for constructor or GET."""
++        if self.config.configured:
++            fingerprint = hashlib.sha256(self.config.token.encode()).hexdigest()
+             if self.store.state('credential_fingerprint') != fingerprint:
+                 self.store.state('credential_fingerprint', fingerprint)
+                 self.store.state('token', {'status': 'unchecked', 'expires_at': None})
+                 self.store.state('connection', {'status': 'unverified'})
+-        self.client = client or GraphClient(config)
+-        self.stop_event = threading.Event()
+-        self.thread = None
++
++    def maintenance(self):
++        """Local maintenance only; does not fetch or reprocess captions."""
++        self.prepare_credentials()
++        with self.storage.connect() as db:
++            return self.store.analysis.purge_expired(db)
+ 
+     @contextmanager
+     def operation(self):
+@@ -37,6 +51,7 @@
+                 raise GraphError('busy')
+         self.client.before_request = renew
+         try:
++            self.prepare_credentials()
+             yield
+         except GraphError as exc:
+             if exc.kind in ('authentication', 'permission', 'rate_limit', 'network', 'upstream'):
+@@ -138,10 +153,17 @@
+         caption = row.get('caption')
+         if caption is not None and not isinstance(caption, str):
+             raise GraphError('invalid_response')
+-        return {'id': identifier, 'published_at': published, 'permalink': permalink, 'media_type': kind, 'caption': caption}
++        return {'id': identifier, 'published_at': published, 'permalink': permalink, 'media_type': kind, 'caption': caption,
++                'provided_fields': [field for field, upstream in (('id', 'id'), ('published_at', 'timestamp'),
++                    ('permalink', 'permalink'), ('media_type', 'media_type'), ('caption', 'caption')) if upstream in row]}
+ 
+     def _collect_tag(self, tag):
+-        run_id = self.store.start_run(tag['id'])
++        origin = getattr(self.client, 'origin', 'legacy_unknown')
++        run_id = self.store.start_run(tag['id'], origin=origin,
++                                     request={'hashtag_id': tag.get('instagram_id'), 'hashtag': tag['name'],
++                                              'max_pages': self.config.max_pages, 'limit': 50,
++                                              'api_version': self.config.version,
++                                              'fields': ['id', 'caption', 'timestamp', 'media_type', 'permalink']})
+         before = self.client.request_count
+         media, returned, validated, truncated, error = {}, 0, 0, False, None
+         try:
+@@ -194,13 +216,14 @@
+             return {'accepted': True, 'success': all(r['success'] for r in results), 'results': results}
+ 
+     def due(self, tag):
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             row = db.execute('SELECT finished_at FROM instagram_runs WHERE hashtag_id=? ORDER BY id DESC LIMIT 1', (tag['id'],)).fetchone()
+         cutoff = (datetime.now(timezone.utc)-timedelta(minutes=self.config.interval_minutes)).isoformat()
+         return not row or not row[0] or row[0] <= cutoff
+ 
+     def status(self, candidate_id=None, days=7, hashtag_id=None, include_media=False):
+-        connection = self.store.state('connection') or {'status': 'unverified'}
++        connection = ({'status': 'unverified'} if self.credential_changed() else
++                      self.store.state('connection') or {'status': 'unverified'})
+         if not self.config.configured:
+             connection = {'status': 'not_configured'}
+         elif not self.config.enabled:
+@@ -208,7 +231,7 @@
+         token = self.token_status()
+         if self.config.configured and token and (token.get('status') == 'invalid' or token.get('expires_at') and token['expires_at'] <= utcnow()):
+             connection = {'status': 'authentication'}
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             lease = db.execute('SELECT expires_at FROM instagram_leases WHERE user_id=?', (self.config.user_id,)).fetchone()
+         return {'configured': self.config.configured, 'enabled': self.config.enabled,
+                 'connection': dict(connection, message=MESSAGES.get(connection['status'], connection['status'])),
+@@ -220,7 +243,8 @@
+ 
+     def token_status(self):
+         """Calculate expiry warnings locally; status polling never calls Meta."""
+-        token = dict(self.store.state('token') or {'status': 'unchecked', 'expires_at': None})
++        token = dict({'status': 'unchecked', 'expires_at': None} if self.credential_changed() else
++                     self.store.state('token') or {'status': 'unchecked', 'expires_at': None})
+         token.update(expiry_status='unknown', warning=None, days_remaining=None, warning_days=7)
+         if token.get('status') == 'invalid':
+             token.update(expiry_status='invalid', warning='Instagram 토큰이 유효하지 않습니다. 새 토큰을 설정하고 재검사하세요.')
+@@ -294,11 +318,13 @@
+             return result
+ 
+     def token_blocked(self):
++        if self.credential_changed():
++            return False
+         token = self.store.state('token') or {}
+         return bool(token.get('status') == 'invalid' or token.get('expires_at') and token['expires_at'] <= utcnow()
+                     or (self.store.state('connection') or {}).get('status') == 'authentication')
+ 
+-    def start(self):
++    def start(self, automatic=True):
+         if self.thread and self.thread.is_alive():
+             return
+         def loop():
+@@ -306,10 +332,9 @@
+             while not self.stop_event.is_set():
+                 try:
+                     if time.monotonic() >= maintenance_due:
+-                        with self.storage.connect() as db:
+-                            self.store.analysis.purge_expired(db)
++                        self.maintenance()
+                         maintenance_due = time.monotonic()+3600
+-                    if self.config.enabled and self.config.configured and not self.token_blocked():
++                    if automatic and self.config.enabled and self.config.configured and not self.token_blocked():
+                         self.collect(due_only=True)
+                 except GraphError:
+                     pass
+--- before/food_trends\instagram_storage.py
++++ after/food_trends\instagram_storage.py
+@@ -4,6 +4,7 @@
+ from datetime import datetime, timedelta, timezone
+ from .storage import utcnow
+ from .instagram_analysis import HashtagAnalysis
++from .contracts import envelope, encode
+ 
+ KST = timezone(timedelta(hours=9))
+ 
+@@ -11,56 +12,10 @@
+ class InstagramStorage:
+     def __init__(self, storage, user_id, caption_retention_days=30):
+         self.storage, self.user_id = storage, user_id
+-        with storage.connect() as db:
+-            db.executescript('''
+-                CREATE TABLE IF NOT EXISTS instagram_hashtags (
+-                    id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
+-                    instagram_id TEXT, created_at TEXT NOT NULL, last_searched_at TEXT,
+-                    active INTEGER NOT NULL DEFAULT 0, approved_at TEXT,
+-                    UNIQUE(user_id,name));
+-                CREATE TABLE IF NOT EXISTS instagram_candidate_hashtags (
+-                    candidate_id INTEGER NOT NULL REFERENCES candidates(item_id),
+-                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
+-                    PRIMARY KEY(candidate_id,hashtag_id));
+-                CREATE TABLE IF NOT EXISTS instagram_media (
+-                    id TEXT PRIMARY KEY, published_at TEXT, first_seen TEXT NOT NULL,
+-                    last_seen TEXT NOT NULL, media_type TEXT, permalink TEXT,
+-                    source TEXT NOT NULL DEFAULT 'instagram_graph');
+-                CREATE TABLE IF NOT EXISTS instagram_hashtag_media (
+-                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
+-                    media_id TEXT NOT NULL REFERENCES instagram_media(id),
+-                    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
+-                    PRIMARY KEY(hashtag_id,media_id));
+-                CREATE TABLE IF NOT EXISTS instagram_runs (
+-                    id INTEGER PRIMARY KEY, hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
+-                    started_at TEXT NOT NULL, finished_at TEXT, status TEXT NOT NULL DEFAULT 'running',
+-                    request_count INTEGER NOT NULL DEFAULT 0, returned_count INTEGER NOT NULL DEFAULT 0,
+-                    new_count INTEGER NOT NULL DEFAULT 0, duplicate_count INTEGER NOT NULL DEFAULT 0,
+-                    error_type TEXT, error_code INTEGER, error_subcode INTEGER,
+-                    truncated INTEGER NOT NULL DEFAULT 0);
+-                CREATE TABLE IF NOT EXISTS instagram_searches (
+-                    id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
+-                    instagram_id TEXT, searched_at TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS instagram_metrics (
+-                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
+-                    grain TEXT NOT NULL, bucket TEXT NOT NULL, new_count INTEGER NOT NULL,
+-                    run_count INTEGER NOT NULL, successful_runs INTEGER NOT NULL,
+-                    PRIMARY KEY(hashtag_id,grain,bucket));
+-                CREATE TABLE IF NOT EXISTS instagram_state (
+-                    user_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL,
+-                    PRIMARY KEY(user_id,key));
+-                CREATE TABLE IF NOT EXISTS instagram_leases (
+-                    user_id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires_at TEXT NOT NULL);
+-                CREATE INDEX IF NOT EXISTS instagram_search_window ON instagram_searches(user_id,searched_at);
+-                CREATE INDEX IF NOT EXISTS instagram_run_tag ON instagram_runs(hashtag_id,id);
+-            ''')
+-            db.execute('BEGIN IMMEDIATE')
+-            if 'caption' not in {r['name'] for r in db.execute('PRAGMA table_info(instagram_media)')}:
+-                db.execute('ALTER TABLE instagram_media ADD COLUMN caption TEXT')
+         self.analysis = HashtagAnalysis(storage, user_id, caption_retention_days)
+ 
+     def state(self, key, value=None):
+-        with self.storage.connect() as db:
++        with (self.storage.connect() if value is not None else self.storage.reader()) as db:
+             if value is not None:
+                 db.execute('INSERT OR REPLACE INTO instagram_state VALUES (?,?,?)',
+                            (self.user_id, key, json.dumps(value)))
+@@ -102,7 +57,7 @@
+         args.append(self.user_id)
+         if active_only:
+             sql += ' AND h.active=1'
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             return [dict(r) for r in db.execute(sql + ' ORDER BY h.id', args)]
+ 
+     def tag(self, tag_id):
+@@ -133,7 +88,7 @@
+ 
+     def usage(self):
+         cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             return [dict(r) for r in db.execute('SELECT name,instagram_id,searched_at FROM instagram_searches WHERE user_id=? AND searched_at>?', (self.user_id, cutoff))]
+ 
+     def record_usage(self, tag):
+@@ -149,16 +104,25 @@
+             db.execute('UPDATE instagram_searches SET instagram_id=? WHERE user_id=? AND name=?',
+                        (tag['instagram_id'], self.user_id, tag['name']))
+ 
+-    def start_run(self, tag_id):
+-        with self.storage.connect() as db:
+-            return db.execute('INSERT INTO instagram_runs(hashtag_id,started_at) VALUES (?,?)', (tag_id, utcnow())).lastrowid
++    def start_run(self, tag_id, origin='legacy_unknown', request=None):
++        contract = envelope('instagram_graph', origin, utcnow(), request=request,
++                            retention_days=self.analysis.retention_days)
++        with self.storage.connect() as db:
++            return db.execute('INSERT INTO instagram_runs(hashtag_id,started_at,origin,contract_json) VALUES (?,?,?,?)',
++                              (tag_id, contract['collected_at'], origin, encode(contract))).lastrowid
+ 
+     def finish_run(self, run_id, media, returned, requests, error=None, truncated=False, validated=None):
+         seen = utcnow()
+         new = 0
+         with self.storage.connect() as db:
+-            tag_id = db.execute('SELECT hashtag_id FROM instagram_runs WHERE id=?', (run_id,)).fetchone()[0]
++            run = db.execute('SELECT * FROM instagram_runs WHERE id=?', (run_id,)).fetchone()
++            tag_id = run['hashtag_id']
+             for item in media.values():
++                contract = envelope('instagram_graph', run['origin'], seen, published_at=item.get('published_at'),
++                                    fields={k: v for k, v in item.items() if k in item.get('provided_fields', item)},
++                                    request=json.loads(run['contract_json'])['request_conditions'] if run['contract_json'] else {},
++                                    observation={'run_id': run_id, 'hashtag_id': tag_id},
++                                    retention_days=self.analysis.retention_days)
+                 db.execute('''INSERT INTO instagram_media(id,published_at,first_seen,last_seen,media_type,permalink,caption,caption_captured_at)
+                               VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen,
+                               published_at=coalesce(excluded.published_at,instagram_media.published_at),
+@@ -176,6 +140,10 @@
+                 db.execute('UPDATE instagram_hashtag_media SET last_seen=? WHERE hashtag_id=? AND media_id=?', (seen, tag_id, item['id']))
+                 self.analysis.analyze_latest(db, item['id'], item.get('caption'), seen, seen)
+                 self.analysis.observe(db, tag_id, item['id'], item.get('caption'), seen, run_id)
++                db.execute('UPDATE instagram_media SET origin=?,contract_json=? WHERE id=?',
++                           (run['origin'], encode(contract), item['id']))
++                db.execute('UPDATE instagram_analysis_observations SET contract_json=? WHERE run_id=? AND media_id=?',
++                           (encode(contract), run_id, item['id']))
+             status = ('partial' if media else 'failed') if error else ('limited' if truncated else 'success')
+             db.execute('''UPDATE instagram_runs SET finished_at=?,status=?,request_count=?,returned_count=?,
+                           new_count=?,duplicate_count=?,error_type=?,error_code=?,error_subcode=?,truncated=? WHERE id=?''',
+@@ -195,7 +163,7 @@
+         return self.run(run_id)
+ 
+     def run(self, run_id):
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             row = db.execute('SELECT * FROM instagram_runs WHERE id=?', (run_id,)).fetchone()
+             return dict(row) if row else None
+ 
+@@ -205,7 +173,7 @@
+         prior = (now - timedelta(hours=48)).isoformat()
+         start_day = (now.astimezone(KST).date() - timedelta(days=days-1)).isoformat()
+         hour_start = (now - timedelta(days=days)).astimezone(KST).isoformat()
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             total = db.execute('SELECT count(*) FROM instagram_hashtag_media WHERE hashtag_id=?', (tag['id'],)).fetchone()[0]
+             recent = db.execute('SELECT count(*) FROM instagram_hashtag_media WHERE hashtag_id=? AND first_seen>=?', (tag['id'], cutoff)).fetchone()[0]
+             previous = db.execute('SELECT count(*) FROM instagram_hashtag_media WHERE hashtag_id=? AND first_seen>=? AND first_seen<?', (tag['id'], prior, cutoff)).fetchone()[0]
+@@ -226,5 +194,10 @@
+                     last_success_at=last_success[0] if last_success else None,
+                     daily=daily, hourly=hourly, analysis=self.analysis.summary(tag, days))
+         if include_media:
++            cutoff = (now-timedelta(days=self.analysis.retention_days)).isoformat()
++            for item in media:
++                if item['caption'] is not None and (item['caption_captured_at'] or item['first_seen']) <= cutoff:
++                    item['caption'] = None
++                    item['caption_retention_state'] = 'expired_pending_maintenance'
+             result['media'] = media
+         return result
+--- before/food_trends\naver_datalab.py
++++ after/food_trends\naver_datalab.py
+@@ -113,6 +113,7 @@
+ class NaverClient:
+     def __init__(self, config, sender=transport, sleeper=time.sleep):
+         self.config, self.sender, self.sleeper = config, sender, sleeper
++        self.origin = 'live_api' if sender is transport else 'mock'
+ 
+     def search(self, body, reserve=lambda: None, finish=lambda *args: None):
+         if not self.config.configured:
+--- before/food_trends\naver_service.py
++++ after/food_trends\naver_service.py
+@@ -8,6 +8,7 @@
+ from .classifier import normalize
+ from .naver_datalab import NaverClient, NaverError, request_body, today
+ from .storage import utcnow
++from .contracts import envelope, encode
+ 
+ # Explicit, exact aliases only. No fuzzy matching or generated food associations.
+ ALIASES = {'두쫀쿠': ['두쫀쿠', '두바이 쫀득 쿠키', '두바이쫀득쿠키']}
+@@ -27,23 +28,21 @@
+         self.client = client or NaverClient(config)
+         self.stop_event = threading.Event()
+         self.lock = threading.Lock()
+-        with storage.connect() as db:
+-            db.executescript('''
+-                CREATE TABLE IF NOT EXISTS naver_targets (
+-                    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(item_id),
+-                    topic TEXT NOT NULL, keywords_json TEXT NOT NULL,
+-                    last_attempt_at TEXT, last_success_at TEXT, status TEXT NOT NULL DEFAULT 'pending');
+-                CREATE TABLE IF NOT EXISTS naver_calls (
+-                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, fingerprint TEXT NOT NULL,
+-                    requested_at TEXT NOT NULL, finished_at TEXT, status TEXT NOT NULL,
+-                    http_status INTEGER, request_json TEXT NOT NULL, candidate_ids TEXT NOT NULL);
+-                CREATE INDEX IF NOT EXISTS naver_calls_day ON naver_calls(day);
+-                CREATE TABLE IF NOT EXISTS naver_guards (
+-                    fingerprint TEXT PRIMARY KEY, owner TEXT NOT NULL, until_epoch REAL NOT NULL);
+-            ''')
+ 
+     def targets(self):
+-        # Reuse the classifier's normalization; never mutate RSS candidates or scores.
++        """Pure read projection; absent persisted target rows remain pending."""
++        with self.storage.reader() as db:
++            rows = db.execute('''SELECT c.item_id,c.normalized_name,t.last_attempt_at,
++                t.last_success_at,coalesce(t.status,'pending') AS status FROM candidates c
++                LEFT JOIN naver_targets t ON t.candidate_id=c.item_id
++                WHERE c.classification='FOOD' ORDER BY c.item_id''').fetchall()
++        return [dict(candidate_id=r['item_id'], topic=keyword_group(r['normalized_name'])['groupName'],
++                     keywords=keyword_group(r['normalized_name'])['keywords'], source='naver_datalab',
++                     last_attempt_at=r['last_attempt_at'], last_success_at=r['last_success_at'], status=r['status'])
++                for r in rows]
++
++    def sync_targets(self):
++        """Explicit write preparation, called only by collection/query operations."""
+         with self.storage.connect() as db:
+             rows = db.execute("SELECT item_id,normalized_name FROM candidates WHERE classification='FOOD' ORDER BY item_id").fetchall()
+             for row in rows:
+@@ -51,18 +50,11 @@
+                 db.execute('''INSERT INTO naver_targets(candidate_id,topic,keywords_json) VALUES (?,?,?)
+                     ON CONFLICT(candidate_id) DO UPDATE SET topic=excluded.topic,keywords_json=excluded.keywords_json''',
+                            (row['item_id'], group['groupName'], json.dumps(group['keywords'], ensure_ascii=False)))
+-            result = []
+-            for row in db.execute('''SELECT t.* FROM naver_targets t JOIN candidates c ON c.item_id=t.candidate_id
+-                                     WHERE c.classification='FOOD' ORDER BY t.candidate_id'''):
+-                target = dict(row)
+-                target['keywords'] = json.loads(target.pop('keywords_json'))
+-                target['source'] = 'naver_datalab'
+-                result.append(target)
+-            return result
++        return self.targets()
+ 
+     def status(self):
+         targets = self.targets()
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             counts = dict(db.execute('SELECT status,count(*) FROM naver_calls GROUP BY status'))
+             daily = db.execute('SELECT count(*) FROM naver_calls WHERE day=?', (today().isoformat(),)).fetchone()[0]
+             latest = db.execute('SELECT requested_at,finished_at,status,http_status FROM naver_calls ORDER BY id DESC LIMIT 1').fetchone()
+@@ -84,6 +76,7 @@
+         selected = [t for t in self.targets() if t['candidate_id'] in candidate_ids]
+         if set(candidate_ids) != {t['candidate_id'] for t in selected}:
+             raise NaverError('validation')
++        self.sync_targets()
+         groups = {t['topic']: {'groupName': t['topic'], 'keywords': t['keywords']} for t in selected}
+         return self._query(selected, groups, days)
+ 
+@@ -100,6 +93,8 @@
+     def _query(self, selected, groups, days):
+         candidate_ids = [t['candidate_id'] for t in selected]
+         body = request_body([groups[k] for k in sorted(groups)], days=days)
++        contract = envelope('naver_datalab', getattr(self.client, 'origin', 'legacy_unknown'), utcnow(),
++                            request=body, observation={'trigger': 'rss_food' if selected else 'user_keyword'})
+         if not self.config.configured:
+             raise NaverError('not_configured')
+         fingerprint = hashlib.sha256(json.dumps(body, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+@@ -118,10 +113,10 @@
+                     count = db.execute('SELECT count(*) FROM naver_calls WHERE day=?', (today().isoformat(),)).fetchone()[0]
+                     if count >= self.config.daily_limit:
+                         raise NaverError('budget')
+-                    ticket = db.execute('''INSERT INTO naver_calls(day,fingerprint,requested_at,status,request_json,candidate_ids)
+-                        VALUES (?,?,?,'running',?,?)''',
++                    ticket = db.execute('''INSERT INTO naver_calls(day,fingerprint,requested_at,status,request_json,candidate_ids,origin,contract_json)
++                        VALUES (?,?,?,'running',?,?,?,?)''',
+                         (today().isoformat(), fingerprint, utcnow(), json.dumps(body, ensure_ascii=False),
+-                         json.dumps(sorted(set(candidate_ids))))).lastrowid
++                         json.dumps(sorted(set(candidate_ids))), contract['origin'], encode(contract))).lastrowid
+                     return ticket
+ 
+             def finish(ticket, result, status):
+@@ -136,6 +131,10 @@
+                     'origin': 'rss_food' if selected else 'user_keyword',
+                     'start_date': body['startDate'], 'end_date': body['endDate'], 'time_unit': body['timeUnit'],
+                     'filters': {}, 'collected_at': utcnow(),
++                    'contract': envelope('naver_datalab', contract['origin'], utcnow(),
++                                         fields={k: results if k == 'results' else body[k]
++                                                 for k in ('startDate', 'endDate', 'timeUnit', 'results')},
++                                         request=body, observation=contract['observation_conditions']),
+                     'results': [dict(r, candidate_ids=[t['candidate_id'] for t in selected if t['topic'] == r['title']])
+                                 for r in results]}
+         except NaverError as exc:
+@@ -163,7 +162,7 @@
+             return {'success': False, 'error_type': 'duplicate', 'requests': 0}
+         try:
+             groups = {}
+-            for target in self.targets():
++            for target in self.sync_targets():
+                 groups.setdefault(target['topic'], []).append(target)
+             if automatic:
+                 from datetime import datetime, timezone
+--- before/food_trends\service.py
++++ after/food_trends\service.py
+@@ -8,6 +8,7 @@
+         self.interval = interval
+         self.timeout = timeout
+         self.fetcher = fetcher or collector.fetch
++        self.origin = 'live_api' if fetcher is None else 'mock'
+         self.lock = threading.Lock()
+         self.stop_event = threading.Event()
+ 
+@@ -18,7 +19,7 @@
+         raw = None
+         status = None
+         try:
+-            run_id = self.storage.start()
++            run_id = self.storage.start(origin=self.origin)
+             raw, status = self.fetcher(self.timeout)
+             items, warnings = collector.parse(raw)
+             summary = self.storage.finish(run_id, items, raw, status, warnings=warnings)
+--- before/food_trends\storage.py
++++ after/food_trends\storage.py
+@@ -5,48 +5,23 @@
+ from pathlib import Path
+ from datetime import datetime, timezone
+ from .classifier import classify
++from .contracts import envelope, encode
+ 
+ def utcnow():
+     return datetime.now(timezone.utc).isoformat()
+ 
+ class Storage:
+     def __init__(self, path):
+-        self.path = str(path)
+-        Path(path).parent.mkdir(parents=True, exist_ok=True)
+-        with self.connect() as db:
+-            db.executescript('''
+-                PRAGMA journal_mode=WAL;
+-                CREATE TABLE IF NOT EXISTS runs (
+-                    id INTEGER PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,
+-                    success INTEGER, error TEXT, http_status INTEGER, item_count INTEGER DEFAULT 0,
+-                    new_count INTEGER DEFAULT 0, warnings TEXT, raw_response BLOB);
+-                CREATE TABLE IF NOT EXISTS items (
+-                    id INTEGER PRIMARY KEY, source_id TEXT UNIQUE NOT NULL, keyword TEXT NOT NULL,
+-                    published_at TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, payload TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS observations (
+-                    run_id INTEGER REFERENCES runs(id), item_id INTEGER REFERENCES items(id),
+-                    payload TEXT NOT NULL, PRIMARY KEY(run_id,item_id));
+-                CREATE TABLE IF NOT EXISTS candidates (
+-                    item_id INTEGER PRIMARY KEY REFERENCES items(id), normalized_name TEXT NOT NULL,
+-                    classification TEXT NOT NULL, reasons TEXT NOT NULL, classifier_version TEXT NOT NULL);
+-                CREATE INDEX IF NOT EXISTS items_keyword ON items(keyword);
+-                CREATE TABLE IF NOT EXISTS classification_history (
+-                    id INTEGER PRIMARY KEY, item_id INTEGER REFERENCES items(id),
+-                    recorded_at TEXT NOT NULL, result_json TEXT NOT NULL);
+-            ''')
+-            # Additive migrations: raw RSS, observation and other feature tables stay intact.
+-            additions = {
+-                'candidates': {'entity_type': "TEXT NOT NULL DEFAULT 'UNKNOWN'", 'rule_score': 'INTEGER',
+-                               'score_basis': 'TEXT', 'evidence_news': "TEXT NOT NULL DEFAULT '[]'", 'classified_at': 'TEXT'},
+-                'runs': {'food_count': 'INTEGER', 'review_count': 'INTEGER', 'new_food_count': 'INTEGER',
+-                         'new_review_count': 'INTEGER', 'classifier_version': 'TEXT'},
+-                'observations': {'classification_json': 'TEXT'},
+-            }
+-            for table, columns in additions.items():
+-                existing = {r['name'] for r in db.execute(f'PRAGMA table_info({table})')}
+-                for name, declaration in columns.items():
+-                    if name not in existing:
+-                        db.execute(f'ALTER TABLE {table} ADD COLUMN {name} {declaration}')
++        from .migrations import require_current
++        self.path = str(Path(path).resolve())
++        require_current(self.path)
++
++    @classmethod
++    def create(cls, path):
++        """Explicit schema creation/upgrade, primarily for isolated fixture databases."""
++        from .migrations import migrate
++        migrate(path)
++        return cls(path)
+ 
+     def _classify(self, db, item_id, item):
+         result = dict(classify(item), classified_at=utcnow())
+@@ -59,17 +34,27 @@
+             if comparison != {k:v for k,v in result.items() if k != 'classified_at'}:
+                 db.execute('INSERT INTO classification_history(item_id,recorded_at,result_json) VALUES (?,?,?)',
+                            (item_id, utcnow(), json.dumps(previous, ensure_ascii=False)))
+-        db.execute('''INSERT OR REPLACE INTO candidates
++        db.execute('''INSERT INTO candidates
+             (item_id,normalized_name,classification,reasons,classifier_version,entity_type,rule_score,score_basis,evidence_news,classified_at)
+-            VALUES (?,?,?,?,?,?,?,?,?,?)''',
++            VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(item_id) DO UPDATE SET
++            normalized_name=excluded.normalized_name,classification=excluded.classification,
++            reasons=excluded.reasons,classifier_version=excluded.classifier_version,
++            entity_type=excluded.entity_type,rule_score=excluded.rule_score,
++            score_basis=excluded.score_basis,evidence_news=excluded.evidence_news,
++            classified_at=excluded.classified_at''',
+             (item_id, result['normalized_name'], result['classification'], json.dumps(result['reasons'], ensure_ascii=False),
+              result['classifier_version'], result['entity_type'], result['rule_score'], result['score_basis'],
+              json.dumps(result['evidence_news'], ensure_ascii=False), result['classified_at']))
+         return result
+ 
+     @contextmanager
+-    def connect(self):
+-        db = sqlite3.connect(self.path, timeout=10)
++    def connect(self, readonly=False):
++        if readonly:
++            db = sqlite3.connect(Path(self.path).as_uri() + '?mode=ro', uri=True, timeout=10)
++            db.execute('PRAGMA query_only=ON')
++            db.execute('BEGIN')
++        else:
++            db = sqlite3.connect(Path(self.path).as_uri() + '?mode=rw', uri=True, timeout=10)
+         db.row_factory = sqlite3.Row
+         db.execute('PRAGMA foreign_keys=ON')
+         try:
+@@ -78,9 +63,15 @@
+         finally:
+             db.close()
+ 
+-    def start(self):
++    def reader(self):
++        return self.connect(readonly=True)
++
++    def start(self, origin='legacy_unknown'):
++        contract = envelope('google_trends_rss', origin, utcnow(),
++                            request={'geo': 'KR', 'endpoint': 'trending/rss'})
+         with self.connect() as db:
+-            return db.execute('INSERT INTO runs(started_at) VALUES (?)', (utcnow(),)).lastrowid
++            return db.execute('INSERT INTO runs(started_at,origin,contract_json) VALUES (?,?,?)',
++                              (contract['collected_at'], origin, encode(contract))).lastrowid
+ 
+     def finish(self, run_id, items=None, raw=None, http_status=None, error=None, warnings=None):
+         new_count = 0
+@@ -89,6 +80,7 @@
+         unique_ids = set()
+         seen = utcnow()
+         with self.connect() as db:
++            origin = db.execute('SELECT origin FROM runs WHERE id=?', (run_id,)).fetchone()[0]
+             for item in items or []:
+                 if item['source_id'] in unique_ids:
+                     continue
+@@ -100,8 +92,19 @@
+                 db.execute('UPDATE items SET last_seen=?,payload=? WHERE source_id=?', (seen, payload, item['source_id']))
+                 item_id = db.execute('SELECT id FROM items WHERE source_id=?', (item['source_id'],)).fetchone()[0]
+                 c = self._classify(db, item_id, item)
+-                db.execute('INSERT OR IGNORE INTO observations(run_id,item_id,payload,classification_json) VALUES (?,?,?,?)',
+-                           (run_id, item_id, payload, json.dumps(c, ensure_ascii=False)))
++                mapping = {'title': 'keyword', 'pubDate': 'published_raw', 'approx_traffic': 'traffic',
++                           'news_item': 'news'}
++                supplied = {mapping[k] for k in item.get('provided_fields', ()) if k in mapping}
++                if 'published_raw' in supplied:
++                    supplied.add('published_at')
++                if item.get('related_queries') is not None:
++                    supplied.add('related_queries')
++                contract = envelope('google_trends_rss', origin, seen, published_at=item['published_at'],
++                                    fields={k: item[k] for k in supplied},
++                                    request={'geo': 'KR', 'endpoint': 'trending/rss'},
++                                    observation={'run_id': run_id, 'item_key': item['source_id']})
++                db.execute('INSERT OR IGNORE INTO observations(run_id,item_id,payload,classification_json,contract_json) VALUES (?,?,?,?,?)',
++                           (run_id, item_id, payload, json.dumps(c, ensure_ascii=False), encode(contract)))
+                 label = c['classification']
+                 if label in counts:
+                     counts[label] += 1
+@@ -116,9 +119,9 @@
+                 'review_count':counts['REVIEW'] if not error else None}
+ 
+     def status(self):
+-        with self.connect() as db:
++        with self.reader() as db:
+             run = db.execute('''SELECT id,started_at,finished_at,success,error,http_status,item_count,new_count,warnings,
+-                food_count,review_count,new_food_count,new_review_count,classifier_version
++                food_count,review_count,new_food_count,new_review_count,classifier_version,origin,contract_json
+                 FROM runs WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1''').fetchone()
+             success = db.execute('SELECT finished_at FROM runs WHERE success=1 ORDER BY id DESC LIMIT 1').fetchone()
+             counts = dict(db.execute('SELECT classification,count(*) FROM candidates GROUP BY classification').fetchall())
+@@ -134,6 +137,8 @@
+                 latest_publication = max((v for v in values if v), default=None)
+         latest = dict(run) if run else None
+         if latest:
++            contract_json = latest.pop('contract_json')
++            latest['contract'] = json.loads(contract_json) if contract_json else None
+             latest['warnings'] = json.loads(latest['warnings'])
+             latest['discovery_state'] = ('NEW_ITEMS' if latest['new_count'] else 'NO_NEW_ITEMS') if latest['success'] else 'COLLECTION_FAILED'
+             latest['current_food_count'] = current_counts.get('FOOD', 0) if latest['success'] else None
+@@ -159,11 +164,14 @@
+         if where:
+             sql += ' WHERE ' + ' AND '.join(where)
+         sql += ' ORDER BY i.first_seen DESC,i.published_at DESC,i.id DESC'
+-        with self.connect() as db:
++        with self.reader() as db:
+             rows = db.execute(sql, args).fetchall()
+             results = []
+             for row in rows:
+                 r = dict(row)
++                contract_row = db.execute('''SELECT contract_json FROM observations
++                    WHERE item_id=? ORDER BY run_id DESC LIMIT 1''', (r['id'],)).fetchone()
++                r['contract'] = json.loads(contract_row[0]) if contract_row and contract_row[0] else None
+                 payload = json.loads(r.pop('payload'))
+                 r.update(payload)
+                 r['reasons'] = json.loads(r['reasons'])
+@@ -182,9 +190,8 @@
+ 
+     def export(self):
+         """RSS-only audit export: excludes credentials and unrelated feature tables."""
+-        with self.connect() as db:
++        with self.reader() as db:
+             # A single read transaction provides a consistent export during collection.
+-            db.execute('BEGIN')
+             result = {'exported_at':utcnow(), 'format_version':1, 'encoding':'raw_response_base64 is original bytes',
+                       'score_notice':'Rule scores are not probabilities'}
+             for table in ('items','candidates','observations','runs','classification_history'):
+--- before/food_trends\youtube.py
++++ after/food_trends\youtube.py
+@@ -81,7 +81,13 @@
+                     video_url='https://www.youtube.com/watch?v='+identity, thumbnail_url=thumbnail,
+                     view_count=count('viewCount'), like_count=count('likeCount'),
+                     comment_count=count('commentCount'), duration=duration, privacy_status=privacy,
+-                    upload_status=status.get('uploadStatus'), embeddable=status.get('embeddable'))
++                    upload_status=status.get('uploadStatus'), embeddable=status.get('embeddable'),
++                    provided_fields=['video_id', 'title', 'published_at', 'channel_id', 'channel_title', 'privacy_status']
++                    + (['description'] if 'description' in snippet else [])
++                    + (['thumbnail_url'] if 'thumbnails' in snippet else [])
++                    + (['duration'] if 'duration' in details else [])
++                    + [field for field, upstream in (('view_count', 'viewCount'), ('like_count', 'likeCount'),
++                                                     ('comment_count', 'commentCount')) if upstream in stats])
+     except (KeyError, TypeError, ValueError, AttributeError, StopIteration):
+         raise YouTubeError('invalid_response') from None
+ 
+--- before/food_trends\youtube_service.py
++++ after/food_trends\youtube_service.py
+@@ -8,6 +8,7 @@
+ from .storage import utcnow
+ from .youtube import YouTubeClient, YouTubeError, items, parse_video, video_id
+ from .youtube_storage import YouTubeStore, pacific_day
++from .contracts import envelope
+ 
+ 
+ class YouTubeService:
+@@ -17,7 +18,7 @@
+         self.client = client or YouTubeClient(config)
+         self.stop_event = threading.Event()
+         self.automatic_scheduling = False
+-        self.origin = getattr(self.client, 'origin', 'unknown')
++        self.origin = getattr(self.client, 'origin', 'legacy_unknown')
+         self.run_id = None
+         self.metrics = None
+ 
+@@ -36,7 +37,7 @@
+         return self.client.get(endpoint, params,
+                                lambda ep: self.store.reserve(ep, query_id, owner, self.config, self.origin, self.run_id), finish)
+ 
+-    def _details(self, identities, owner, query_id=None):
++    def _details(self, identities, owner, query_id=None, request_context=None):
+         identities = list(dict.fromkeys(identities))
+         valid = set()
+         for offset in range(0, len(identities), 50):
+@@ -47,7 +48,7 @@
+                 raise YouTubeError('invalid_response')
+             with self.storage.connect() as db:
+                 existing = {r[0] for r in db.execute('SELECT video_id FROM youtube_videos WHERE video_id IN ('+','.join('?' for _ in batch)+')', batch)}
+-            saved = self.store.save_videos(batch, parsed, self.origin, self.run_id)
++            saved = self.store.save_videos(batch, parsed, self.origin, self.run_id, request_context)
+             valid.update(saved)
+             if self.metrics is not None:
+                 self.metrics['detail_result_rows'] += len(parsed)
+@@ -93,7 +94,8 @@
+                 self.metrics['search_result_rows'] += len(page_ids)
+                 self.search_ids.update(page_ids)
+             # Detail response supplies the full snippet and availability. Missing/private videos are removed.
+-            valid = self._details(page_ids, owner, query['id'])
++            context = {k: v for k, v in params.items() if k != 'pageToken'}
++            valid = self._details(page_ids, owner, query['id'], request_context=dict(context, endpoint='search'))
+             identities.update(valid)
+             self.store.match(query['id'], valid)
+             if self.metrics is not None and query['food_id'] is not None:
+@@ -186,6 +188,8 @@
+                         'food_connections': len(self.food_links),
+                         'food_extraction': 'disabled_pending_policy_approval',
+                         'mapping': 'search_query_provenance_only'}
++                result['contract'] = envelope('youtube', self.origin, utcnow(),
++                    observation={'mapping': 'search_query_provenance_only', 'snapshot_only': True})
+                 result['live_connection_verified'] = self.origin == 'live_api' and any('200' in b for b in self.metrics['http_statuses'].values())
+                 with self.storage.connect() as db:
+                     db.execute('UPDATE youtube_runs SET finished_at=?,status=?,result_json=? WHERE id=?',
+@@ -195,7 +199,7 @@
+             return {'success': False, 'error_type': exc.kind, 'requests': 0}
+ 
+     def _call_count(self):
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             return db.execute('SELECT count(*) FROM youtube_calls').fetchone()[0]
+ 
+     def delete_data(self):
+@@ -207,16 +211,14 @@
+             return {'success': True, 'deleted_videos': count, 'notice': '로컬 저장 데이터만 삭제했습니다. YouTube 원본은 삭제되지 않습니다.'}
+ 
+     def status(self):
+-        self.store.purge()
+-        self.store.sync_queries(self.config)
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             daily = dict(db.execute('SELECT endpoint,count(*) FROM youtube_calls WHERE day=? GROUP BY endpoint', (pacific_day(),)))
+             queries = [dict(r) for r in db.execute('''SELECT q.id,q.query,q.mode,q.food_id,f.name AS food_name,q.last_attempt,
+                 q.page_token IS NOT NULL AS has_more,count(c.id) AS daily_requests
+                 FROM youtube_queries q LEFT JOIN youtube_foods f ON q.food_id=f.id
+                 LEFT JOIN youtube_calls c ON c.query_id=q.id AND c.endpoint='search' AND c.day=?
+                 WHERE q.active=1 GROUP BY q.id ORDER BY q.id''', (pacific_day(),))]
+-            video_count = db.execute('SELECT count(*) FROM youtube_videos').fetchone()[0]
++            video_count = db.execute('SELECT count(*) FROM youtube_videos WHERE expires_at>?', (utcnow(),)).fetchone()[0]
+             latest = db.execute('SELECT result_json FROM youtube_runs WHERE finished_at IS NOT NULL ORDER BY finished_at DESC LIMIT 1').fetchone()
+             latest_run = json.loads(latest[0]) if latest and latest[0] else None
+             last_live = db.execute("SELECT max(finished_at) FROM youtube_calls WHERE origin='live_api' AND status='success' AND http_status=200").fetchone()[0]
+@@ -224,7 +226,8 @@
+             breakdown = [dict(r) for r in db.execute('''SELECT endpoint,origin,status,http_status,count(*) AS attempts,
+                 sum(result_count) AS response_items FROM youtube_calls WHERE day=? GROUP BY endpoint,origin,status,http_status''', (pacific_day(),))]
+             origins = [dict(r) for r in db.execute('''SELECT coalesce(p.origin,'legacy_unknown') AS origin,count(*) AS videos
+-                FROM youtube_videos v LEFT JOIN youtube_video_provenance p ON v.video_id=p.video_id GROUP BY coalesce(p.origin,'legacy_unknown')''')]
++                FROM youtube_videos v LEFT JOIN youtube_video_provenance p ON v.video_id=p.video_id
++                WHERE v.expires_at>? GROUP BY coalesce(p.origin,'legacy_unknown')''', (utcnow(),))]
+         return {'source': 'youtube', 'configured': self.config.configured,
+                 'status_version': 2, 'latest_run': latest_run, 'daily_call_breakdown': breakdown,
+                 'video_origins': origins, 'last_live_http_success_at': last_live,
+--- before/food_trends\youtube_storage.py
++++ after/food_trends\youtube_storage.py
+@@ -7,6 +7,7 @@
+ from .naver_service import keyword_group
+ from .storage import utcnow
+ from .youtube import YouTubeError
++from .contracts import envelope, encode
+ 
+ 
+ def pacific_day():
+@@ -24,51 +25,9 @@
+ class YouTubeStore:
+     def __init__(self, storage):
+         self.storage = storage
+-        with storage.connect() as db:
+-            db.executescript('''
+-                PRAGMA secure_delete=ON;
+-                CREATE TABLE IF NOT EXISTS youtube_foods (
+-                    id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+-                CREATE TABLE IF NOT EXISTS youtube_candidate_foods (
+-                    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(item_id) ON DELETE CASCADE,
+-                    food_id INTEGER NOT NULL REFERENCES youtube_foods(id));
+-                CREATE TABLE IF NOT EXISTS youtube_queries (
+-                    id INTEGER PRIMARY KEY, query TEXT NOT NULL, mode TEXT NOT NULL,
+-                    food_id INTEGER REFERENCES youtube_foods(id), active INTEGER NOT NULL DEFAULT 1,
+-                    after_at TEXT, before_at TEXT, page_token TEXT, token_at TEXT, last_attempt TEXT,
+-                    UNIQUE(query,mode));
+-                CREATE TABLE IF NOT EXISTS youtube_videos (
+-                    video_id TEXT PRIMARY KEY, payload TEXT NOT NULL, collected_at TEXT NOT NULL,
+-                    refreshed_at TEXT NOT NULL, expires_at TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS youtube_matches (
+-                    query_id INTEGER REFERENCES youtube_queries(id) ON DELETE CASCADE,
+-                    video_id TEXT REFERENCES youtube_videos(video_id) ON DELETE CASCADE,
+-                    matched_at TEXT NOT NULL, PRIMARY KEY(query_id,video_id));
+-                CREATE TABLE IF NOT EXISTS youtube_calls (
+-                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, endpoint TEXT NOT NULL,
+-                    query_id INTEGER REFERENCES youtube_queries(id), started_at TEXT NOT NULL,
+-                    finished_at TEXT, status TEXT NOT NULL, http_status INTEGER);
+-                CREATE INDEX IF NOT EXISTS youtube_calls_day ON youtube_calls(day,endpoint);
+-                CREATE INDEX IF NOT EXISTS youtube_expiry ON youtube_videos(expires_at);
+-                CREATE TABLE IF NOT EXISTS youtube_state (
+-                    key TEXT PRIMARY KEY, value TEXT NOT NULL);
+-                CREATE TABLE IF NOT EXISTS youtube_runs (
+-                    id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,
+-                    trigger TEXT NOT NULL, origin TEXT NOT NULL, status TEXT NOT NULL,
+-                    result_json TEXT);
+-                CREATE TABLE IF NOT EXISTS youtube_video_provenance (
+-                    video_id TEXT PRIMARY KEY REFERENCES youtube_videos(video_id) ON DELETE CASCADE,
+-                    origin TEXT NOT NULL, verified_at TEXT NOT NULL, run_id TEXT);
+-            ''')
+-            columns = {r['name'] for r in db.execute('PRAGMA table_info(youtube_calls)')}
+-            for name, declaration in {'origin': "TEXT NOT NULL DEFAULT 'legacy_unknown'",
+-                                      'run_id': 'TEXT', 'result_count': 'INTEGER'}.items():
+-                if name not in columns:
+-                    db.execute(f'ALTER TABLE youtube_calls ADD COLUMN {name} {declaration}')
+-        self.purge()
+ 
+     def state(self, key, default=None):
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             row = db.execute('SELECT value FROM youtube_state WHERE key=?', (key,)).fetchone()
+             return row[0] if row else default
+ 
+@@ -142,7 +101,7 @@
+                 delay = 60 if state == 'rate_limit' else 21600 if state in ('authentication', 'permission') else 5
+                 db.execute("INSERT OR REPLACE INTO youtube_state VALUES ('cooldown_until',?)", (str(time.time()+delay),))
+ 
+-    def save_videos(self, requested, videos, origin='legacy_unknown', run_id=None):
++    def save_videos(self, requested, videos, origin='legacy_unknown', run_id=None, request_context=None):
+         stamp = utcnow()
+         expiry = (datetime.now(timezone.utc)+timedelta(days=29)).isoformat()
+         public = {v['video_id']: v for v in videos if v['privacy_status'] == 'public' and v.get('upload_status') not in ('deleted', 'failed', 'rejected')}
+@@ -152,9 +111,17 @@
+                 if identity not in public:
+                     db.execute('DELETE FROM youtube_videos WHERE video_id=?', (identity,))
+             for identity, video in public.items():
+-                db.execute('''INSERT INTO youtube_videos VALUES (?,?,?,?,?) ON CONFLICT(video_id) DO UPDATE SET
+-                    payload=excluded.payload,refreshed_at=excluded.refreshed_at,expires_at=excluded.expires_at''',
+-                           (identity, json.dumps(video, ensure_ascii=False), stamp, stamp, expiry))
++                fields = {k: v for k, v in video.items()
++                          if k in video.get('provided_fields', video)}
++                contract = envelope('youtube', origin, stamp, published_at=video['published_at'], fields=fields,
++                                    request=request_context or {'endpoint': 'videos',
++                                        'part': 'snippet,statistics,contentDetails,status', 'id': ','.join(requested)},
++                                    observation={'run_id': run_id, 'item_key': identity, 'snapshot_only': True})
++                db.execute('''INSERT INTO youtube_videos(video_id,payload,collected_at,refreshed_at,expires_at,contract_json)
++                    VALUES (?,?,?,?,?,?) ON CONFLICT(video_id) DO UPDATE SET
++                    payload=excluded.payload,refreshed_at=excluded.refreshed_at,expires_at=excluded.expires_at,
++                    contract_json=excluded.contract_json''',
++                           (identity, json.dumps(video, ensure_ascii=False), stamp, stamp, expiry, encode(contract)))
+                 db.execute('INSERT OR REPLACE INTO youtube_video_provenance VALUES (?,?,?,?)', (identity, origin, stamp, run_id))
+         return set(public)
+ 
+@@ -174,8 +141,7 @@
+         return deleted
+ 
+     def videos(self, limit=25):
+-        self.purge()
+-        with self.storage.connect() as db:
++        with self.storage.reader() as db:
+             result = []
+             for row in db.execute('SELECT * FROM youtube_videos WHERE expires_at>? ORDER BY refreshed_at DESC,video_id LIMIT ?', (utcnow(), limit)):
+                 video = dict(json.loads(row['payload']), collected_at=row['collected_at'], refreshed_at=row['refreshed_at'], expires_at=row['expires_at'])
+@@ -184,6 +150,8 @@
+                 video['matches'] = [dict(r) for r in db.execute('''SELECT q.query,q.mode,q.food_id,f.name AS food_name,
+                     'search_match_unverified' AS verification FROM youtube_matches m
+                     JOIN youtube_queries q ON q.id=m.query_id LEFT JOIN youtube_foods f ON f.id=q.food_id
+-                    WHERE m.video_id=? AND q.active=1''', (row['video_id'],))]
++                    WHERE m.video_id=? AND q.active=1 AND m.matched_at>?''',
++                    (row['video_id'], (datetime.now(timezone.utc)-timedelta(days=29)).isoformat()))]
++                video['contract'] = json.loads(row['contract_json']) if row['contract_json'] else None
+                 result.append(video)
+             return result
+--- before/food_trends\__main__.py
++++ after/food_trends\__main__.py
+@@ -54,6 +54,10 @@
+     load_env()
+     parser = argparse.ArgumentParser(description='Google Trends 음식 트렌드 탐지')
+     parser.add_argument('--collect-once', action='store_true')
++    maintenance_group = parser.add_mutually_exclusive_group()
++    maintenance_group.add_argument('--migrate', action='store_true', help='Explicit local schema migration; no API calls')
++    maintenance_group.add_argument('--migration-status', action='store_true', help='Read-only schema version check')
++    maintenance_group.add_argument('--maintenance', action='store_true', help='Local expiry cleanup; no API calls or reprocessing')
+     parser.add_argument('--reanalyze', action='store_true')
+     parser.add_argument('--no-schedulers', action='store_true', help='자동 외부 수집 없이 로컬 저장 데이터 UI 실행')
+     parser.add_argument('--export-json', metavar='PATH', help='RSS 원본/분류/관측/이력을 JSON으로 내보내기')
+@@ -88,7 +92,29 @@
+     timeout = float(os.getenv('RSS_TIMEOUT_SECONDS', '20'))
+     if interval <= 0 or timeout <= 0:
+         parser.error('수집 간격과 타임아웃은 양수여야 합니다')
+-    storage = Storage(os.getenv('DATABASE_PATH', 'data/trends.sqlite3'))
++    database_path = os.getenv('DATABASE_PATH', 'data/trends.sqlite3')
++    from .migrations import migrate, schema_version, LATEST_VERSION, MigrationRequired
++    if args.migrate or args.migration_status:
++        import json
++        result = (migrate(database_path) if args.migrate else
++                  {'version': schema_version(database_path), 'required_version': LATEST_VERSION})
++        print(json.dumps(result))
++        return
++    try:
++        storage = Storage(database_path)
++    except MigrationRequired as exc:
++        parser.exit(2, str(exc) + '\n')
++    if args.maintenance:
++        import json
++        from .youtube_storage import YouTubeStore
++        from .instagram_analysis import HashtagAnalysis
++        settings = InstagramConfig.from_env()
++        analysis = HashtagAnalysis(storage, settings.user_id, settings.caption_retention_days)
++        with storage.connect() as db:
++            captions = analysis.purge_expired(db)
++        videos = YouTubeStore(storage).purge()
++        print(json.dumps({'success': True, 'purged_captions': captions, 'purged_videos': videos, 'api_requests': 0}))
++        return
+     if args.export_json:
+         import json
+         from pathlib import Path
+@@ -157,8 +183,8 @@
+         parser.exit(2, f'로컬 서버 시작 실패: 포트 {port} 사용 여부를 확인하세요. {exc}\n')
+     if not args.no_schedulers:
+         service.start()
+-        instagram.start()
+         naver.start()
++    instagram.start(automatic=not args.no_schedulers)
+     youtube.start(automatic=not args.no_schedulers)
+     print(f'Local: http://127.0.0.1:{port}', flush=True)
+     try:
+--- before/tests\audit_browser_check.py
++++ after/tests\audit_browser_check.py
+@@ -106,7 +106,7 @@
+         path=Path(temp)/'failure-preview.sqlite3'
+         source=sqlite3.connect('data/trends.sqlite3'); destination=sqlite3.connect(path)
+         source.backup(destination);source.close();destination.close()
+-        store=Storage(path)
++        store=Storage.create(path)
+         def fail(_):
+             raise TimeoutError('QA ONLY: simulated offline, not a live RSS observation')
+         service=CollectionService(store,fetcher=fail)
+--- before/tests\instagram_analysis_browser_check.py
++++ after/tests\instagram_analysis_browser_check.py
+@@ -63,7 +63,7 @@
+ def main():
+     browser=Browser();report={}
+     with tempfile.TemporaryDirectory() as temp:
+-        storage=Storage(Path(temp)/'qa.sqlite3')
++        storage=Storage.create(Path(temp)/'qa.sqlite3')
+         rss=CollectionService(storage,fetcher=lambda _: (fixture('두쫀쿠'),200));rss.collect()
+         transport=Transport()
+         transport.media_pages=[{'data':[dict(MEDIA,id='1',caption='caption-body-must-not-render #두쫀쿠 #CAFE #cafe #디저트'),dict(MEDIA,id='2',caption='#두쫀쿠 #cafe'),dict(MEDIA,id='3',caption=None)]}]
+--- before/tests\instagram_browser_check.py
++++ after/tests\instagram_browser_check.py
+@@ -92,7 +92,7 @@
+     report['real_app']={'unconfigured_state':'passed','disabled_approval':'passed','rss_detail':'passed'}
+ 
+     with tempfile.TemporaryDirectory() as temporary:
+-        storage=Storage(Path(temporary)/'browser.sqlite3')
++        storage=Storage.create(Path(temporary)/'browser.sqlite3')
+         rss=CollectionService(storage,fetcher=lambda _: (fixture('두쫀쿠'),200))
+         rss.collect()
+         config=InstagramConfig(token=FAKE_TOKEN)
+--- before/tests\instagram_token_warning_browser_check.py
++++ after/tests\instagram_token_warning_browser_check.py
+@@ -19,7 +19,7 @@
+ def main():
+     browser=Browser()
+     with tempfile.TemporaryDirectory() as temporary:
+-        storage=Storage(Path(temporary)/'warning.sqlite3')
++        storage=Storage.create(Path(temporary)/'warning.sqlite3')
+         rss=CollectionService(storage,fetcher=lambda _: (fixture('두쫀쿠'),200))
+         rss.collect()
+         config=InstagramConfig(token=FAKE_TOKEN)
+--- before/tests\naver_browser_check.py
++++ after/tests\naver_browser_check.py
+@@ -54,7 +54,7 @@
+             browser.ws = websocket.create_connection(page['webSocketDebuggerUrl'], origin='http://localhost:9235', timeout=10)
+             browser.sequence, browser.errors = 0, []
+             browser.call('Runtime.enable', {})
+-            storage = Storage(Path(temporary)/'browser.sqlite3')
++            storage = Storage.create(Path(temporary)/'browser.sqlite3')
+             rss = CollectionService(storage, fetcher=lambda _: (fixture('두바이 쫀득 쿠키'), 200)); rss.collect()
+             config = NaverConfig(client_id='synthetic-id', client_secret='synthetic-secret')
+             sender = Transport()
+--- before/tests\test_audit_improvements.py
++++ after/tests\test_audit_improvements.py
+@@ -72,7 +72,7 @@
+                 classification TEXT,reasons TEXT,classifier_version TEXT);
+                 INSERT INTO candidates VALUES (1,'광주송정역','FOOD','["먹거리"]','context-rules-v1');''')
+         db.close()
+-        store = Storage(self.path)
++        store = Storage.create(self.path)
+         service = CollectionService(store,fetcher=lambda _: (fixture('광주송정역'),200))
+         service.collect()
+         record = store.trends(item_id=1)[0]
+@@ -90,7 +90,7 @@
+             self.assertEqual(db.execute('SELECT count(*) FROM classification_history').fetchone()[0],1)
+ 
+     def test_recent_stats_dedup_failure_and_export(self):
+-        store = Storage(self.path)
++        store = Storage.create(self.path)
+         service = CollectionService(store,fetcher=lambda _: (fixture('두바이 쿠키'),200))
+         service.collect()
+         status = store.status()
+@@ -117,7 +117,7 @@
+         self.assertEqual(status['latest_run']['discovery_state'],'COLLECTION_FAILED')
+ 
+     def test_export_api_and_audit_integrity(self):
+-        store=Storage(self.path)
++        store=Storage.create(self.path)
+         service=CollectionService(store,fetcher=lambda _: (fixture(),200))
+         service.collect()
+         report=audit(self.path,Path(self.temp.name)/'audit')
+@@ -139,7 +139,7 @@
+ 
+     @unittest.skipUnless(os.name=='nt','Windows port reuse regression')
+     def test_second_server_cannot_bind_same_port(self):
+-        store=Storage(self.path)
++        store=Storage.create(self.path)
+         service=CollectionService(store)
+         first=make_server(service,port=0)
+         try:
+--- before/tests\test_instagram.py
++++ after/tests\test_instagram.py
+@@ -90,7 +90,7 @@
+ class InstagramTests(unittest.TestCase):
+     def setUp(self):
+         self.temp = tempfile.TemporaryDirectory()
+-        self.store = Storage(Path(self.temp.name)/'test.sqlite3')
++        self.store = Storage.create(Path(self.temp.name)/'test.sqlite3')
+         self.config = InstagramConfig(token=FAKE_TOKEN)
+         self.transport = Transport()
+         self.sleeps = []
+@@ -259,7 +259,7 @@
+     def test_leases_cross_process_and_crash_recovery(self):
+         self.start()
+         owner = self.ig.store.acquire()
+-        other = InstagramService(Storage(self.store.path),self.config,self.client)
++        other = InstagramService(Storage.create(self.store.path),self.config,self.client)
+         with self.assertRaises(GraphError) as raised:
+             other.collect()
+         self.assertEqual(raised.exception.kind,'busy')
+--- before/tests\test_instagram_analysis.py
++++ after/tests\test_instagram_analysis.py
+@@ -35,7 +35,7 @@
+ class AnalysisTests(unittest.TestCase):
+     def setUp(self):
+         self.temp=tempfile.TemporaryDirectory()
+-        self.storage=Storage(Path(self.temp.name)/'test.sqlite3')
++        self.storage=Storage.create(Path(self.temp.name)/'test.sqlite3')
+         self.config=InstagramConfig(token=FAKE_TOKEN)
+         self.transport=Transport()
+         self.client=GraphClient(self.config,self.transport,lambda _:None)
+--- before/tests\test_mvp.py
++++ after/tests\test_mvp.py
+@@ -18,7 +18,7 @@
+ class MVPTests(unittest.TestCase):
+     def setUp(self):
+         self.temp = tempfile.TemporaryDirectory()
+-        self.store = Storage(Path(self.temp.name) / 'test.sqlite3')
++        self.store = Storage.create(Path(self.temp.name) / 'test.sqlite3')
+ 
+     def tearDown(self):
+         self.temp.cleanup()
+--- before/tests\test_naver.py
++++ after/tests\test_naver.py
+@@ -47,7 +47,7 @@
+ class NaverTests(unittest.TestCase):
+     def setUp(self):
+         self.temp = tempfile.TemporaryDirectory()
+-        self.storage = Storage(Path(self.temp.name) / 'test.sqlite3')
++        self.storage = Storage.create(Path(self.temp.name) / 'test.sqlite3')
+         self.config = NaverConfig(client_id='synthetic-id', client_secret='synthetic-secret')
+         self.sender, self.delays = Transport(), []
+         self.client = NaverClient(self.config, self.sender, self.delays.append)
+--- before/tests\test_youtube.py
++++ after/tests\test_youtube.py
+@@ -66,7 +66,7 @@
+ class YouTubeTests(unittest.TestCase):
+     def setUp(self):
+         self.temp = tempfile.TemporaryDirectory()
+-        self.storage = Storage(Path(self.temp.name)/'youtube.sqlite3')
++        self.storage = Storage.create(Path(self.temp.name)/'youtube.sqlite3')
+         self.config = YouTubeConfig(api_key='synthetic-secret', discovery_queries=('신상 디저트',), queries_per_run=3)
+         self.sender, self.delays = Transport(), []
+         self.client = YouTubeClient(self.config, self.sender, self.delays.append)
+--- before/tests\youtube_browser_check.py
++++ after/tests\youtube_browser_check.py
+@@ -61,7 +61,7 @@
+             if args.base:
+                 base = args.base
+             else:
+-                storage = Storage(Path(temporary)/'ui.sqlite3')
++                storage = Storage.create(Path(temporary)/'ui.sqlite3')
+                 rss = CollectionService(storage, fetcher=lambda _: (fixture('두바이 쫀득 쿠키'), 200)); rss.collect()
+                 config = YouTubeConfig(api_key='synthetic-secret', discovery_queries=('신상 디저트',), queries_per_run=3)
+                 sender = Transport()
+--- /dev/null
++++ after/food_trends\contracts.py
+@@ -0,0 +1,143 @@
++"""Versioned metadata contracts. Provider payloads and credentials are not envelopes."""
++import copy
++import json
++import re
++from datetime import datetime
++from urllib.parse import parse_qsl, urlsplit
++
++CONTRACT_VERSION = 'source-envelope-v1'
++ORIGINS = frozenset(('live_api', 'mock', 'user', 'legacy_unknown'))
++_SECRET_KEYS = frozenset(('authorization', 'accesstoken', 'inputtoken', 'fbexchangetoken',
++                          'clientsecret', 'apikey', 'xgoogapikey', 'xncpapigwapikey',
++                          'xncpapigwapikeyid', 'token', 'appsecret', 'password', 'key',
++                          'clientid', 'clientkey', 'secret', 'apisecret', 'credentials',
++                          'instagramaccesstoken', 'youtubeapikey', 'metaappsecret',
++                          'naverdatalabclientid', 'naverdatalabclientsecret'))
++
++SOURCES = {
++    'google_trends_rss': {
++        'adapter_version': 'rss-adapter-v1', 'data_type': 'trend_item',
++        'fields': ('keyword', 'published_at', 'published_raw', 'traffic', 'news', 'related_queries'),
++        'metrics': {'approx_traffic': 'approximate_search_traffic_text'},
++        'request_fields': ('geo', 'endpoint'),
++        'policy': {'version': 'rss-existing-v1', 'response_storage': True, 'response_cache': False,
++                   'retention_days': None, 'long_term_retention_verified': False,
++                   'expand_retention_allowed': False, 'derived_operations': ('existing_food_rules',)},
++    },
++    'instagram_graph': {
++        'adapter_version': 'instagram-adapter-v1', 'data_type': 'hashtag_media',
++        'fields': ('id', 'caption', 'published_at', 'media_type', 'permalink'),
++        'metrics': {'observed_posts': 'unique_observed_post', 'co_tag_rate': 'percent_of_observed_posts'},
++        'request_fields': ('hashtag_id', 'hashtag', 'fields', 'limit', 'max_pages', 'api_version'),
++        'policy': {'version': 'instagram-existing-v1', 'response_storage': False, 'response_cache': False,
++                   'retention_days': 30, 'long_term_retention_verified': False,
++                   'expand_retention_allowed': False, 'derived_operations': ('existing_caption_hashtags',)},
++    },
++    'youtube': {
++        'adapter_version': 'youtube-adapter-v1', 'data_type': 'video_metadata',
++        'fields': ('video_id', 'title', 'description', 'published_at', 'channel_id', 'channel_title',
++                   'thumbnail_url', 'view_count', 'like_count', 'comment_count', 'duration', 'privacy_status'),
++        'metrics': {'view_count': 'video_view_count_snapshot', 'like_count': 'video_like_count_snapshot',
++                    'comment_count': 'video_comment_count_snapshot'},
++        'request_fields': ('part', 'type', 'regionCode', 'relevanceLanguage', 'order', 'publishedAfter',
++                           'publishedBefore', 'maxResults', 'q', 'id', 'endpoint'),
++        'policy': {'version': 'youtube-existing-v1', 'response_storage': False, 'response_cache': False,
++                   'retention_days': 29, 'long_term_retention_verified': False,
++                   'expand_retention_allowed': False, 'derived_operations': ()},
++    },
++    'naver_datalab': {
++        'adapter_version': 'naver-adapter-v1', 'data_type': 'relative_search_series',
++        'fields': ('startDate', 'endDate', 'timeUnit', 'results'),
++        'metrics': {'relative_search_index': 'relative_search_index_0_100'},
++        'request_fields': ('startDate', 'endDate', 'timeUnit', 'keywordGroups', 'device', 'gender', 'ages'),
++        'policy': {'version': 'naver-no-response-storage-v1', 'response_storage': False,
++                   'response_cache': False, 'retention_days': 0, 'long_term_retention_verified': False,
++                   'expand_retention_allowed': False, 'derived_operations': ()},
++    },
++}
++
++
++def _key(value):
++    return re.sub(r'[^a-z0-9]', '', value.lower())
++
++
++def validate_metadata(value):
++    """Fail closed on credential-shaped keys, URLs and non-JSON values; never echo values."""
++    if isinstance(value, dict):
++        for key, child in value.items():
++            if not isinstance(key, str) or _key(key) in _SECRET_KEYS:
++                raise ValueError('Credentials are forbidden in contract metadata')
++            validate_metadata(child)
++    elif isinstance(value, (list, tuple)):
++        for child in value:
++            validate_metadata(child)
++    elif isinstance(value, str):
++        if value.lower().startswith(('bearer ', 'basic ')):
++            raise ValueError('Credentials are forbidden in contract metadata')
++        if '://' in value:
++            url = urlsplit(value)
++            if url.username or url.password or any(_key(k) in _SECRET_KEYS for k, _ in parse_qsl(url.query)):
++                raise ValueError('Credential URLs are forbidden in contract metadata')
++    elif value is not None and type(value) not in (bool, int, float):
++        raise ValueError('Contract metadata must be JSON-compatible')
++    json.dumps(value, allow_nan=False)
++
++
++def _time(value, nullable=False):
++    if value is None and nullable:
++        return
++    if not isinstance(value, str) or datetime.fromisoformat(value.replace('Z', '+00:00')).tzinfo is None:
++        raise ValueError('Contract timestamps require a timezone')
++
++
++def policy_for(source_code, retention_days=None):
++    policy = copy.deepcopy(SOURCES[source_code]['policy'])
++    if source_code == 'instagram_graph' and retention_days is not None:
++        # Contract creation cannot silently extend the existing configured lifetime.
++        if type(retention_days) is not int or not 1 <= retention_days <= 365:
++            raise ValueError('Invalid existing caption retention setting')
++        policy['retention_days'] = retention_days
++    return policy
++
++
++def require_operation(source_code, operation):
++    if operation not in SOURCES[source_code]['policy']['derived_operations']:
++        raise ValueError('Processing operation is not enabled by the source policy')
++
++
++def envelope(source_code, origin, collected_at, *, published_at=None, fields=None,
++             request=None, observation=None, retention_days=None):
++    if source_code not in SOURCES or origin not in ORIGINS:
++        raise ValueError('Unknown source or origin')
++    _time(collected_at)
++    _time(published_at, nullable=True)
++    source = SOURCES[source_code]
++    request = {} if request is None else request
++    if not isinstance(request, dict) or set(request) - set(source['request_fields']):
++        raise ValueError('Unknown request metadata field')
++    field_evidence = 'not_recorded' if fields is None else 'adapter_observed'
++    fields = {} if fields is None else fields
++    if not isinstance(fields, dict):
++        raise ValueError('Field metadata requires a mapping')
++    states = {}
++    for name in source['fields'] if field_evidence == 'adapter_observed' else ():
++        value = fields.get(name)
++        states[name] = ('not_provided' if name not in fields else 'null' if value is None
++                        else 'empty' if value == '' or value == [] else 'provided')
++    result = {
++        'contract_version': CONTRACT_VERSION, 'source_code': source_code, 'origin': origin,
++        'collected_at': collected_at, 'published_at': published_at, 'data_type': source['data_type'],
++        'metric_units': copy.deepcopy(source['metrics']), 'field_states': states, 'field_evidence': field_evidence,
++        'provided_fields': [k for k, v in states.items() if v != 'not_provided'],
++        'missing_fields': [k for k, v in states.items() if v == 'not_provided'],
++        'request_conditions': copy.deepcopy(request), 'observation_conditions': copy.deepcopy(observation or {}),
++        'adapter_version': source['adapter_version'], 'policy': policy_for(source_code, retention_days),
++    }
++    result['policy_version'] = result['policy']['version']
++    validate_metadata(result)
++    return result
++
++
++def encode(contract):
++    validate_metadata(contract)
++    return json.dumps(contract, ensure_ascii=False, allow_nan=False, sort_keys=True)
+--- /dev/null
++++ after/food_trends\migrations.py
+@@ -0,0 +1,100 @@
++"""Explicit, atomic, versioned SQLite migrations. No service constructors run DDL."""
++import sqlite3
++from contextlib import closing
++from datetime import datetime, timezone
++from pathlib import Path
++from .migration_definitions import BASE_SQL, LEGACY_ADDITIONS
++
++LATEST_VERSION = 2
++
++
++class MigrationRequired(RuntimeError):
++    pass
++
++
++def _add_columns(db, table, columns):
++    existing = {r[1] for r in db.execute(f'PRAGMA table_info({table})')}
++    for name, declaration in columns.items():
++        if name not in existing:
++            db.execute(f'ALTER TABLE {table} ADD COLUMN {name} {declaration}')
++
++
++def _legacy_schema(db):
++    for statement in BASE_SQL.split(';'):
++        if statement.strip():
++            db.execute(statement)
++    for table, columns in LEGACY_ADDITIONS.items():
++        _add_columns(db, table, columns)
++
++
++def _contracts(db):
++    for table in ('runs', 'instagram_runs', 'instagram_media', 'naver_calls'):
++        _add_columns(db, table, {
++            'origin': "TEXT NOT NULL DEFAULT 'legacy_unknown'",
++            'contract_json': 'TEXT CHECK(contract_json IS NULL OR json_valid(contract_json))',
++        })
++    for table in ('observations', 'instagram_analysis_observations', 'youtube_videos'):
++        _add_columns(db, table, {
++            'contract_json': 'TEXT CHECK(contract_json IS NULL OR json_valid(contract_json))',
++        })
++
++
++MIGRATIONS = ((1, 'legacy_additive_schema', _legacy_schema),
++              (2, 'source_contract_metadata', _contracts))
++
++
++def schema_version(path):
++    path = Path(path).resolve()
++    if not path.is_file():
++        return 0
++    with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
++        db.execute('PRAGMA query_only=ON')
++        if not db.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone():
++            return 0
++        versions = [r[0] for r in db.execute('SELECT version FROM schema_migrations ORDER BY version')]
++        if versions != list(range(1, max(versions, default=0) + 1)):
++            raise MigrationRequired('Non-contiguous migration history; restore or inspect the database.')
++        return max(versions, default=0)
++
++
++def require_current(path):
++    if schema_version(path) != LATEST_VERSION:
++        raise MigrationRequired('Database migration required. Back up first, then run python -m food_trends --migrate.')
++
++
++def migrate(path):
++    """Caller explicitly authorizes DDL. Existing source rows are never reprocessed."""
++    path = Path(path)
++    version = schema_version(path)
++    if version > LATEST_VERSION:
++        raise MigrationRequired('Database is newer than this application; refusing downgrade.')
++    if version == LATEST_VERSION:
++        return {'version': version, 'applied': []}
++    path.parent.mkdir(parents=True, exist_ok=True)
++    db = sqlite3.connect(path, timeout=30)
++    try:
++        db.execute('PRAGMA foreign_keys=ON')
++        db.execute('PRAGMA journal_mode=WAL')
++        db.execute('BEGIN IMMEDIATE')
++        db.execute('''CREATE TABLE IF NOT EXISTS schema_migrations (
++            version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)''')
++        # Re-read after acquiring the database write lock, including concurrent migrators.
++        current = max((r[0] for r in db.execute('SELECT version FROM schema_migrations')), default=0)
++        if current > LATEST_VERSION:
++            raise MigrationRequired('Database is newer than this application.')
++        applied = []
++        for number, name, change in MIGRATIONS:
++            if number > current:
++                change(db)
++                db.execute('INSERT INTO schema_migrations VALUES (?,?,?)',
++                           (number, name, datetime.now(timezone.utc).isoformat()))
++                applied.append(number)
++        if db.execute('PRAGMA foreign_key_check').fetchone():
++            raise MigrationRequired('Foreign key validation failed; migration rolled back.')
++        db.commit()
++        return {'version': LATEST_VERSION, 'applied': applied}
++    except BaseException:
++        db.rollback()
++        raise
++    finally:
++        db.close()
+--- /dev/null
++++ after/food_trends\migration_definitions.py
+@@ -0,0 +1,152 @@
++"""Legacy additive schema, executed only by the explicit migration runner."""
++
++BASE_SQL = '''
++CREATE TABLE IF NOT EXISTS runs (
++                    id INTEGER PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,
++                    success INTEGER, error TEXT, http_status INTEGER, item_count INTEGER DEFAULT 0,
++                    new_count INTEGER DEFAULT 0, warnings TEXT, raw_response BLOB);
++                CREATE TABLE IF NOT EXISTS items (
++                    id INTEGER PRIMARY KEY, source_id TEXT UNIQUE NOT NULL, keyword TEXT NOT NULL,
++                    published_at TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, payload TEXT NOT NULL);
++                CREATE TABLE IF NOT EXISTS observations (
++                    run_id INTEGER REFERENCES runs(id), item_id INTEGER REFERENCES items(id),
++                    payload TEXT NOT NULL, PRIMARY KEY(run_id,item_id));
++                CREATE TABLE IF NOT EXISTS candidates (
++                    item_id INTEGER PRIMARY KEY REFERENCES items(id), normalized_name TEXT NOT NULL,
++                    classification TEXT NOT NULL, reasons TEXT NOT NULL, classifier_version TEXT NOT NULL);
++                CREATE INDEX IF NOT EXISTS items_keyword ON items(keyword);
++                CREATE TABLE IF NOT EXISTS classification_history (
++                    id INTEGER PRIMARY KEY, item_id INTEGER REFERENCES items(id),
++                    recorded_at TEXT NOT NULL, result_json TEXT NOT NULL);
++            
++
++                CREATE TABLE IF NOT EXISTS instagram_hashtags (
++                    id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
++                    instagram_id TEXT, created_at TEXT NOT NULL, last_searched_at TEXT,
++                    active INTEGER NOT NULL DEFAULT 0, approved_at TEXT,
++                    UNIQUE(user_id,name));
++                CREATE TABLE IF NOT EXISTS instagram_candidate_hashtags (
++                    candidate_id INTEGER NOT NULL REFERENCES candidates(item_id),
++                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
++                    PRIMARY KEY(candidate_id,hashtag_id));
++                CREATE TABLE IF NOT EXISTS instagram_media (
++                    id TEXT PRIMARY KEY, published_at TEXT, first_seen TEXT NOT NULL,
++                    last_seen TEXT NOT NULL, media_type TEXT, permalink TEXT,
++                    source TEXT NOT NULL DEFAULT 'instagram_graph');
++                CREATE TABLE IF NOT EXISTS instagram_hashtag_media (
++                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
++                    media_id TEXT NOT NULL REFERENCES instagram_media(id),
++                    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
++                    PRIMARY KEY(hashtag_id,media_id));
++                CREATE TABLE IF NOT EXISTS instagram_runs (
++                    id INTEGER PRIMARY KEY, hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
++                    started_at TEXT NOT NULL, finished_at TEXT, status TEXT NOT NULL DEFAULT 'running',
++                    request_count INTEGER NOT NULL DEFAULT 0, returned_count INTEGER NOT NULL DEFAULT 0,
++                    new_count INTEGER NOT NULL DEFAULT 0, duplicate_count INTEGER NOT NULL DEFAULT 0,
++                    error_type TEXT, error_code INTEGER, error_subcode INTEGER,
++                    truncated INTEGER NOT NULL DEFAULT 0);
++                CREATE TABLE IF NOT EXISTS instagram_searches (
++                    id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, name TEXT NOT NULL,
++                    instagram_id TEXT, searched_at TEXT NOT NULL);
++                CREATE TABLE IF NOT EXISTS instagram_metrics (
++                    hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
++                    grain TEXT NOT NULL, bucket TEXT NOT NULL, new_count INTEGER NOT NULL,
++                    run_count INTEGER NOT NULL, successful_runs INTEGER NOT NULL,
++                    PRIMARY KEY(hashtag_id,grain,bucket));
++                CREATE TABLE IF NOT EXISTS instagram_state (
++                    user_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL,
++                    PRIMARY KEY(user_id,key));
++                CREATE TABLE IF NOT EXISTS instagram_leases (
++                    user_id TEXT PRIMARY KEY, owner TEXT NOT NULL, expires_at TEXT NOT NULL);
++                CREATE INDEX IF NOT EXISTS instagram_search_window ON instagram_searches(user_id,searched_at);
++                CREATE INDEX IF NOT EXISTS instagram_run_tag ON instagram_runs(hashtag_id,id);
++            
++
++                CREATE TABLE IF NOT EXISTS instagram_caption_analysis (
++                    media_id TEXT PRIMARY KEY REFERENCES instagram_media(id),
++                    caption_state TEXT NOT NULL, caption_hash TEXT,
++                    extractor_version TEXT NOT NULL, analyzed_at TEXT NOT NULL,
++                    hashtag_count INTEGER NOT NULL);
++                CREATE TABLE IF NOT EXISTS instagram_caption_tags (
++                    media_id TEXT NOT NULL REFERENCES instagram_media(id),
++                    normalized_name TEXT NOT NULL, original_names TEXT NOT NULL,
++                    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
++                    PRIMARY KEY(media_id,normalized_name));
++                CREATE TABLE IF NOT EXISTS instagram_analysis_observations (
++                    id INTEGER PRIMARY KEY, hashtag_id INTEGER NOT NULL REFERENCES instagram_hashtags(id),
++                    media_id TEXT NOT NULL REFERENCES instagram_media(id),
++                    run_id INTEGER REFERENCES instagram_runs(id), observed_at TEXT NOT NULL,
++                    caption_state TEXT NOT NULL, caption_hash TEXT, hashtag_count INTEGER NOT NULL,
++                    extractor_version TEXT NOT NULL, evidence_kind TEXT NOT NULL,
++                    UNIQUE(hashtag_id,media_id,observed_at));
++                CREATE TABLE IF NOT EXISTS instagram_observation_tags (
++                    observation_id INTEGER NOT NULL REFERENCES instagram_analysis_observations(id),
++                    normalized_name TEXT NOT NULL, original_names TEXT NOT NULL,
++                    active INTEGER NOT NULL DEFAULT 1,
++                    PRIMARY KEY(observation_id,normalized_name));
++                CREATE INDEX IF NOT EXISTS instagram_analysis_window ON instagram_analysis_observations(hashtag_id,observed_at,media_id);
++                CREATE INDEX IF NOT EXISTS instagram_observed_tag ON instagram_observation_tags(normalized_name,observation_id);
++            
++
++                CREATE TABLE IF NOT EXISTS naver_targets (
++                    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(item_id),
++                    topic TEXT NOT NULL, keywords_json TEXT NOT NULL,
++                    last_attempt_at TEXT, last_success_at TEXT, status TEXT NOT NULL DEFAULT 'pending');
++                CREATE TABLE IF NOT EXISTS naver_calls (
++                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, fingerprint TEXT NOT NULL,
++                    requested_at TEXT NOT NULL, finished_at TEXT, status TEXT NOT NULL,
++                    http_status INTEGER, request_json TEXT NOT NULL, candidate_ids TEXT NOT NULL);
++                CREATE INDEX IF NOT EXISTS naver_calls_day ON naver_calls(day);
++                CREATE TABLE IF NOT EXISTS naver_guards (
++                    fingerprint TEXT PRIMARY KEY, owner TEXT NOT NULL, until_epoch REAL NOT NULL);
++            
++
++                CREATE TABLE IF NOT EXISTS youtube_foods (
++                    id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
++                CREATE TABLE IF NOT EXISTS youtube_candidate_foods (
++                    candidate_id INTEGER PRIMARY KEY REFERENCES candidates(item_id) ON DELETE CASCADE,
++                    food_id INTEGER NOT NULL REFERENCES youtube_foods(id));
++                CREATE TABLE IF NOT EXISTS youtube_queries (
++                    id INTEGER PRIMARY KEY, query TEXT NOT NULL, mode TEXT NOT NULL,
++                    food_id INTEGER REFERENCES youtube_foods(id), active INTEGER NOT NULL DEFAULT 1,
++                    after_at TEXT, before_at TEXT, page_token TEXT, token_at TEXT, last_attempt TEXT,
++                    UNIQUE(query,mode));
++                CREATE TABLE IF NOT EXISTS youtube_videos (
++                    video_id TEXT PRIMARY KEY, payload TEXT NOT NULL, collected_at TEXT NOT NULL,
++                    refreshed_at TEXT NOT NULL, expires_at TEXT NOT NULL);
++                CREATE TABLE IF NOT EXISTS youtube_matches (
++                    query_id INTEGER REFERENCES youtube_queries(id) ON DELETE CASCADE,
++                    video_id TEXT REFERENCES youtube_videos(video_id) ON DELETE CASCADE,
++                    matched_at TEXT NOT NULL, PRIMARY KEY(query_id,video_id));
++                CREATE TABLE IF NOT EXISTS youtube_calls (
++                    id INTEGER PRIMARY KEY, day TEXT NOT NULL, endpoint TEXT NOT NULL,
++                    query_id INTEGER REFERENCES youtube_queries(id), started_at TEXT NOT NULL,
++                    finished_at TEXT, status TEXT NOT NULL, http_status INTEGER);
++                CREATE INDEX IF NOT EXISTS youtube_calls_day ON youtube_calls(day,endpoint);
++                CREATE INDEX IF NOT EXISTS youtube_expiry ON youtube_videos(expires_at);
++                CREATE TABLE IF NOT EXISTS youtube_state (
++                    key TEXT PRIMARY KEY, value TEXT NOT NULL);
++                CREATE TABLE IF NOT EXISTS youtube_runs (
++                    id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,
++                    trigger TEXT NOT NULL, origin TEXT NOT NULL, status TEXT NOT NULL,
++                    result_json TEXT);
++                CREATE TABLE IF NOT EXISTS youtube_video_provenance (
++                    video_id TEXT PRIMARY KEY REFERENCES youtube_videos(video_id) ON DELETE CASCADE,
++                    origin TEXT NOT NULL, verified_at TEXT NOT NULL, run_id TEXT);
++'''
++
++LEGACY_ADDITIONS = {'candidates': {'entity_type': "TEXT NOT NULL DEFAULT 'UNKNOWN'",
++                'rule_score': 'INTEGER',
++                'score_basis': 'TEXT',
++                'evidence_news': "TEXT NOT NULL DEFAULT '[]'",
++                'classified_at': 'TEXT'},
++ 'runs': {'food_count': 'INTEGER',
++          'review_count': 'INTEGER',
++          'new_food_count': 'INTEGER',
++          'new_review_count': 'INTEGER',
++          'classifier_version': 'TEXT'},
++ 'observations': {'classification_json': 'TEXT'},
++ 'instagram_media': {'caption': 'TEXT', 'caption_captured_at': 'TEXT', 'caption_purged_at': 'TEXT'},
++ 'youtube_calls': {'origin': "TEXT NOT NULL DEFAULT 'legacy_unknown'",
++                   'run_id': 'TEXT',
++                   'result_count': 'INTEGER'}}
+--- /dev/null
++++ after/tests\run_offline.py
+@@ -0,0 +1,77 @@
++"""Run fixture tests with external sockets and the production DB blocked."""
++import argparse
++import contextlib
++import json
++import socket
++import sqlite3
++import sys
++import unittest
++from pathlib import Path
++from urllib.parse import unquote, urlsplit
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument('--output', default='reports/development-a1-a3-2026-10-27')
++    args = parser.parse_args()
++    root = Path(__file__).resolve().parents[1]
++    sys.path.insert(0, str(root))
++    production = (root / 'data/trends.sqlite3').resolve()
++    attempts = []
++    original_connect = socket.socket.connect
++    original_connect_ex = socket.socket.connect_ex
++    original_resolve = socket.getaddrinfo
++    original_db = sqlite3.connect
++
++    def allow_host(host):
++        if host not in ('127.0.0.1', '::1', 'localhost', b'127.0.0.1', None):
++            attempts.append('blocked_external_socket')
++            raise RuntimeError('External network disabled for fixture tests')
++
++    def connect(sock, address):
++        if isinstance(address, tuple):
++            allow_host(address[0])
++        return original_connect(sock, address)
++
++    def connect_ex(sock, address):
++        if isinstance(address, tuple):
++            allow_host(address[0])
++        return original_connect_ex(sock, address)
++
++    def resolve(host, *args, **kwargs):
++        allow_host(host)
++        return original_resolve(host, *args, **kwargs)
++
++    def database(path, *args, **kwargs):
++        text = str(path)
++        if text != ':memory:':
++            if text.startswith('file:'):
++                text = unquote(urlsplit(text).path)
++                if len(text) > 2 and text[0] == '/' and text[2] == ':':
++                    text = text[1:]
++            if Path(text).resolve() == production:
++                raise RuntimeError('Production database disabled for fixture tests')
++        return original_db(path, *args, **kwargs)
++
++    socket.socket.connect, socket.socket.connect_ex, socket.getaddrinfo = connect, connect_ex, resolve
++    sqlite3.connect = database
++    output = root / args.output
++    output.mkdir(parents=True, exist_ok=True)
++    try:
++        with (output / 'tests.log').open('w', encoding='utf-8') as stream:
++            with contextlib.redirect_stderr(stream):
++                suite = unittest.defaultTestLoader.discover(str(root / 'tests'), pattern='test_*.py')
++                result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
++    finally:
++        socket.socket.connect, socket.socket.connect_ex, socket.getaddrinfo = original_connect, original_connect_ex, original_resolve
++        sqlite3.connect = original_db
++    summary = {'tests': result.testsRun, 'failures': len(result.failures), 'errors': len(result.errors),
++               'skipped': len(result.skipped), 'blocked_external_attempts': len(attempts),
++               'production_database': 'blocked', 'successful': result.wasSuccessful() and not attempts}
++    (output / 'test-summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
++    print(json.dumps(summary))
++    return 0 if summary['successful'] else 1
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())
+--- /dev/null
++++ after/tests\test_foundations.py
+@@ -0,0 +1,309 @@
++"""A1-A3 regression tests: isolated databases and injected transports only."""
++import hashlib
++import io
++import json
++import sqlite3
++import tempfile
++import threading
++import unittest
++from contextlib import closing
++from contextlib import redirect_stdout
++from dataclasses import replace
++from datetime import datetime, timedelta, timezone
++from pathlib import Path
++from unittest.mock import patch
++from urllib.request import urlopen
++
++from food_trends.api import make_server
++from food_trends.classifier import classify
++from food_trends.config import InstagramConfig, NaverConfig, YouTubeConfig
++from food_trends.contracts import envelope, encode, policy_for, require_operation
++from food_trends.instagram_graph import GraphClient
++from food_trends.instagram_service import InstagramService
++from food_trends.migrations import migrate, schema_version, MigrationRequired
++from food_trends.naver_datalab import NaverClient
++from food_trends.naver_service import NaverService
++from food_trends.service import CollectionService
++from food_trends.storage import Storage, utcnow
++from food_trends.youtube import YouTubeClient, parse_video
++from food_trends.youtube_service import YouTubeService
++from test_instagram import Transport as InstagramTransport
++from test_naver import Transport as NaverTransport
++from test_youtube import Transport as YouTubeTransport, resource
++from test_mvp import fixture
++
++
++def snapshot(path):
++    with closing(sqlite3.connect(path)) as db:
++        return '\n'.join(db.iterdump())
++
++
++class FoundationTests(unittest.TestCase):
++    def setUp(self):
++        self.temp = tempfile.TemporaryDirectory()
++        self.path = Path(self.temp.name) / 'fixture.sqlite3'
++        self.storage = Storage.create(self.path)
++        self.rss = CollectionService(self.storage, fetcher=lambda _: (fixture('쿠키'), 200))
++        self.rss.collect()
++        self.ig_config = InstagramConfig(token='fixture-token')
++        self.ig_sender = InstagramTransport()
++        self.ig = InstagramService(self.storage, self.ig_config, GraphClient(self.ig_config, self.ig_sender))
++        self.naver_config = NaverConfig(client_id='fixture-id', client_secret='fixture-secret')
++        self.naver = NaverService(self.storage, self.naver_config,
++                                 NaverClient(self.naver_config, NaverTransport(), lambda _: None))
++        self.youtube_config = YouTubeConfig(api_key='fixture-key', discovery_queries=('fixture discovery',))
++        self.youtube = YouTubeService(self.storage, self.youtube_config,
++                                      YouTubeClient(self.youtube_config, YouTubeTransport(), lambda _: None))
++
++    def tearDown(self):
++        self.temp.cleanup()
++
++    def links(self):
++        with self.storage.reader() as db:
++            return [tuple(r) for r in db.execute('SELECT * FROM youtube_candidate_foods ORDER BY candidate_id')]
++
++    def test_a1_repeated_collection_and_reanalysis_preserve_links(self):
++        self.youtube.store.sync_queries(self.youtube_config)
++        before = self.links()
++        self.assertEqual(len(before), 1)
++        for _ in range(3):
++            result = self.rss.collect()
++            self.assertTrue(result['success'])
++            self.assertEqual(result['new_count'], 0)
++            self.storage.reanalyze()
++            self.assertEqual(self.links(), before)
++        with self.storage.reader() as db:
++            self.assertEqual(db.execute('SELECT count(*) FROM classification_history').fetchone()[0], 0)
++            self.assertEqual(db.execute('SELECT count(*) FROM items').fetchone()[0], 1)
++
++    def test_a1_version_and_classification_changes_keep_id_and_history(self):
++        self.youtube.store.sync_queries(self.youtube_config)
++        before = self.links()
++        old = self.storage.trends()[0]
++        def upgraded(item):
++            return dict(classify(item), classifier_version='fixture-next-version', classification='REVIEW')
++        with patch('food_trends.storage.classify', side_effect=upgraded):
++            self.storage.reanalyze()
++            self.storage.reanalyze()
++        self.assertEqual(self.links(), before)
++        current = self.storage.trends()[0]
++        self.assertEqual((current['id'], current['classification']), (old['id'], 'REVIEW'))
++        with self.storage.reader() as db:
++            rows = db.execute('SELECT result_json FROM classification_history').fetchall()
++            self.assertEqual(len(rows), 1)
++            self.assertEqual(json.loads(rows[0][0])['classifier_version'], old['classifier_version'])
++            self.assertEqual(db.execute('PRAGMA foreign_key_check').fetchall(), [])
++
++    def test_a1_new_candidate_still_created(self):
++        self.rss.fetcher = lambda _: (fixture('케이크'), 200)
++        self.assertEqual(self.rss.collect()['new_count'], 1)
++        self.assertEqual(self.storage.status()['total_keywords'], 2)
++
++    def test_readers_reject_writes_and_constructor_does_not_create_database(self):
++        with self.storage.reader() as db:
++            with self.assertRaises(sqlite3.OperationalError):
++                db.execute('DELETE FROM items')
++        absent = Path(self.temp.name) / 'missing' / 'new.sqlite3'
++        with self.assertRaises(MigrationRequired):
++            Storage(absent)
++        self.assertFalse(absent.parent.exists())
++
++    def test_all_constructors_and_direct_status_are_pure_reads(self):
++        before = snapshot(self.path)
++        storage = Storage(self.path)
++        ig = InstagramService(storage, self.ig_config, self.ig.client)
++        naver = NaverService(storage, self.naver_config, self.naver.client)
++        youtube = YouTubeService(storage, self.youtube_config, self.youtube.client)
++        storage.status(); storage.trends(); storage.export()
++        ig.status(); naver.status(); youtube.status()
++        self.assertEqual(snapshot(self.path), before)
++
++    def test_all_get_routes_are_readonly_even_with_pending_targets_and_expired_data(self):
++        self.youtube.collect(verification=True)
++        self.ig.start_tracking('두쫀쿠')
++        with self.storage.connect() as db:
++            db.execute("DELETE FROM naver_targets")
++            db.execute("UPDATE youtube_videos SET expires_at='2000-01-01T00:00:00+00:00'")
++            db.execute("UPDATE youtube_matches SET matched_at='2000-01-01T00:00:00+00:00'")
++            db.execute("UPDATE youtube_queries SET page_token='expired',token_at='2000-01-01T00:00:00+00:00'")
++        before = snapshot(self.path)
++        server = make_server(self.rss, port=0, instagram=self.ig, naver=self.naver, youtube=self.youtube)
++        thread = threading.Thread(target=server.serve_forever, daemon=True)
++        thread.start()
++        connect = self.storage.connect
++        def readonly_only(*args, **kwargs):
++            if not kwargs.get('readonly'):
++                raise AssertionError('GET attempted to open a writable connection')
++            return connect(*args, **kwargs)
++        try:
++            with patch.object(self.storage, 'connect', side_effect=readonly_only):
++                for route in ('/api/status', '/api/trends', '/api/trends/1', '/api/export',
++                              '/api/instagram', '/api/instagram/media?hashtag_id=1',
++                              '/api/naver', '/api/youtube'):
++                    with self.subTest(route=route):
++                        with urlopen(f'http://127.0.0.1:{server.server_port}{route}') as response:
++                            data = json.load(response)
++                            if route == '/api/youtube':
++                                self.assertEqual(data['stored_videos'], 0)
++                                self.assertEqual(data['videos'], [])
++        finally:
++            server.shutdown(); server.server_close(); thread.join()
++        self.assertEqual(snapshot(self.path), before)
++
++    def test_changed_credentials_status_is_local_without_state_reset(self):
++        self.ig.prepare_credentials()
++        self.ig.store.state('token', {'status': 'invalid', 'expires_at': None})
++        before = snapshot(self.path)
++        changed = InstagramService(self.storage, replace(self.ig_config, token='different-fixture-token'), self.ig.client)
++        self.assertEqual(changed.status()['token']['status'], 'unchecked')
++        self.assertEqual(changed.status()['connection']['status'], 'unverified')
++        self.assertEqual(snapshot(self.path), before)
++
++    def test_explicit_maintenance_purges_without_network(self):
++        self.youtube.collect(verification=True)
++        self.ig.start_tracking('두쫀쿠')
++        old = (datetime.now(timezone.utc) - timedelta(days=31)).isoformat()
++        with self.storage.connect() as db:
++            db.execute('UPDATE youtube_videos SET expires_at=?', (old,))
++            db.execute('UPDATE instagram_media SET caption_captured_at=?', (old,))
++        before_calls = len(self.ig_sender.calls)
++        self.assertGreater(self.ig.maintenance(), 0)
++        self.assertGreater(self.youtube.store.purge(), 0)
++        self.assertEqual(len(self.ig_sender.calls), before_calls)
++        self.assertEqual(self.youtube.status()['stored_videos'], 0)
++
++    def test_expired_caption_is_hidden_on_read_and_legacy_cleanup_needs_no_reprocessing(self):
++        self.ig.start_tracking('두쫀쿠')
++        old = (datetime.now(timezone.utc)-timedelta(days=31)).isoformat()
++        with self.storage.connect() as db:
++            db.execute('UPDATE instagram_media SET caption_captured_at=?', (old,))
++            db.execute('''INSERT INTO instagram_media(id,first_seen,last_seen,caption)
++                VALUES ('unprocessed-legacy',?,?,?)''', (old, old, 'expired fixture caption'))
++        before = snapshot(self.path)
++        view = self.ig.status(include_media=True)['hashtags'][0]
++        self.assertIsNone(view['media'][0]['caption'])
++        self.assertEqual(view['analysis']['raw_captions_retained'], 0)
++        self.assertEqual(snapshot(self.path), before)
++        self.assertEqual(self.ig.maintenance(), 2)
++        with self.storage.reader() as db:
++            self.assertIsNone(db.execute("SELECT caption FROM instagram_media WHERE id='unprocessed-legacy'").fetchone()[0])
++            self.assertEqual(db.execute("SELECT count(*) FROM instagram_caption_analysis WHERE media_id='unprocessed-legacy'").fetchone()[0], 0)
++
++    def test_local_maintenance_thread_runs_with_automatic_collection_disabled(self):
++        complete = threading.Event()
++        maintenance = self.ig.maintenance
++        def maintain_once():
++            result = maintenance()
++            self.ig.stop_event.set()
++            complete.set()
++            return result
++        with patch.object(self.ig, 'maintenance', side_effect=maintain_once), \
++                patch.object(self.ig, 'collect', side_effect=AssertionError('automatic collection forbidden')):
++            try:
++                self.ig.start(automatic=False)
++                self.assertTrue(complete.wait(3))
++            finally:
++                self.ig.stop_event.set()
++                self.ig.thread.join(3)
++        self.assertFalse(self.ig.thread.is_alive())
++        self.assertEqual(self.ig_sender.calls, [])
++
++    def test_cli_migration_commands_are_explicit_and_status_does_not_write(self):
++        import os
++        from food_trends.__main__ import main
++        path = Path(self.temp.name) / 'cli.sqlite3'
++        with patch.dict(os.environ, {'DATABASE_PATH': str(path)}, clear=True), \
++                patch('food_trends.__main__.load_env'):
++            for command in ('--migration-status', '--migrate'):
++                with patch('sys.argv', ['food_trends', command]), redirect_stdout(io.StringIO()) as stream:
++                    main()
++                result = json.loads(stream.getvalue())
++                if command == '--migration-status':
++                    self.assertEqual(result['version'], 0)
++                    self.assertFalse(path.exists())
++                else:
++                    self.assertEqual(result['applied'], [1, 2])
++            before = snapshot(path)
++            with patch('sys.argv', ['food_trends', '--youtube-status']), redirect_stdout(io.StringIO()), \
++                    self.assertRaises(SystemExit) as exit_code:
++                main()
++            self.assertEqual(exit_code.exception.code, 0)
++            self.assertEqual(snapshot(path), before)
++
++    def test_new_contracts_are_mock_and_naver_never_persists_response_values(self):
++        self.naver.query_keywords(['fixture food'])
++        self.youtube.collect(verification=True)
++        self.ig.start_tracking('두쫀쿠')
++        with self.storage.reader() as db:
++            for table in ('runs', 'observations', 'naver_calls', 'instagram_runs', 'instagram_media', 'youtube_videos'):
++                contract = json.loads(db.execute(f'SELECT contract_json FROM {table} WHERE contract_json IS NOT NULL LIMIT 1').fetchone()[0])
++                self.assertEqual(contract['origin'], 'mock')
++                self.assertIn('policy_version', contract)
++                self.assertNotIn('fixture-secret', encode(contract))
++            nav = db.execute('SELECT contract_json FROM naver_calls').fetchone()[0]
++            self.assertNotIn('73.125', nav)
++            self.assertNotIn('"ratio"', nav)
++            self.assertFalse(json.loads(nav)['policy']['response_storage'])
++
++    def test_youtube_legacy_origin_remains_unknown_on_read(self):
++        self.youtube.store.save_videos(['abcdefghij1'], [parse_video(resource())])
++        before = snapshot(self.path)
++        data = self.youtube.status()
++        self.assertEqual(data['videos'][0]['provenance']['origin'], 'legacy_unknown')
++        self.assertEqual(data['videos'][0]['contract']['origin'], 'legacy_unknown')
++        self.assertEqual(snapshot(self.path), before)
++
++    def test_explicit_migration_is_idempotent_and_rolls_back_failed_step(self):
++        before = snapshot(self.path)
++        self.assertEqual(migrate(self.path)['applied'], [])
++        self.assertEqual(snapshot(self.path), before)
++        fresh = Path(self.temp.name) / 'rollback.sqlite3'
++        def failed(db):
++            db.execute('CREATE TABLE should_rollback (id INTEGER)')
++            raise RuntimeError('synthetic migration failure')
++        with patch('food_trends.migrations.MIGRATIONS', ((1, 'fixture_failure', failed),)):
++            with self.assertRaises(RuntimeError):
++                migrate(fresh)
++        with closing(sqlite3.connect(fresh)) as db:
++            self.assertEqual(db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall(), [])
++        self.assertEqual(schema_version(fresh), 0)
++
++
++class ContractTests(unittest.TestCase):
++    def test_field_absence_null_empty_and_metric_units_are_distinct(self):
++        data = envelope('youtube', 'mock', utcnow(),
++                        fields={'description': '', 'like_count': None, 'view_count': '0'})
++        self.assertEqual(data['field_states']['description'], 'empty')
++        self.assertEqual(data['field_states']['like_count'], 'null')
++        self.assertEqual(data['field_states']['view_count'], 'provided')
++        self.assertEqual(data['field_states']['comment_count'], 'not_provided')
++        self.assertEqual(data['metric_units']['view_count'], 'video_view_count_snapshot')
++        self.assertIsNone(data['published_at'])
++
++    def test_contract_rejects_credentials_unknown_origins_and_naive_times(self):
++        for request in ({'api_key': 'synthetic-secret'},
++                        {'endpoint': 'https://example.com/?access_token=synthetic-secret'},
++                        {'endpoint': 'https://example.com/?key=synthetic-secret'},
++                        {'endpoint': {'client_id': 'synthetic-credential'}},
++                        {'endpoint': {'Authorization': 'Bearer synthetic-secret'}}):
++            with self.subTest(request_key=next(iter(request))):
++                with self.assertRaises(ValueError):
++                    envelope('youtube', 'mock', utcnow(), request=request)
++        with self.assertRaises(ValueError):
++            envelope('youtube', 'legacy', utcnow())
++        with self.assertRaises(ValueError):
++            envelope('youtube', 'mock', '2026-10-27T12:00:00')
++
++    def test_policy_is_copied_and_unapproved_operations_are_disabled(self):
++        policy = policy_for('youtube')
++        policy['retention_days'] = 999
++        self.assertEqual(policy_for('youtube')['retention_days'], 29)
++        self.assertEqual(policy_for('naver_datalab')['retention_days'], 0)
++        self.assertFalse(policy_for('instagram_graph')['expand_retention_allowed'])
++        for source in ('youtube', 'naver_datalab', 'instagram_graph'):
++            with self.assertRaises(ValueError):
++                require_operation(source, 'food_extraction')
++
++
++if __name__ == '__main__':
++    unittest.main()
+--- /dev/null
++++ after/tests\verify_preserved_copy.py
+@@ -0,0 +1,75 @@
++"""Validate explicit migration on a disposable copy, never the source database."""
++import argparse
++import hashlib
++import json
++import sqlite3
++import sys
++import tempfile
++from contextlib import closing
++from pathlib import Path
++
++
++def digest_columns(db, table, columns):
++    names = ','.join('"'+c.replace('"', '""')+'"' for c in columns)
++    digest = hashlib.sha256()
++    rows = db.execute(f'SELECT {names} FROM "{table}" ORDER BY rowid').fetchall()
++    for row in rows:
++        digest.update(repr(tuple(row)).encode('utf-8'))
++    return {'rows': len(rows), 'sha256': digest.hexdigest()}
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument('source', help='An existing read-only preservation snapshot')
++    parser.add_argument('--output', default='reports/development-a1-a3-2026-10-27/copy-migration.json')
++    args = parser.parse_args()
++    root = Path(__file__).resolve().parents[1]
++    sys.path.insert(0, str(root))
++    from food_trends.migrations import migrate
++    from food_trends.storage import Storage
++    source_path = Path(args.source).resolve()
++    with tempfile.TemporaryDirectory() as directory:
++        copy_path = Path(directory) / 'migration-copy.sqlite3'
++        with closing(sqlite3.connect(source_path.as_uri()+'?mode=ro', uri=True)) as source:
++            source.execute('PRAGMA query_only=ON')
++            with closing(sqlite3.connect(copy_path)) as destination:
++                source.backup(destination)
++        with closing(sqlite3.connect(copy_path)) as db:
++            columns = {r[0]: [c[1] for c in db.execute(f'PRAGMA table_info("{r[0]}")')]
++                       for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
++            before = {t: digest_columns(db, t, names) for t, names in columns.items()}
++        migration = migrate(copy_path)
++        with closing(sqlite3.connect(copy_path)) as db:
++            after = {t: digest_columns(db, t, names) for t, names in columns.items()}
++            integrity = db.execute('PRAGMA integrity_check').fetchone()[0]
++            fk_errors = len(db.execute('PRAGMA foreign_key_check').fetchall())
++            legacy = {t: db.execute(f"SELECT count(*) FROM {t} WHERE origin!='legacy_unknown'").fetchone()[0]
++                      for t in ('runs', 'instagram_runs', 'instagram_media', 'naver_calls')}
++            state_before = list(db.iterdump())
++        # Read-only construction, source status and export on real saved rows.
++        from food_trends.config import InstagramConfig, NaverConfig, YouTubeConfig
++        from food_trends.instagram_service import InstagramService
++        from food_trends.naver_service import NaverService
++        from food_trends.youtube_service import YouTubeService
++        storage = Storage(copy_path)
++        storage.status(); storage.trends(); storage.export()
++        InstagramService(storage, InstagramConfig()).status()
++        NaverService(storage, NaverConfig()).status()
++        YouTubeService(storage, YouTubeConfig()).status()
++        with closing(sqlite3.connect(copy_path)) as db:
++            read_unchanged = state_before == list(db.iterdump())
++        second = migrate(copy_path)
++        result = {'source': str(source_path.relative_to(root)), 'migration': migration,
++                  'original_tables_compared': len(before), 'original_columns_and_rows_preserved': before == after,
++                  'integrity': integrity, 'foreign_key_errors': fk_errors,
++                  'legacy_rows_promoted': legacy, 'constructors_and_reads_unchanged': read_unchanged,
++                  'second_migration_applied': second['applied'], 'source_database_written': False}
++    target = root / args.output
++    target.parent.mkdir(parents=True, exist_ok=True)
++    target.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
++    print(json.dumps({k: v for k, v in result.items() if k != 'source'}))
++    return 0 if before == after and read_unchanged and integrity == 'ok' and not fk_errors and not any(legacy.values()) else 1
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())

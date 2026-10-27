@@ -1,0 +1,10 @@
+{
+  "tests_run": 97,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "blocked_external_attempts": 0,
+  "source_or_env_changed": [],
+  "production_db_access": "blocked in test process",
+  "note": "temporary fixture databases only; loopback test servers allowed; no production service started"
+}

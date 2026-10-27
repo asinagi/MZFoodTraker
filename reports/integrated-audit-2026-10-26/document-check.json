@@ -1,0 +1,8 @@
+{
+  "relative_file_links_missing": [],
+  "markdown_fence_errors": [],
+  "known_credential_matches_in_deliverables": [],
+  "evidence_count_crosschecks": "passed",
+  "implementation_tests": "97 passed; not rerun after documentation edits",
+  "new_files_only_under": "reports\\integrated-audit-2026-10-26"
+}

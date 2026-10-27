@@ -1,0 +1,139 @@
+{
+  "changed_existing_files": [
+    {
+      "path": "food_trends\\instagram_analysis.py",
+      "added": 10,
+      "removed": 39
+    },
+    {
+      "path": "food_trends\\instagram_graph.py",
+      "added": 1,
+      "removed": 0
+    },
+    {
+      "path": "food_trends\\instagram_service.py",
+      "added": 40,
+      "removed": 15
+    },
+    {
+      "path": "food_trends\\instagram_storage.py",
+      "added": 28,
+      "removed": 55
+    },
+    {
+      "path": "food_trends\\naver_datalab.py",
+      "added": 1,
+      "removed": 0
+    },
+    {
+      "path": "food_trends\\naver_service.py",
+      "added": 27,
+      "removed": 28
+    },
+    {
+      "path": "food_trends\\service.py",
+      "added": 2,
+      "removed": 1
+    },
+    {
+      "path": "food_trends\\storage.py",
+      "added": 56,
+      "removed": 49
+    },
+    {
+      "path": "food_trends\\youtube.py",
+      "added": 7,
+      "removed": 1
+    },
+    {
+      "path": "food_trends\\youtube_service.py",
+      "added": 13,
+      "removed": 10
+    },
+    {
+      "path": "food_trends\\youtube_storage.py",
+      "added": 18,
+      "removed": 50
+    },
+    {
+      "path": "food_trends\\__main__.py",
+      "added": 28,
+      "removed": 2
+    },
+    {
+      "path": "tests\\audit_browser_check.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\instagram_analysis_browser_check.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\instagram_browser_check.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\instagram_token_warning_browser_check.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\naver_browser_check.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\test_audit_improvements.py",
+      "added": 4,
+      "removed": 4
+    },
+    {
+      "path": "tests\\test_instagram.py",
+      "added": 2,
+      "removed": 2
+    },
+    {
+      "path": "tests\\test_instagram_analysis.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\test_mvp.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\test_naver.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\test_youtube.py",
+      "added": 1,
+      "removed": 1
+    },
+    {
+      "path": "tests\\youtube_browser_check.py",
+      "added": 1,
+      "removed": 1
+    }
+  ],
+  "new_code_and_test_files": [
+    "food_trends\\contracts.py",
+    "food_trends\\migrations.py",
+    "food_trends\\migration_definitions.py",
+    "tests\\run_offline.py",
+    "tests\\test_foundations.py",
+    "tests\\verify_preserved_copy.py"
+  ],
+  "env_unchanged": true,
+  "python_syntax": "all source/test files parsed",
+  "external_changes_not_authored_by_this_task": [
+    "README.md",
+    ".env.example",
+    ".gitignore"
+  ]
+}
