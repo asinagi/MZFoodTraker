@@ -1,0 +1,16 @@
+{
+  "files": [
+    "food_trends/execution.py",
+    "food_trends/execution_schema.py",
+    "food_trends/migrations.py",
+    "food_trends/quota.py",
+    "tests/test_execution.py",
+    "reports/development-b3-2026-10-27/INFRASTRUCTURE.md",
+    "reports/development-b3-2026-10-27/baseline.json",
+    "reports/development-b3-2026-10-27/baseline-tests/test-summary.json",
+    "reports/development-b3-2026-10-27/infrastructure-tests/test-summary.json"
+  ],
+  "secret_value_matches": 0,
+  "scope": "execution infrastructure only",
+  "source_database_written": false
+}

@@ -1,0 +1,53 @@
+{
+  "local_head": "c159a47af2ce0f0739f18b4303ee2ccbc83bafdf",
+  "origin_main": "c159a47af2ce0f0739f18b4303ee2ccbc83bafdf",
+  "clean_at_start": false,
+  "production_schema_version": 0,
+  "preservation_snapshot": "data\\b3-preservation-20261027T082023Z\\snapshot.sqlite3",
+  "original_tables": {
+    "runs": 87,
+    "items": 334,
+    "observations": 820,
+    "candidates": 334,
+    "instagram_hashtags": 1,
+    "instagram_candidate_hashtags": 0,
+    "instagram_media": 129,
+    "instagram_hashtag_media": 129,
+    "instagram_runs": 11,
+    "instagram_searches": 1,
+    "instagram_metrics": 9,
+    "instagram_state": 5,
+    "instagram_leases": 0,
+    "classification_history": 245,
+    "naver_targets": 0,
+    "naver_calls": 10,
+    "naver_guards": 5,
+    "youtube_foods": 0,
+    "youtube_candidate_foods": 0,
+    "youtube_queries": 6,
+    "youtube_videos": 253,
+    "youtube_matches": 277,
+    "youtube_calls": 20,
+    "youtube_state": 4,
+    "instagram_caption_analysis": 129,
+    "instagram_caption_tags": 470,
+    "instagram_analysis_observations": 469,
+    "instagram_observation_tags": 1664,
+    "youtube_runs": 2,
+    "youtube_video_provenance": 5
+  },
+  "snapshot_integrity": "ok",
+  "snapshot_sha256": "09e323f9ae97242348e29154924a7fab400ed98ee6da22aec641f9c8d427f090",
+  "existing_listeners": [
+    {
+      "port": 8000,
+      "pid": 50584
+    },
+    {
+      "port": 8002,
+      "pid": 51280
+    }
+  ],
+  "production_migrated": false,
+  "env_copied": false
+}

@@ -1,5 +1,6 @@
 """Local budget accounting. Preview reads only; explicit B3-facing reservations never send HTTP."""
 import json
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from .food_service import FoodError, identity, dump, text
@@ -123,14 +124,15 @@ class QuotaManager:
     def _event(self, db, reservation, action, now, metadata):
         db.execute('INSERT INTO quota_events VALUES (?,?,?,?,?)',(identity('QEVT'),reservation,action,stamp(now),dump(metadata)))
 
-    def reserve(self, plan_id, attempt_key, attempt_no=1, ttl_seconds=120):
+    def reserve(self, plan_id, attempt_key, attempt_no=1, ttl_seconds=120, *, connection=None):
         """Explicit local B3 handoff, never called by preview or planning HTTP endpoints."""
         key=text(attempt_key,128)
         if type(attempt_no) is not int or attempt_no<1 or type(ttl_seconds) is not int or not 1<=ttl_seconds<=300:
             raise FoodError('예약 번호·기한을 확인하세요.')
         now=instant(self.tracking.clock())
-        with self.storage.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+        with (nullcontext(connection) if connection is not None else self.storage.connect()) as db:
+            if connection is None:
+                db.execute('BEGIN IMMEDIATE')
             old=db.execute('SELECT * FROM quota_reservations WHERE attempt_key=?',(key,)).fetchone()
             if old:
                 if old['plan_id']!=plan_id or old['attempt_no']!=attempt_no:
@@ -161,11 +163,12 @@ class QuotaManager:
             db.execute('INSERT INTO quota_charges VALUES (?,?,?,?,?,?,?,?,?)',(reservation,c['resource'],c['cost'],c['distinct_key'],
                 c['window_start'],c['window_end'],c['reset_timezone'],c['local_limit'],c['provider_limit']))
 
-    def mark_attempted(self, reservation_id):
+    def mark_attempted(self, reservation_id, *, connection=None):
         """Records a local attempt intention; B3 must supply lease/fencing and then send HTTP."""
         now=instant(self.tracking.clock())
-        with self.storage.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+        with (nullcontext(connection) if connection is not None else self.storage.connect()) as db:
+            if connection is None:
+                db.execute('BEGIN IMMEDIATE')
             row=self.tracking.foods._row(db,'quota_reservations','reservation_id',reservation_id)
             if row['state']=='ATTEMPTED':return row
             if row['state']!='RESERVED' or instant(row['expires_at'])<=now:raise FoodError('예약이 해제되었거나 만료됐습니다.',409)
