@@ -5,17 +5,26 @@ import threading
 from dataclasses import replace
 from datetime import datetime, timezone
 from .contracts import validate_metadata
-from .execution import ExecutionService, ExecutionSettings, ExecutionWorker
+from .execution import ExecutionService, ExecutionSettings, ExecutionWorker, TERMINAL
 from .execution_sources import adapters_from_clients
 from .food_service import FoodError
+from .ingestion import IngestionService, ingest_safely
 
 
 class ExecutionController:
-    def __init__(self, execution, adapters=None):
+    def __init__(self, execution, adapters=None, ingestion=None):
         self.execution=execution
         self.worker=ExecutionWorker(execution,adapters or {})
+        self.ingestion=ingestion
         self.stop_event=threading.Event()
         self.thread=None
+
+    def _after(self, result):
+        """B4 staging after a terminal job; a staging failure stays pending and never alters the job."""
+        if self.ingestion and result and result.get('status') in TERMINAL and result.get('run_id'):
+            summary=ingest_safely(self.ingestion.execution_run,result['run_id']) or {}
+            result['ingestion']={k:v for k,v in summary.items() if k not in ('storable_metrics','transient_metrics')}
+        return result
 
     def status(self, job_id=None):
         result=self.execution.status(job_id)
@@ -26,7 +35,7 @@ class ExecutionController:
         return result
 
     def run_once(self, job_id=None):
-        return self.worker.run_once(job_id)
+        return self._after(self.worker.run_once(job_id))
 
     def recover_rss(self, limit=100):
         """Local, explicit retry of the A4 bridge, never a feed fetch or auto-approval."""
@@ -54,7 +63,7 @@ class ExecutionController:
         for _ in range(max_jobs):
             result=self.worker.run_once(mode=mode)
             if result is None:break
-            results.append(result)
+            results.append(self._after(result))
         return {'scheduled':jobs,'results':results}
 
     def start(self):
@@ -165,4 +174,4 @@ def live_controller(storage, registry_path, environ=None):
     settings=ExecutionSettings(live_enabled=True,automatic=readiness['automatic_requested'],exclusive_live_sources=exclusive)
     classes={'instagram_graph':GraphClient,'youtube':YouTubeClient,'naver_datalab':NaverClient}
     clients={(a.source_id,a.account_scope):classes[a.source_id](configs[a.source_id]) for a in accounts if (a.source_id,a.account_scope) in live}
-    return ExecutionController(ExecutionService(storage,planner,settings),adapters_from_clients(clients))
+    return ExecutionController(ExecutionService(storage,planner,settings),adapters_from_clients(clients),IngestionService(storage))

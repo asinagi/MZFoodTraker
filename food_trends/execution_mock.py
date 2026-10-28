@@ -59,4 +59,5 @@ def mock_controller(storage, planner, transport=None):
         else:
             client=NaverClient(NaverConfig(client_id='synthetic-mock-id',client_secret='synthetic-mock-secret',retries=0),transport)
         clients[(account.source_id,account.account_scope)]=client
-    return ExecutionController(ExecutionService(storage,planner),adapters_from_clients(clients))
+    from .ingestion import IngestionService
+    return ExecutionController(ExecutionService(storage,planner),adapters_from_clients(clients),IngestionService(storage,planner.tracking.clock))

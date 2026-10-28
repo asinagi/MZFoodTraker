@@ -77,6 +77,9 @@ def main():
     maintenance_group.add_argument('--migrate', action='store_true', help='Explicit local schema migration; no API calls')
     maintenance_group.add_argument('--migration-status', action='store_true', help='Read-only schema version check')
     maintenance_group.add_argument('--maintenance', action='store_true', help='Local expiry cleanup; no API calls or reprocessing')
+    maintenance_group.add_argument('--ingest-pending', action='store_true', help='완료 회차의 공통 스테이징 처리; API 호출 없음')
+    maintenance_group.add_argument('--ingest-legacy', choices=('youtube', 'instagram_graph'),
+                                   help='출처 불명 legacy 저장분을 표시된 논리 회차로 스테이징; API 호출 없음')
     parser.add_argument('--reanalyze', action='store_true')
     parser.add_argument('--no-schedulers', action='store_true', help='자동 외부 수집 없이 로컬 저장 데이터 UI 실행')
     parser.add_argument('--export-json', metavar='PATH', help='RSS 원본/분류/관측/이력을 JSON으로 내보내기')
@@ -140,9 +143,18 @@ def main():
             captions = analysis.purge_expired(db)
         videos = YouTubeStore(storage).purge()
         from .execution_maintenance import purge as purge_execution
+        from .ingestion import IngestionService
         execution_cleanup = purge_execution(storage)
+        staging = IngestionService(storage).purge()
         print(json.dumps({'success': True, 'purged_captions': captions, 'purged_videos': videos, 'api_requests': 0,
-                          'execution': execution_cleanup}))
+                          'execution': execution_cleanup, 'staging': staging}))
+        return
+    if args.ingest_pending or args.ingest_legacy:
+        import json
+        from .ingestion import IngestionService
+        ingestion = IngestionService(storage)
+        result = ingestion.ingest_pending() if args.ingest_pending else ingestion.legacy_backfill(args.ingest_legacy)
+        print(json.dumps({k: v for k, v in result.items() if k not in ('storable_metrics', 'transient_metrics')}, ensure_ascii=False))
         return
     if args.execution_readiness:
         import json

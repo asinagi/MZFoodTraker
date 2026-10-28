@@ -30,6 +30,7 @@ class CollectionService:
             except Exception:
                 logging.warning('RSS entity resolution pending retry; source collection is preserved')
                 summary['entity_resolution'] = {'state': 'pending_retry', 'run_id': run_id}
+            summary['ingestion'] = self._ingest(run_id)
             return {'accepted': True, 'success': True, 'run_id': run_id, 'item_count': len(items), **summary}
         except Exception as exc:
             logging.exception('Collection failed')
@@ -37,11 +38,18 @@ class CollectionService:
             if run_id is not None:
                 try:
                     self.storage.finish(run_id, raw=raw, http_status=getattr(exc, 'code', status), error=error)
+                    # A failed run is staged as not observed, never as a measured zero.
+                    self._ingest(run_id)
                 except Exception:
                     logging.exception('Could not persist collection error')
             return {'accepted': True, 'success': False, 'error': error, 'run_id': run_id}
         finally:
             self.lock.release()
+
+    def _ingest(self, run_id):
+        from .ingestion import IngestionService, ingest_safely
+        summary = ingest_safely(IngestionService(self.storage).rss_run, run_id) or {}
+        return {k: v for k, v in summary.items() if k not in ('storable_metrics', 'transient_metrics')}
 
     def start(self):
         def loop():

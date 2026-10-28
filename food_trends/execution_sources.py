@@ -236,9 +236,16 @@ class NaverExecutor(SourceAdapter):
         body=request_body(p['keywordGroups'],start=p['startDate'],end=p['endDate'],time_unit=p['timeUnit'],
                           filters={k:p[k] for k in ('device','gender','ages') if k in p})
         if body!=p:raise ExecutionError('validation')
-        # search() already calls the existing strict parse_response. Returned values are transient.
+        # search() already calls the existing strict parse_response. Returned values are transient:
+        # the common metric form and its quality rules run in memory and nothing value-bearing is written.
+        def persist(db,result,targets):
+            from . import data_quality as dq
+            from .ingestion import METRIC_DEFINITIONS,naver_metrics
+            if any(dq.status(dq.metric_rules(m,METRIC_DEFINITIONS,False))=='FAIL' for m in naver_metrics(body,result,stamp(execution.now()))):
+                raise ExecutionError('invalid_response')
+            return len(result),len(result)
         s.request('naver_search','request',lambda:self.client.search(body,single_attempt=True),lambda result:result,
-                  lambda db,result,targets:(len(result),len(result)),lambda result:{'done':True})
+                  persist,lambda result:{'done':True})
         return {'status':'SUCCEEDED'}
 
 
