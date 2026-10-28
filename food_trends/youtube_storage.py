@@ -1,7 +1,7 @@
 """Additive SQLite storage; API entities expire independently of RSS and FOOD data."""
 import json
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from .naver_service import keyword_group
@@ -104,11 +104,11 @@ class YouTubeStore:
                 delay = 60 if state == 'rate_limit' else 21600 if state in ('authentication', 'permission') else 5
                 db.execute("INSERT OR REPLACE INTO youtube_state VALUES ('cooldown_until',?)", (str(time.time()+delay),))
 
-    def save_videos(self, requested, videos, origin='legacy_unknown', run_id=None, request_context=None):
-        stamp = utcnow()
-        expiry = (datetime.now(timezone.utc)+timedelta(days=29)).isoformat()
+    def save_videos(self, requested, videos, origin='legacy_unknown', run_id=None, request_context=None, *, connection=None, observed_at=None):
+        stamp = observed_at or utcnow()
+        expiry = (datetime.fromisoformat(stamp)+timedelta(days=29)).isoformat()
         public = {v['video_id']: v for v in videos if v['privacy_status'] == 'public' and v.get('upload_status') not in ('deleted', 'failed', 'rejected')}
-        with self.storage.connect() as db:
+        with (nullcontext(connection) if connection is not None else self.storage.connect()) as db:
             db.execute('PRAGMA secure_delete=ON')
             for identity in requested:
                 if identity not in public:

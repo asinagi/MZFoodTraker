@@ -7,7 +7,7 @@ from .food_service import FoodError, identity, dump, text
 from .tracking_service import instant, stamp
 
 KST = timezone(timedelta(hours=9))
-COST_VERSION = 'youtube-doc-2026-10-15-v1'
+COST_VERSION = 'source-cost-v2-b3'
 
 
 def pacific_offset(now):
@@ -60,8 +60,11 @@ class QuotaManager:
             return [line('naver.calls',1,options.get('daily_limit',100),None,'Asia/Seoul')]
         if source=='instagram_graph':
             tag=plan['canonical_query']['parameters']['q']
-            return [line('instagram.unique_tags',1,options.get('soft_limit',28),30,'UTC',tag),
+            requirements=[line('instagram.unique_tags',1,options.get('soft_limit',28),30,'UTC',tag),
                     line('instagram.lookup_calls',1,None,None,'UTC'),line('instagram.media_calls',pages,None,None,'UTC')]
+            if self.tracking.account(source,plan['account_scope']).mode=='live':
+                requirements.append(line('instagram.remote_usage_calls',3,None,None,'UTC'))
+            return requirements
         return [line('rss.feed_calls',1,None,None,'UTC')]
 
     def _usage(self, db, plan, requirement, now, exclude=None, simulated=()):

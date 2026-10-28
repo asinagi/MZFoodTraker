@@ -113,7 +113,10 @@ def main():
         with storage.connect() as db:
             captions = analysis.purge_expired(db)
         videos = YouTubeStore(storage).purge()
-        print(json.dumps({'success': True, 'purged_captions': captions, 'purged_videos': videos, 'api_requests': 0}))
+        from .execution_maintenance import purge as purge_execution
+        execution_cleanup = purge_execution(storage)
+        print(json.dumps({'success': True, 'purged_captions': captions, 'purged_videos': videos, 'api_requests': 0,
+                          'execution': execution_cleanup}))
         return
     if args.export_json:
         import json

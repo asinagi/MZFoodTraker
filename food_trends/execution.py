@@ -1,6 +1,7 @@
 """Durable scheduler/outbox and fenced execution. No HTTP client is imported here."""
 import json
 import sqlite3
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import timedelta
 from .contracts import CONTRACT_VERSION, validate_metadata
@@ -61,6 +62,11 @@ class ExecutionService:
             reasons.append('EXECUTION_MODE_MISMATCH')
         if mode == 'live' and (not self.settings.live_enabled or plan['source_id'] not in self.settings.exclusive_live_sources):
             reasons.append('LIVE_DISABLED_OR_LEGACY_WRITER_NOT_TRANSFERRED')
+        if mode == 'live':
+            owner = db.execute('SELECT owner FROM execution_source_ownership WHERE source_id=? AND account_scope=?',
+                               (plan['source_id'], plan['account_scope'])).fetchone()
+            if not owner or owner[0] != 'B3':
+                reasons.append('LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED')
         block = db.execute('SELECT * FROM execution_blocks WHERE source_id=? AND account_scope=?',
                            (plan['source_id'], plan['account_scope'])).fetchone()
         if block and (block['until_at'] is None or instant(block['until_at']) > self.now()):
@@ -105,7 +111,9 @@ class ExecutionService:
                     result.append(existing[-1])
                     continue
                 # Before claim, later plans can join one shared transport job.
-                reusable = next((j for j in existing if j['status'] == 'READY' and j['attempt_count'] == 0), None)
+                reusable = next((j for j in existing if j['status'] == 'READY' and j['attempt_count'] == 0 and
+                    not any(db.execute('SELECT 1 FROM execution_mappings WHERE job_id=? AND target_id=?',
+                                       (j['job_id'],m['target_id'])).fetchone() for m in uncovered)), None)
                 if reusable:
                     job_id = reusable['job_id']
                 else:
@@ -149,7 +157,7 @@ class ExecutionService:
             raise LostLease()
         return job
 
-    def claim(self, owner, job_id=None):
+    def claim(self, owner, job_id=None, mode=None):
         owner = text(owner, 100)
         now = self.now()
         with self.storage.connect() as db:
@@ -158,18 +166,20 @@ class ExecutionService:
                 LEFT JOIN execution_leases l ON l.resource_key=j.job_id
                 WHERE j.status IN ('READY','RETRY_WAIT','CLAIMED','RUNNING')
                 AND (j.next_retry_at IS NULL OR j.next_retry_at<=?) AND (l.expires_at IS NULL OR l.expires_at<=?)
-                AND (? IS NULL OR j.job_id=?) ORDER BY j.created_at,j.job_id''', (stamp(now), stamp(now), job_id, job_id)).fetchall()
+                AND (? IS NULL OR j.job_id=?) AND (? IS NULL OR j.mode=?) ORDER BY j.created_at,j.job_id''',
+                (stamp(now), stamp(now), job_id, job_id, mode, mode)).fetchall()
             for row in rows:
                 job = dict(row)
+                # An interrupted send remains charged; no claim of remote exactly-once. This precedes the
+                # attempt limit so a final interrupted attempt is not finalised as a certain failure.
+                unknown = db.execute("UPDATE execution_calls SET status='UNKNOWN',error_kind='INTERRUPTED_AFTER_SEND' WHERE job_id=? AND status='SENT'", (job['job_id'],)).rowcount
+                if unknown:
+                    db.execute('UPDATE execution_jobs SET remote_duplicate_possible=1 WHERE job_id=?', (job['job_id'],))
                 if job['attempt_count'] >= job['max_attempts']:
                     self._terminal(db, job, 'FAILED', 'MAX_ATTEMPTS')
                     continue
                 old = db.execute('SELECT * FROM execution_leases WHERE resource_key=?', (job['job_id'],)).fetchone()
                 token = old['fencing_generation'] + 1 if old else 1
-                # An interrupted send remains charged; no claim of remote exactly-once.
-                unknown = db.execute("UPDATE execution_calls SET status='UNKNOWN',error_kind='INTERRUPTED_AFTER_SEND' WHERE job_id=? AND status='SENT'", (job['job_id'],)).rowcount
-                if unknown:
-                    db.execute('UPDATE execution_jobs SET remote_duplicate_possible=1 WHERE job_id=?', (job['job_id'],))
                 # Recover reservations left before the attempted/send boundary.
                 for reservation in db.execute('''SELECT r.* FROM quota_reservations r WHERE r.attempt_key LIKE ? AND r.state='RESERVED' ''', (job['job_id'] + ':%',)).fetchall():
                     db.execute("UPDATE quota_reservations SET state='RELEASED' WHERE reservation_id=?", (reservation['reservation_id'],))
@@ -220,13 +230,15 @@ class ExecutionService:
                     break
             return plan
 
-    def finish(self, claim, status, error=None):
+    def finish(self, claim, status, error=None, *, connection=None):
         if status not in ('SUCCEEDED', 'PARTIAL', 'LIMITED'):
             raise ValueError('Invalid completed status')
-        with self.storage.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+        with (nullcontext(connection) if connection is not None else self.storage.connect()) as db:
+            if connection is None:
+                db.execute('BEGIN IMMEDIATE')
             job = self._fence(db, claim['job']['job_id'], claim['owner_id'], claim['fencing_generation'])
-            calls = db.execute('SELECT count(*),coalesce(sum(returned_count),0),coalesce(sum(accepted_count),0) FROM execution_calls WHERE job_id=? AND status=\'SUCCEEDED\'', (job['job_id'],)).fetchone()
+            calls = db.execute('''SELECT count(*),coalesce(sum(CASE WHEN endpoint IN ('recent_media','videos','naver_search') THEN returned_count ELSE 0 END),0),
+                coalesce(sum(accepted_count),0) FROM execution_calls WHERE job_id=? AND status='SUCCEEDED' ''', (job['job_id'],)).fetchone()
             if not calls[0]:
                 raise FoodError('HTTP 성공 기록 없이 실행 성공을 확정할 수 없습니다.', 409)
             eligible = self._eligible(db, job, started_only=True)
@@ -236,7 +248,11 @@ class ExecutionService:
                 contract_version=CONTRACT_VERSION, policy_version=plan['policy_version'], observed_at=stamp(self.now()),
                 request_context=plan['contract']['request_conditions'], execution_status=status,
                 coverage='complete_request' if status=='SUCCEEDED' else 'partial_request', returned_count=calls[1], accepted_count=calls[2],
-                error_kind=error, allowed_result_reference=None if job['source_id']=='naver_datalab' else {'storage':'existing_source_tables','run_id':job['run_id']},
+                error_kind=error, allowed_result_reference=None if job['source_id']=='naver_datalab' else
+                    {'storage':'existing_source_tables','run_id':job['run_id'],'receipt_job_id':job['job_id'],
+                     'receipt_table':'execution_item_receipts','exclude_expired':True},
+                returned_count_basis='content_response_rows_or_transient_naver_groups',
+                accepted_count_basis='unique_persisted_items_or_transient_naver_groups',
                 mapping_semantics='search_provenance_only', remote_debit_confirmed=False)
             validate_metadata(contract)
             db.execute('UPDATE execution_runs SET observed_at=?,returned_count=?,accepted_count=?,result_contract_json=? WHERE run_id=?',
@@ -267,12 +283,26 @@ class ExecutionService:
                 self._terminal(db, job, 'CANCELLED', kind)
             elif job['attempt_count'] >= job['max_attempts']:
                 successes = db.execute("SELECT 1 FROM execution_calls WHERE job_id=? AND status='SUCCEEDED' AND accepted_count>0", (job['job_id'],)).fetchone()
-                self._terminal(db, job, 'PARTIAL' if successes else 'FAILED', kind)
+                if successes:
+                    self.finish(claim, 'PARTIAL', kind, connection=db)
+                else:
+                    self._terminal(db, job, 'FAILED', kind)
             else:
                 delay = max(2 ** job['attempt_count'] * 5, float(getattr(error, 'retry_after', 0)))
                 db.execute("UPDATE execution_jobs SET status='RETRY_WAIT',error_kind=?,next_retry_at=? WHERE job_id=?",
                            (kind, stamp(self.now()+timedelta(seconds=delay)), job['job_id']))
                 db.execute("UPDATE execution_runs SET execution_status='RETRY_WAIT' WHERE run_id=?", (job['run_id'],))
+            if kind in ('quota','rate_limit'):
+                from .quota import daily_window
+                zone = 'America/Los_Angeles' if job['source_id']=='youtube' else 'Asia/Seoul' if job['source_id']=='naver_datalab' else 'UTC'
+                delay = max(float(getattr(error, 'retry_after', 0)),
+                            (instant(daily_window(self.now(), zone)['end'])-self.now()).total_seconds() if kind=='quota' else 60)
+                until = stamp(self.now()+timedelta(seconds=delay))
+                db.execute('''INSERT INTO execution_blocks VALUES (?,?,?,?,?) ON CONFLICT(source_id,account_scope)
+                    DO UPDATE SET error_kind=excluded.error_kind,blocked_at=excluded.blocked_at,until_at=excluded.until_at''',
+                    (job['source_id'],job['account_scope'],kind,stamp(self.now()),until))
+                if self._job(db, job['job_id'])['status']=='RETRY_WAIT':
+                    db.execute('UPDATE execution_jobs SET next_retry_at=? WHERE job_id=? AND next_retry_at<?', (until,job['job_id'],until))
             db.execute('UPDATE execution_leases SET expires_at=? WHERE resource_key=?', (stamp(self.now()), job['job_id']))
 
     def status(self, job_id=None):
@@ -283,7 +313,7 @@ class ExecutionService:
                 row['execution_blockers'] = self._gate(db, plan, row['mode'])
                 row['eligible_target_ids'] = [m['target_id'] for m in self._eligible(db, row)]
                 row['current_budget'] = self.planner.quota.assess(db, plan, self.now())
-                row['calls'] = [dict(r) for r in db.execute('SELECT * FROM execution_calls WHERE job_id=? ORDER BY started_at,call_id', (row['job_id'],))]
+                row['calls'] = [dict(r) for r in db.execute('SELECT * FROM execution_calls WHERE job_id=? ORDER BY rowid', (row['job_id'],))]
                 run = dict(db.execute('SELECT * FROM execution_runs WHERE job_id=?', (row['job_id'],)).fetchone())
                 run['result_contract'] = json.loads(run.pop('result_contract_json') or 'null')
                 row['run'] = run
@@ -298,8 +328,8 @@ class ExecutionWorker:
         self.execution, self.adapters = execution, adapters
         self.owner, self.fault = owner or identity('WORKER'), fault or (lambda stage: None)
 
-    def run_once(self, job_id=None):
-        claim = self.execution.claim(self.owner, job_id)
+    def run_once(self, job_id=None, mode=None):
+        claim = self.execution.claim(self.owner, job_id, mode)
         if claim is None:
             return None
         try:
@@ -372,7 +402,7 @@ class RequestSession:
                 if instant(c['window_end']) <= e.now():
                     raise ExecutionError('window_changed')
             # Workflow reservation is a ceiling, never permission for an unbounded client retry.
-            maximum = p['canonical_query'].get('max_pages', 1) if endpoint in ('search', 'videos', 'recent_media') else 1
+            maximum = p['canonical_query'].get('max_pages', 1) if endpoint in ('search', 'videos', 'recent_media') else 3 if endpoint=='recent_searches' else 1
             if self.counts.get(endpoint, 0) >= maximum:
                 raise ExecutionError('validation')
             call_id = identity('CALL')
@@ -395,7 +425,7 @@ class RequestSession:
             parsed = parse(payload)
             next_state = checkpoint(parsed)
             validate_metadata(next_state)
-            if set(next_state) - {'phase','page','cursor','hashtag_id','pending_ids','requested_ids','more','limited','done','legacy_tag_id','legacy_query_id'}:
+            if set(next_state) - {'phase','page','cursor','hashtag_id','pending_ids','requested_ids','more','limited','done','legacy_tag_id','legacy_query_id','remote_hashtag_ids'}:
                 raise ExecutionError('validation')
             with self.execution.storage.connect() as db:
                 db.execute('BEGIN IMMEDIATE')

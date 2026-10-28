@@ -42,6 +42,9 @@ class InstagramService:
 
     @contextmanager
     def operation(self):
+        from .execution_ownership import legacy_allowed
+        if not legacy_allowed(self.storage,'instagram_graph','ig:'+self.config.user_id):
+            raise GraphError('busy')
         if not self.config.configured:
             raise GraphError('not_configured')
         owner = self.store.acquire()

@@ -115,10 +115,11 @@ class NaverClient:
         self.config, self.sender, self.sleeper = config, sender, sleeper
         self.origin = 'live_api' if sender is transport else 'mock'
 
-    def search(self, body, reserve=lambda: None, finish=lambda *args: None):
+    def search(self, body, reserve=lambda: None, finish=lambda *args: None, *, single_attempt=False):
         if not self.config.configured:
             raise NaverError('not_configured')
-        for attempt in range(self.config.retries + 1):
+        attempts = 1 if single_attempt else self.config.retries + 1
+        for attempt in range(attempts):
             ticket = reserve()
             error = None
             try:
@@ -152,7 +153,7 @@ class NaverClient:
             except (ValueError, UnicodeError):
                 error = NaverError('invalid_response')
             finish(ticket, error.kind, error.status)
-            if error.kind not in ('network', 'upstream', 'rate_limit') or attempt == self.config.retries:
+            if error.kind not in ('network', 'upstream', 'rate_limit') or attempt == attempts - 1:
                 raise error
             if error.retry_after > 8:
                 raise error  # Caller records a cooldown; do not retry earlier than Retry-After.

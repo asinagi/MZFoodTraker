@@ -1,6 +1,7 @@
 """Additive SQLite schema and observation metrics; no changes to RSS tables."""
 import json
 import uuid
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from .storage import utcnow
 from .instagram_analysis import HashtagAnalysis
@@ -111,10 +112,10 @@ class InstagramStorage:
             return db.execute('INSERT INTO instagram_runs(hashtag_id,started_at,origin,contract_json) VALUES (?,?,?,?)',
                               (tag_id, contract['collected_at'], origin, encode(contract))).lastrowid
 
-    def finish_run(self, run_id, media, returned, requests, error=None, truncated=False, validated=None):
-        seen = utcnow()
+    def finish_run(self, run_id, media, returned, requests, error=None, truncated=False, validated=None, *, connection=None, observed_at=None):
+        seen = observed_at or utcnow()
         new = 0
-        with self.storage.connect() as db:
+        with (nullcontext(connection) if connection is not None else self.storage.connect()) as db:
             run = db.execute('SELECT * FROM instagram_runs WHERE id=?', (run_id,)).fetchone()
             tag_id = run['hashtag_id']
             for item in media.values():
@@ -160,6 +161,8 @@ class InstagramStorage:
                                   successful_runs=successful_runs+excluded.successful_runs''',
                                (tag_id, grain, bucket, new, int(not error and not truncated)))
             self.analysis.purge_expired(db)
+            if connection is not None:
+                return dict(db.execute('SELECT * FROM instagram_runs WHERE id=?', (run_id,)).fetchone())
         return self.run(run_id)
 
     def run(self, run_id):

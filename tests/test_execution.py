@@ -125,6 +125,35 @@ class ExecutionTests(unittest.TestCase):
         self.advance();result=self.worker.run_once(job['job_id'])
         self.assertTrue(result['remote_duplicate_possible']);self.assertEqual(self.adapter.calls,2)
 
+    def test_interrupted_send_on_final_attempt_is_not_hidden_when_job_fails(self):
+        crash=lambda stage:(_ for _ in ()).throw(Crash()) if stage=='before_http' else None
+        self.execution=ExecutionService(self.storage,self.planner,ExecutionSettings(max_attempts=1))
+        worker=ExecutionWorker(self.execution,self.worker.adapters);job=self.job()
+        with self.assertRaises(Crash):
+            ExecutionWorker(self.execution,self.worker.adapters,fault=crash).run_once(job['job_id'])
+        self.advance();self.assertIsNone(worker.run_once(job['job_id']))
+        result=self.row(job)
+        self.assertEqual((result['status'],result['error_kind']),('FAILED','MAX_ATTEMPTS'))
+        self.assertTrue(result['remote_duplicate_possible'])
+        self.assertEqual([c['status'] for c in result['calls']],['UNKNOWN'])
+        self.assertEqual(self.adapter.calls,0)
+
+    def test_final_attempt_crash_after_clean_failures_keeps_uncertainty(self):
+        job=self.job();real=self.adapter.execute
+        self.adapter.execute=lambda *args:(_ for _ in ()).throw(ExecutionError('upstream',503))
+        for _ in range(2):
+            self.worker.run_once(job['job_id']);self.advance(600)
+        self.assertFalse(self.row(job)['remote_duplicate_possible'])
+        self.adapter.execute=real
+        with self.assertRaises(Crash):
+            ExecutionWorker(self.execution,self.worker.adapters,
+                fault=lambda stage:(_ for _ in ()).throw(Crash()) if stage=='before_http' else None).run_once(job['job_id'])
+        self.advance();self.assertIsNone(self.worker.run_once(job['job_id']))
+        result=self.row(job)
+        self.assertEqual((result['status'],result['attempt_count']),('FAILED',3))
+        self.assertTrue(result['remote_duplicate_possible'])
+        self.assertNotIn('SENT',[c['status'] for c in result['calls']])
+
     def test_page_commit_then_crash_reuses_checkpoint_without_http_or_quota(self):
         job=self.job()
         with self.assertRaises(Crash):

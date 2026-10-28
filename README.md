@@ -1,8 +1,8 @@
 # MZFoodTraker
 
-MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. 새 공통 계획의 실제 HTTP 실행은 후속 B3에서 연결합니다.
+MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. B3에서 Outbox·Lease/Fencing 기반 실행기를 기존 출처 클라이언트·저장소에 연결했습니다. 기본은 Mock 전용이며 Live와 자동 실행은 꺼져 있습니다.
 
-아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md)을 반영합니다. 현재 코드의 명시적 migration 버전은 **5**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
+아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md)을 반영합니다. 현재 코드의 명시적 migration 버전은 **7**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
 
 ## 현재 구현 현황
 
@@ -10,7 +10,8 @@ MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적�
 | --- | --- |
 | Google Trends RSS 후보 탐지 | 한국 급상승 RSS 수집, 원본·회차별 관측 보존, 규칙 기반 FOOD / REVIEW / NON_FOOD 분류, 검색·상세·내보내기 |
 | 음식 개체 식별 및 별칭 정규화 | 영속 FOOD_ID, 범위별 정확 별칭, 공통 후보·사람 승인·이력, 브랜드/매장 gate, 파생/연관 관계, 별칭 취소·복구, 제한된 사람 승인 병합, 수동 등록 UI/API 구현. 일반적인 split/unmerge와 자동 추적 연결은 미구현 |
-| 공통 추적 관리·요청 계획 | 승인 FOOD_ID별 상태·세대·주기·다음 예정, 공유 spec/다대다 매핑, 출처별 serializer·로컬 예산 판단·명시적 예약 계약, 계획 UI/API. 미리보기/계획 저장은 HTTP·예산 예약을 만들지 않음. outbox/lease/실제 실행은 B3 후속 |
+| 공통 추적 관리·요청 계획 | 승인 FOOD_ID별 상태·세대·주기·다음 예정, 공유 spec/다대다 매핑, 출처별 serializer·로컬 예산 판단·명시적 예약 계약, 계획 UI/API. 미리보기/계획 저장은 HTTP·예산 예약을 만들지 않음 |
+| 신뢰성 있는 실행 전달 (B3) | 계획 → Outbox·Job → Lease/Fencing claim → 요청 전 예산 예약·시도 기록 → 기존 NAVER·YouTube·Instagram 클라이언트/파서/저장소 → 페이지별 체크포인트. 늦은 소유자 쓰기 차단, 전송 후 중단은 원격 중복 불명으로 기록하고 예산을 환불하지 않음. 격리 Mock에서만 검증했으며 Live·자동 실행은 기본 비활성이고 출처별 기존 writer 소유권 이전과 별도 운영 승인이 필요. RSS는 기존 스케줄러 소유 |
 | Instagram 해시태그 추적 | 사용자가 승인한 태그의 공식 Graph API 수집, 중복 방지, 캡션 해시태그 추출, 공동 출현 및 시간·일별 관측 집계 구현. 자동 음식 발굴은 미구현 |
 | NAVER DataLab 관심도 추적 | FOOD 후보 및 사용자 지정 검색어의 7/30/90일 상대 관심도 조회·그래프. 응답 본문과 지수는 DB에 저장하지 않으며 사용자 지정 조회는 공통 음식 등록이 아님 |
 | YouTube 영상 데이터 추적 | 설정 검색어 및 RSS FOOD 후보 기반 검색, 영상 상세·조회수 등 저장, 호출 예산·재시도·출처 구분·29일 TTL 구현. 영상에서 음식을 추출하는 파생 분석은 비활성화 |
@@ -33,6 +34,7 @@ B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**입니다
 │   ├── contracts.py           # 출처·단위·origin·제공 필드 메타데이터
 │   ├── migrations.py         # 명시적 버전 마이그레이션
 │   ├── migration_definitions.py # 기존 추가형 스키마 정의
+│   ├── execution*.py          # B3 Outbox·Lease 실행기, 출처 어댑터, 소유권, Mock 전송
 │   ├── service.py             # RSS 수집·잠금·스케줄
 │   ├── api.py                 # 로컬 HTTP API
 │   ├── audit.py               # 저장 데이터 감사

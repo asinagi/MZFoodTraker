@@ -15,8 +15,9 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 class YouTubeError(Exception):
-    def __init__(self, kind, status=None):
+    def __init__(self, kind, status=None, retry_after=0):
         self.kind, self.status = kind, status
+        self.retry_after = retry_after
         super().__init__({
             'not_configured': 'YouTube API 키가 설정되지 않았습니다',
             'budget': '자체 일일 요청 예산에 도달했습니다',
@@ -97,14 +98,16 @@ class YouTubeClient:
         self.config, self.transport, self.sleep = config, transport or build_opener(NoRedirect()).open, sleep
         self.origin = 'mock' if transport is not None else 'live_api'
 
-    def get(self, endpoint, params, reserve, finish):
+    def get(self, endpoint, params, reserve, finish, *, single_attempt=False):
         if not self.config.configured:
             raise YouTubeError('not_configured')
         if endpoint not in ('search', 'videos'):
             raise YouTubeError('validation')
-        for attempt in range(self.config.retries + 1):
+        attempts = 1 if single_attempt else self.config.retries + 1
+        for attempt in range(attempts):
             ticket = reserve(endpoint)
             state, status, result_count = 'internal', None, None
+            retry_after = 0
             try:
                 # Key in header, never in URLs, logs, DB request records or error messages.
                 request = Request('https://www.googleapis.com/youtube/v3/'+endpoint+'?'+urlencode(params),
@@ -124,6 +127,8 @@ class YouTubeClient:
                 return payload
             except HTTPError as exc:
                 status = exc.code
+                from .retry_after import seconds
+                retry_after = seconds(exc.headers)
                 try:
                     error = json.loads(exc.read(65536)).get('error', {})
                     reasons = {e.get('reason') for e in error.get('errors', []) if isinstance(e, dict)}
@@ -144,6 +149,6 @@ class YouTubeClient:
             finally:
                 finish(ticket, state, status, result_count)
             # Rate/quota errors are persisted as cooldowns; do not retry them immediately.
-            if state not in ('network', 'upstream') or attempt == self.config.retries:
-                raise YouTubeError(state, status)
+            if state not in ('network', 'upstream') or attempt == attempts - 1 or retry_after > 0:
+                raise YouTubeError(state, status, retry_after)
             self.sleep(2 ** attempt)

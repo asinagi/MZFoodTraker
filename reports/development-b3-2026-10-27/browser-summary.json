@@ -1,0 +1,26 @@
+{
+  "successful": true,
+  "jobs_rendered": 6,
+  "mock_http_attempts": 11,
+  "real_http_attempts": 0,
+  "http_after_schedule_click": 0,
+  "extra_http_after_completion_and_refresh": 0,
+  "run_buttons_after_completion": 0,
+  "live_mode_available": false,
+  "automatic_enabled": false,
+  "javascript_errors": 0,
+  "external_page_requests": 0,
+  "forbidden_posts": 0,
+  "execution_posts": [
+    "/api/execution/run",
+    "/api/execution/schedule"
+  ],
+  "database_counts": {
+    "execution_jobs": 6,
+    "execution_calls": 11,
+    "execution_results": 6,
+    "quota_reservations": 6,
+    "items": 0
+  },
+  "production_database_used": false
+}

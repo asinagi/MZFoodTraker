@@ -9,7 +9,7 @@ from .youtube import YouTubeError
 
 STATIC = Path(__file__).parent.parent / 'static'
 
-def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None, youtube=None, foods=None, tracking=None, planner=None):
+def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None, youtube=None, foods=None, tracking=None, planner=None, execution=None):
     from .food_service import FoodService
     from . import food_http
     foods = foods or FoodService(service.storage)
@@ -20,6 +20,10 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
     from .query_planner import QueryPlanner
     from . import planner_http
     planner = planner or QueryPlanner(service.storage, tracking, int(service.interval))
+    from .execution import ExecutionService
+    from .execution_runtime import ExecutionController
+    from . import execution_http
+    execution = execution or ExecutionController(ExecutionService(service.storage,planner))
     class Handler(BaseHTTPRequestHandler):
         def send(self, status, data, mime='application/json; charset=utf-8', download=None):
             body = json.dumps(data, ensure_ascii=False).encode() if mime.startswith('application/json') else data
@@ -37,6 +41,8 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
             url = urlsplit(self.path)
             params = parse_qs(url.query)
             try:
+                if url.path.startswith('/api/execution/'):
+                    return execution_http.get(self, execution, url.path, params)
                 if url.path.startswith('/api/planner/'):
                     return planner_http.get(self, planner, url.path, params)
                 if url.path.startswith('/api/tracking/'):
@@ -105,16 +111,20 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
                     return self.send(200, (STATIC / 'tracking.js').read_bytes(), 'text/javascript; charset=utf-8')
                 if url.path == '/planner.js':
                     return self.send(200, (STATIC / 'planner.js').read_bytes(), 'text/javascript; charset=utf-8')
+                if url.path == '/execution.js':
+                    return self.send(200, (STATIC / 'execution.js').read_bytes(), 'text/javascript; charset=utf-8')
                 self.send(404, {'error': '경로 없음'})
             except Exception:
                 self.send(500, {'error': '저장 데이터 조회 실패. 서버 로그를 확인하세요.'})
 
         def do_POST(self):
-            if self.path != '/api/collect' and not self.path.startswith(('/api/instagram/', '/api/naver/', '/api/youtube/', '/api/foods/', '/api/tracking/', '/api/planner/')):
+            if self.path != '/api/collect' and not self.path.startswith(('/api/instagram/', '/api/naver/', '/api/youtube/', '/api/foods/', '/api/tracking/', '/api/planner/', '/api/execution/')):
                 return self.send(404, {'error': '경로 없음'})
             origin = self.headers.get('Origin')
             if origin and urlsplit(origin).netloc != self.headers.get('Host'):
                 return self.send(403, {'error': '같은 로컬 페이지에서 요청하세요'})
+            if self.path.startswith('/api/execution/'):
+                return execution_http.post(self, execution)
             if self.path.startswith('/api/planner/'):
                 return planner_http.post(self, planner)
             if self.path.startswith('/api/tracking/'):

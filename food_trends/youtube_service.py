@@ -124,6 +124,9 @@ class YouTubeService:
         return self._details(identities, owner) if identities else set()
 
     def collect(self, automatic=False, small=False, refresh_only=False, verification=False):
+        from .execution_ownership import legacy_allowed
+        if not legacy_allowed(self.storage,'youtube'):
+            return {'success':False,'error_type':'busy','requests':0,'writer_owner':'B3'}
         self.store.purge()
         if not self.config.configured:
             return {'success': False, 'error_type': 'not_configured', 'requests': 0}

@@ -2,7 +2,7 @@
 window.mountFoodTracking = async function(food, parent) {
   const element = (tag, text) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; return node; };
   const panel = element('section'); panel.className = 'tracking-panel';
-  panel.append(element('h3', '출처별 추적 계획 관리'), element('p', '계획 관리만 수행합니다. 실제 API 실행은 연결되지 않았습니다.'));
+  panel.append(element('h3', '출처별 추적 계획 관리'), element('p', '이곳의 계획 명령은 수집을 시작하지 않습니다. 실행은 별도 실행 관리에서 승인 범위와 예산을 확인합니다.'));
   parent.append(panel);
   const note = element('p'); note.setAttribute('role', 'status'); panel.append(note);
   const fetchJSON = async (path, body) => {

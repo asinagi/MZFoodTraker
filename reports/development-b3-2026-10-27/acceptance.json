@@ -1,0 +1,353 @@
+{
+  "successful": true,
+  "food_id": "FOOD_6b089d1a0ffa4c3dbcef7822d0153c84",
+  "food_descriptor": {
+    "food_id": "FOOD_6b089d1a0ffa4c3dbcef7822d0153c84",
+    "canonical_name": "두바이 쫀득 쿠키",
+    "entity_kind": "PRODUCT",
+    "status": "ACTIVE",
+    "revision": 4,
+    "default_scope": "food:ko",
+    "merged_into": null,
+    "created_at": "2026-10-28T02:23:07.834383+00:00",
+    "updated_at": "2026-10-28T02:23:07.834383+00:00",
+    "entity_status": "ACTIVE",
+    "resolution_version": "approved-exact-alias-v1",
+    "approval_status": "APPROVED",
+    "tracking_eligible": true,
+    "approved_aliases": [
+      {
+        "alias_id": "ALIAS_da1c68c221c04a80ada725fa30dc2f6b",
+        "food_id": "FOOD_6b089d1a0ffa4c3dbcef7822d0153c84",
+        "surface_form": "두바이 쫀득 쿠키",
+        "normalized_form": "두바이 쫀득 쿠키",
+        "scope": "food:ko",
+        "normalization_version": "food-nfc-space-v1",
+        "status": "ACTIVE",
+        "revision": 1,
+        "created_at": "2026-10-28T02:23:07.834383+00:00",
+        "updated_at": "2026-10-28T02:23:07.834383+00:00"
+      },
+      {
+        "alias_id": "ALIAS_50f7d18f413e4c7da6459994654ef331",
+        "food_id": "FOOD_6b089d1a0ffa4c3dbcef7822d0153c84",
+        "surface_form": "두바이쫀득쿠키",
+        "normalized_form": "두바이쫀득쿠키",
+        "scope": "food:ko",
+        "normalization_version": "food-nfc-space-v1",
+        "status": "ACTIVE",
+        "revision": 1,
+        "created_at": "2026-10-28T02:23:07.834383+00:00",
+        "updated_at": "2026-10-28T02:23:07.834383+00:00"
+      },
+      {
+        "alias_id": "ALIAS_8bd8f4adba3e413dab374312ce59c56f",
+        "food_id": "FOOD_6b089d1a0ffa4c3dbcef7822d0153c84",
+        "surface_form": "두쫀쿠",
+        "normalized_form": "두쫀쿠",
+        "scope": "food:ko",
+        "normalization_version": "food-nfc-space-v1",
+        "status": "ACTIVE",
+        "revision": 1,
+        "created_at": "2026-10-28T02:23:07.834383+00:00",
+        "updated_at": "2026-10-28T02:23:07.834383+00:00"
+      }
+    ],
+    "revoked_aliases": [],
+    "relations": []
+  },
+  "jobs": 6,
+  "mock_http_attempts": 11,
+  "real_http_attempts": 0,
+  "preview_database_changes": 0,
+  "duplicate_http_attempts": 0,
+  "rss_food_items": 0,
+  "database_counts": {
+    "execution_jobs": 6,
+    "execution_outbox": 6,
+    "execution_calls": 11,
+    "execution_results": 6,
+    "quota_reservations": 6,
+    "youtube_videos": 1,
+    "instagram_media": 1,
+    "food_entities": 1,
+    "items": 0
+  },
+  "statuses": [
+    {
+      "source": "instagram_graph",
+      "status": "SUCCEEDED",
+      "run_id": "RUN_b96747e8cb6c415c8c3988e20df1f7e7",
+      "contract": {
+        "accepted_count": 1,
+        "accepted_count_basis": "unique_persisted_items_or_transient_naver_groups",
+        "active_target_ids": [
+          "TARGET_ff23614f77f14c59aafb6ade957ba5fd"
+        ],
+        "allowed_result_reference": {
+          "exclude_expired": true,
+          "receipt_job_id": "JOB_05a540cd1346406192a655a2316ff6cb",
+          "receipt_table": "execution_item_receipts",
+          "run_id": "RUN_b96747e8cb6c415c8c3988e20df1f7e7",
+          "storage": "existing_source_tables"
+        },
+        "contract_version": "source-envelope-v1",
+        "coverage": "complete_request",
+        "error_kind": null,
+        "execution_status": "SUCCEEDED",
+        "job_id": "JOB_05a540cd1346406192a655a2316ff6cb",
+        "mapping_semantics": "search_provenance_only",
+        "observed_at": "2026-10-28T02:23:08.145830+00:00",
+        "origin": "mock",
+        "policy_version": "instagram-existing-v1",
+        "query_id": "QUERY_302f6330facadff4fcc36d478967f9de1e5e784ae644f903146d177fa00988ab",
+        "remote_debit_confirmed": false,
+        "request_context": {
+          "api_version": "v26.0",
+          "fields": [
+            "id",
+            "caption",
+            "timestamp",
+            "media_type",
+            "permalink"
+          ],
+          "hashtag": "두쫀쿠",
+          "limit": 50,
+          "max_pages": 20
+        },
+        "returned_count": 1,
+        "returned_count_basis": "content_response_rows_or_transient_naver_groups",
+        "run_id": "RUN_b96747e8cb6c415c8c3988e20df1f7e7",
+        "source_code": "instagram_graph"
+      }
+    },
+    {
+      "source": "instagram_graph",
+      "status": "SUCCEEDED",
+      "run_id": "RUN_b041c0692b6b47588d6e6049f96a397c",
+      "contract": {
+        "accepted_count": 1,
+        "accepted_count_basis": "unique_persisted_items_or_transient_naver_groups",
+        "active_target_ids": [
+          "TARGET_ff23614f77f14c59aafb6ade957ba5fd"
+        ],
+        "allowed_result_reference": {
+          "exclude_expired": true,
+          "receipt_job_id": "JOB_906870e7c2534294a84f66a10db4d2ba",
+          "receipt_table": "execution_item_receipts",
+          "run_id": "RUN_b041c0692b6b47588d6e6049f96a397c",
+          "storage": "existing_source_tables"
+        },
+        "contract_version": "source-envelope-v1",
+        "coverage": "complete_request",
+        "error_kind": null,
+        "execution_status": "SUCCEEDED",
+        "job_id": "JOB_906870e7c2534294a84f66a10db4d2ba",
+        "mapping_semantics": "search_provenance_only",
+        "observed_at": "2026-10-28T02:23:08.283735+00:00",
+        "origin": "mock",
+        "policy_version": "instagram-existing-v1",
+        "query_id": "QUERY_b555d9ae10239831452cfb10905660ed3ebaf2bdfdc22ebab86dcb171953d185",
+        "remote_debit_confirmed": false,
+        "request_context": {
+          "api_version": "v26.0",
+          "fields": [
+            "id",
+            "caption",
+            "timestamp",
+            "media_type",
+            "permalink"
+          ],
+          "hashtag": "두바이쫀득쿠키",
+          "limit": 50,
+          "max_pages": 20
+        },
+        "returned_count": 1,
+        "returned_count_basis": "content_response_rows_or_transient_naver_groups",
+        "run_id": "RUN_b041c0692b6b47588d6e6049f96a397c",
+        "source_code": "instagram_graph"
+      }
+    },
+    {
+      "source": "naver_datalab",
+      "status": "SUCCEEDED",
+      "run_id": "RUN_3921b74954c346468fb18ad9f9db00b0",
+      "contract": {
+        "accepted_count": 1,
+        "accepted_count_basis": "unique_persisted_items_or_transient_naver_groups",
+        "active_target_ids": [
+          "TARGET_d69a323e8a004c5b8dc51c651dea4c43"
+        ],
+        "allowed_result_reference": null,
+        "contract_version": "source-envelope-v1",
+        "coverage": "complete_request",
+        "error_kind": null,
+        "execution_status": "SUCCEEDED",
+        "job_id": "JOB_aebaa823a0f94e30ae3ba7e816e84c0b",
+        "mapping_semantics": "search_provenance_only",
+        "observed_at": "2026-10-28T02:23:08.368829+00:00",
+        "origin": "mock",
+        "policy_version": "naver-no-response-storage-v1",
+        "query_id": "QUERY_9c32285745857e5addcb5eaabf0c0d55cbfe73f8b3500d3dbdee0ebd28ee3531",
+        "remote_debit_confirmed": false,
+        "request_context": {
+          "endDate": "2026-10-27",
+          "keywordGroups": [
+            {
+              "groupName": "FOOD_6b089d1a0ffa4c3dbcef7822d0153c84",
+              "keywords": [
+                "두바이 쫀득 쿠키",
+                "두바이쫀득쿠키",
+                "두쫀쿠"
+              ]
+            }
+          ],
+          "startDate": "2026-09-28",
+          "timeUnit": "date"
+        },
+        "returned_count": 1,
+        "returned_count_basis": "content_response_rows_or_transient_naver_groups",
+        "run_id": "RUN_3921b74954c346468fb18ad9f9db00b0",
+        "source_code": "naver_datalab"
+      }
+    },
+    {
+      "source": "youtube",
+      "status": "SUCCEEDED",
+      "run_id": "RUN_1b6214a6e0a6428b9b84100b47ef5e0c",
+      "contract": {
+        "accepted_count": 1,
+        "accepted_count_basis": "unique_persisted_items_or_transient_naver_groups",
+        "active_target_ids": [
+          "TARGET_3c07d938ded1476abdc3de0d0ed03a76"
+        ],
+        "allowed_result_reference": {
+          "exclude_expired": true,
+          "receipt_job_id": "JOB_239f77001f8d4711a7407675a678b700",
+          "receipt_table": "execution_item_receipts",
+          "run_id": "RUN_1b6214a6e0a6428b9b84100b47ef5e0c",
+          "storage": "existing_source_tables"
+        },
+        "contract_version": "source-envelope-v1",
+        "coverage": "complete_request",
+        "error_kind": null,
+        "execution_status": "SUCCEEDED",
+        "job_id": "JOB_239f77001f8d4711a7407675a678b700",
+        "mapping_semantics": "search_provenance_only",
+        "observed_at": "2026-10-28T02:23:08.492073+00:00",
+        "origin": "mock",
+        "policy_version": "youtube-existing-v1",
+        "query_id": "QUERY_2500eb8cde735b5d65a78eed093a6c006e421563dc40d7dafe99ea479c4efda9",
+        "remote_debit_confirmed": false,
+        "request_context": {
+          "maxResults": 50,
+          "order": "date",
+          "part": "snippet",
+          "publishedAfter": "2026-10-21T00:00:00.000000+00:00",
+          "publishedBefore": "2026-10-28T00:00:00.000000+00:00",
+          "q": "두쫀쿠",
+          "regionCode": "KR",
+          "relevanceLanguage": "ko",
+          "type": "video"
+        },
+        "returned_count": 1,
+        "returned_count_basis": "content_response_rows_or_transient_naver_groups",
+        "run_id": "RUN_1b6214a6e0a6428b9b84100b47ef5e0c",
+        "source_code": "youtube"
+      }
+    },
+    {
+      "source": "youtube",
+      "status": "SUCCEEDED",
+      "run_id": "RUN_a74f7fdf025d4e20a2c4ed864120a31f",
+      "contract": {
+        "accepted_count": 1,
+        "accepted_count_basis": "unique_persisted_items_or_transient_naver_groups",
+        "active_target_ids": [
+          "TARGET_3c07d938ded1476abdc3de0d0ed03a76"
+        ],
+        "allowed_result_reference": {
+          "exclude_expired": true,
+          "receipt_job_id": "JOB_492beb9caf534d0bb601efd28620c6ee",
+          "receipt_table": "execution_item_receipts",
+          "run_id": "RUN_a74f7fdf025d4e20a2c4ed864120a31f",
+          "storage": "existing_source_tables"
+        },
+        "contract_version": "source-envelope-v1",
+        "coverage": "complete_request",
+        "error_kind": null,
+        "execution_status": "SUCCEEDED",
+        "job_id": "JOB_492beb9caf534d0bb601efd28620c6ee",
+        "mapping_semantics": "search_provenance_only",
+        "observed_at": "2026-10-28T02:23:08.625458+00:00",
+        "origin": "mock",
+        "policy_version": "youtube-existing-v1",
+        "query_id": "QUERY_61bef395bddc98f958a422c0840064604b0c04042c3c7386df39f48ba8110b45",
+        "remote_debit_confirmed": false,
+        "request_context": {
+          "maxResults": 50,
+          "order": "date",
+          "part": "snippet",
+          "publishedAfter": "2026-10-21T00:00:00.000000+00:00",
+          "publishedBefore": "2026-10-28T00:00:00.000000+00:00",
+          "q": "두바이쫀득쿠키",
+          "regionCode": "KR",
+          "relevanceLanguage": "ko",
+          "type": "video"
+        },
+        "returned_count": 1,
+        "returned_count_basis": "content_response_rows_or_transient_naver_groups",
+        "run_id": "RUN_a74f7fdf025d4e20a2c4ed864120a31f",
+        "source_code": "youtube"
+      }
+    },
+    {
+      "source": "youtube",
+      "status": "SUCCEEDED",
+      "run_id": "RUN_efda90853e98488b9e4ef6e480dcae2e",
+      "contract": {
+        "accepted_count": 1,
+        "accepted_count_basis": "unique_persisted_items_or_transient_naver_groups",
+        "active_target_ids": [
+          "TARGET_3c07d938ded1476abdc3de0d0ed03a76"
+        ],
+        "allowed_result_reference": {
+          "exclude_expired": true,
+          "receipt_job_id": "JOB_a492bebd17c24986ad35d40e3c9456fd",
+          "receipt_table": "execution_item_receipts",
+          "run_id": "RUN_efda90853e98488b9e4ef6e480dcae2e",
+          "storage": "existing_source_tables"
+        },
+        "contract_version": "source-envelope-v1",
+        "coverage": "complete_request",
+        "error_kind": null,
+        "execution_status": "SUCCEEDED",
+        "job_id": "JOB_a492bebd17c24986ad35d40e3c9456fd",
+        "mapping_semantics": "search_provenance_only",
+        "observed_at": "2026-10-28T02:23:08.750669+00:00",
+        "origin": "mock",
+        "policy_version": "youtube-existing-v1",
+        "query_id": "QUERY_9ec8ebee446e0d34f6cc88a0ef430eeb059f6af0ecd5f52ad0f1fe397fec2cdf",
+        "remote_debit_confirmed": false,
+        "request_context": {
+          "maxResults": 50,
+          "order": "date",
+          "part": "snippet",
+          "publishedAfter": "2026-10-21T00:00:00.000000+00:00",
+          "publishedBefore": "2026-10-28T00:00:00.000000+00:00",
+          "q": "두바이 쫀득 쿠키",
+          "regionCode": "KR",
+          "relevanceLanguage": "ko",
+          "type": "video"
+        },
+        "returned_count": 1,
+        "returned_count_basis": "content_response_rows_or_transient_naver_groups",
+        "run_id": "RUN_efda90853e98488b9e4ef6e480dcae2e",
+        "source_code": "youtube"
+      }
+    }
+  ],
+  "live_enabled": false,
+  "automatic_enabled": false,
+  "production_database_used": false
+}

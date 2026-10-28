@@ -2,7 +2,7 @@
 
 2026-10-27. 기준 HEAD c159a47, origin/main 동일. 시작 시 미커밋 변경 없음. baseline.json의 clean_at_start=false는 기준 테스트 산출물을 새 보고서 디렉터리에 만든 후의 측정이며 기존 사용자 변경을 뜻하지 않는다.
 
-명시적 migration v6에 실행 작업·매핑·Outbox·Lease·Run·Call·Checkpoint·결과 대상·계정 차단 테이블을 추가했다. 기존 테이블 데이터의 재분류·변경은 하지 않는다. 운영 DB는 v0을 유지했고, 읽기 전용 online backup의 integrity_check=ok를 확인했다. 기존 8000/8002 listener를 중지하거나 재시작하지 않았다.
+명시적 migration v6에 실행 작업·매핑·Outbox·Lease·Run·Call·Checkpoint·결과 대상·계정 차단 테이블을 추가했다. v7(출처 연결 단계)은 출처별 단일 writer 소유권과 만료되는 item receipt 테이블을 추가한다. 기존 테이블 데이터의 재분류·변경은 하지 않는다. 운영 DB는 v0을 유지했고, 읽기 전용 online backup의 integrity_check=ok를 확인했다. 기존 8000/8002 listener를 중지하거나 재시작하지 않았다.
 
 QueryPlanner의 불변 spec/hash·계약을 재사용한다. enqueue는 유효한 계획을 확인하고 job+outbox+tracking slot을 같은 트랜잭션에 저장한다. 공유 query/slot의 대상 매핑을 합치며 실행을 시작한 세대의 매핑은 고정한다. 재개로 바뀐 대상 generation은 별도 execution_generation으로 관리한다. RSS 실행은 기존 고정 feed scheduler 소유로 차단한다.
 
@@ -14,4 +14,4 @@ Worker claim은 BEGIN IMMEDIATE로 직렬화하고 owner/fencing_generation/만�
 
 기본 live_enabled=false, automatic=false다. Live에는 승인된 registry와 출처별 legacy writer 소유권 이전 설정이 추가로 필요하다. 인증/권한 오류는 계정 범위를 차단한다. Rate limit은 Retry-After를 줄이지 않는다. 최대 workflow 시도는 기본 3회, 지수 지연은 10/20/40초이며 공급자 지연이 더 길면 그 값을 사용한다. 공급자 사용량 확인은 항상 별도이며 현재 null/false다.
 
-신규 18개 infrastructure 회귀 및 기존 199개 검증은 infrastructure-tests/test-summary.json에 기록한다. 개발 검증은 격리 DB와 가상 실행 함수만 사용한다. 출처 adapter·UI/API·실행 배포 계약은 다음 작업 단위에서 추가한다.
+신규 18개 infrastructure 회귀 및 기존 199개 검증은 infrastructure-tests/test-summary.json에 기록한다. 개발 검증은 격리 DB와 가상 실행 함수만 사용한다. 출처 adapter·UI/API·소유권 이전과 인수 검증 결과는 [REPORT.md](REPORT.md)에 기록한다.

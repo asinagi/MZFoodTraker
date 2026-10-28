@@ -26,8 +26,9 @@ MESSAGES = {
 
 
 class GraphError(Exception):
-    def __init__(self, kind, code=None, subcode=None):
+    def __init__(self, kind, code=None, subcode=None, status=None, retry_after=0):
         self.kind, self.code, self.subcode = kind, code, subcode
+        self.status, self.retry_after = status, retry_after
         super().__init__(MESSAGES.get(kind, MESSAGES['internal']))
 
 
@@ -45,7 +46,7 @@ class GraphClient:
         self.request_count = 0
         self.before_request = lambda: None
 
-    def get(self, path, params=None, *, bearer=None):
+    def get(self, path, params=None, *, bearer=None, single_attempt=False):
         token = self.config.token if bearer is None else bearer
         if not token:
             raise GraphError('not_configured')
@@ -66,7 +67,8 @@ class GraphClient:
                 url, body = base + path, urlencode(params).encode()
         else:
             url, body = base + path + '?' + urlencode(params), None
-        for attempt in range(3):
+        attempts = 1 if single_attempt else 3
+        for attempt in range(attempts):
             self.before_request()
             self.request_count += 1
             retry_after = 0
@@ -94,10 +96,9 @@ class GraphClient:
                     error = self.error(payload.get('error', {}), exc.code)
                 except (ValueError, TypeError, AttributeError):
                     error = self.error({}, exc.code)
-                try:
-                    retry_after = min(30, max(0, float(exc.headers.get('Retry-After', '0'))))
-                except (ValueError, AttributeError):
-                    pass
+                from .retry_after import seconds
+                retry_after = seconds(exc.headers)
+                error.status, error.retry_after = exc.code, retry_after
                 exc.close()
             except (URLError, TimeoutError, socket.timeout, OSError):
                 error = GraphError('network')
@@ -105,7 +106,7 @@ class GraphClient:
                 error = GraphError('invalid_response')
             except GraphError as exc:
                 error = exc
-            if error.kind not in ('network', 'rate_limit', 'upstream') or attempt == 2:
+            if error.kind not in ('network', 'rate_limit', 'upstream') or attempt == attempts - 1 or retry_after > 30:
                 raise error from None
             self.sleeper(max(retry_after, 2 ** (attempt + 1)))
 

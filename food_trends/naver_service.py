@@ -94,6 +94,9 @@ class NaverService:
         return self._query([], groups, days)
 
     def _query(self, selected, groups, days):
+        from .execution_ownership import legacy_allowed
+        if not legacy_allowed(self.storage,'naver_datalab'):
+            raise NaverError('duplicate')
         candidate_ids = [t['candidate_id'] for t in selected]
         body = request_body([groups[k] for k in sorted(groups)], days=days)
         contract = envelope('naver_datalab', getattr(self.client, 'origin', 'legacy_unknown'), utcnow(),
