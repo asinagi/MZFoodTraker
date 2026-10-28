@@ -1,0 +1,11 @@
+{
+  "successful": true,
+  "mock_accounts": 3,
+  "zero_rss_food": true,
+  "register_activate_pause_resume_stop_reregister": true,
+  "javascript_errors": 0,
+  "external_page_requests": 0,
+  "provider_posts": 0,
+  "production_database_used": false,
+  "planner_preview_persist_history": false
+}

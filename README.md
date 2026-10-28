@@ -1,8 +1,8 @@
 # MZFoodTraker
 
-MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. B3에서 Outbox·Lease/Fencing 기반 실행기를 기존 출처 클라이언트·저장소에 연결했습니다. 기본은 Mock 전용이며 Live와 자동 실행은 꺼져 있습니다.
+MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. B3에서 Outbox·Lease/Fencing 기반 실행기를 기존 출처 클라이언트·저장소에 연결했고, B4~B5에서 네 출처의 공통 스테이징·품질 검사와 FOOD_ID 중심 검색 근거·음식 언급·지표 모델을 구현했습니다. 기본은 Mock 전용이며 Live와 자동 실행은 꺼져 있습니다.
 
-아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md)을 반영합니다. 현재 코드의 명시적 migration 버전은 **7**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
+아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md), [B3 보완·B4~B5 개발 결과](reports/development-b4-b5-2026-10-28/REPORT.md)를 반영합니다. 현재 코드의 명시적 migration 버전은 **10**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
 
 ## 현재 구현 현황
 
@@ -15,11 +15,13 @@ MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적�
 | Instagram 해시태그 추적 | 사용자가 승인한 태그의 공식 Graph API 수집, 중복 방지, 캡션 해시태그 추출, 공동 출현 및 시간·일별 관측 집계 구현. 자동 음식 발굴은 미구현 |
 | NAVER DataLab 관심도 추적 | FOOD 후보 및 사용자 지정 검색어의 7/30/90일 상대 관심도 조회·그래프. 응답 본문과 지수는 DB에 저장하지 않으며 사용자 지정 조회는 공통 음식 등록이 아님 |
 | YouTube 영상 데이터 추적 | 설정 검색어 및 RSS FOOD 후보 기반 검색, 영상 상세·조회수 등 저장, 호출 예산·재시도·출처 구분·29일 TTL 구현. 영상에서 음식을 추출하는 파생 분석은 비활성화 |
-| 추이 분석 및 시각화 | 출처별 상태·그래프·관계 표 구현. 출처 공통 관측 모델, 통합 일 집계, 통합 유행 점수는 미구현 |
+| 공통 Ingestion·품질 (B4) | 네 출처를 A2 Source Envelope → 정책 게이트 → 스테이징(회차·콘텐츠·Snapshot 해시·회차 관계) → 품질 결과로 처리. 원문은 기존 저장소에만 두고 참조만 기록. NAVER 값은 메모리 전용. legacy 출처 불명 행은 표시된 논리 회차 |
+| 음식 중심 관측 (B5) | 검색 근거(SEARCH_ONLY), 승인 정확 별칭 기반 음식 언급(RSS 검색어·뉴스 제목, Instagram 캡션 해시태그), 허용 지표(RSS 표시값, Instagram 관측 게시물 수). YouTube 언급·지표와 NAVER 저장은 정책상 차단. 별칭·병합·분리 재처리와 B8 무효화 계약 |
+| 추이 분석 및 시각화 | 출처별 상태·그래프·관계 표 구현. 통합 일 집계(B8)와 통합 유행 점수는 미구현 |
 
 2026-10-27 A1~A3 개발 검증에서는 기존 97개와 신규 17개를 합친 114개 자동화 테스트가 통과했습니다. 2026-10-26 통합 감사의 최신 RSS 표본은 FOOD 0건이어서 실제 음식 양성의 전 출처 자동 연결은 검증되지 않았습니다. 테스트 통과는 탐지 정확도나 이용약관 준수의 인증이 아닙니다. 과거 실제 호출 결과와 제약은 [통합 감사](reports/integrated-audit-2026-10-26/REPORT.md)를 참고하세요.
 
-B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
+B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 최종 **280개 통과**입니다. 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
 
 ## 디렉터리 구조
 
@@ -35,6 +37,8 @@ B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**입니다
 │   ├── migrations.py         # 명시적 버전 마이그레이션
 │   ├── migration_definitions.py # 기존 추가형 스키마 정의
 │   ├── execution*.py          # B3 Outbox·Lease 실행기, 출처 어댑터, 소유권, Mock 전송
+│   ├── ingestion*.py, data_quality.py # B4 공통 스테이징·품질 검사
+│   ├── food_observation*.py   # B5 검색 근거·음식 언급·지표·재처리
 │   ├── service.py             # RSS 수집·잠금·스케줄
 │   ├── api.py                 # 로컬 HTTP API
 │   ├── audit.py               # 저장 데이터 감사

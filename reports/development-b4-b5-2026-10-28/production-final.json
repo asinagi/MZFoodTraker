@@ -1,0 +1,31 @@
+{
+  "checked_at_utc": "2026-10-28T03:43:47.743028+00:00",
+  "access": "mode=ro query_only",
+  "table_count": 30,
+  "schema_migrations_present": false,
+  "new_b3_b5_tables_present": false,
+  "integrity": "ok",
+  "row_counts": {
+    "runs": 92,
+    "items": 360,
+    "observations": 870,
+    "instagram_runs": 14,
+    "instagram_media": 181,
+    "youtube_videos": 431,
+    "naver_calls": 10
+  },
+  "listeners": [
+    {
+      "address": "127.0.0.1:8000",
+      "pid": 50584
+    },
+    {
+      "address": "127.0.0.1:8002",
+      "pid": 51280
+    }
+  ],
+  "note": "Row growth since the B3 baseline comes from the existing running writers, not from this work.",
+  "production_migrated": false,
+  "servers_restarted": false,
+  "live_api_calls": 0
+}

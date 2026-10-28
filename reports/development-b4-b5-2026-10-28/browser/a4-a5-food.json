@@ -1,0 +1,11 @@
+{
+  "successful": true,
+  "zero_rss_food": true,
+  "ui_submit_review_repeat": true,
+  "exact_aliases_same_food_id": true,
+  "mobile_panel_fits": true,
+  "javascript_errors": 0,
+  "external_page_requests": 0,
+  "source_post_requests": 0,
+  "production_database_used": false
+}

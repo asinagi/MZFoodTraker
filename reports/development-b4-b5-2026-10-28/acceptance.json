@@ -1,0 +1,81 @@
+{
+  "successful": true,
+  "food_id": "FOOD_68f311e8c207428d82f894e619506312",
+  "jobs": 6,
+  "mock_http_attempts": 11,
+  "real_http_attempts": 0,
+  "worker_crash_injected": true,
+  "duplicate_http_after_redelivery": 0,
+  "row_changes_after_reprocessing": 0,
+  "rss_collection": {
+    "success": true,
+    "ingested": true
+  },
+  "staging_and_link_counts": {
+    "ingest_runs": 7,
+    "source_items": 3,
+    "item_snapshots": 3,
+    "run_items": 6,
+    "quality_results": 67,
+    "item_query_matches": 5,
+    "food_mentions": 4,
+    "metric_observations": 3
+  },
+  "quality_outcomes": {
+    "NOT_APPLICABLE": 1,
+    "PASS": 62,
+    "WARN": 4
+  },
+  "coverage_by_source": {
+    "google_trends_rss": "COMPLETE",
+    "instagram_graph": "COMPLETE",
+    "naver_datalab": "COMPLETE",
+    "youtube": "COMPLETE"
+  },
+  "youtube_mentions": 0,
+  "stored_naver_or_youtube_metrics": 0,
+  "food_view": {
+    "google_trends_rss": {
+      "mention_policy": "ALLOWED",
+      "confirmed_items": 1,
+      "mentions": 3,
+      "search_matched_items": 0,
+      "search_matches": 0,
+      "metric_storage": "STORED",
+      "metric_units": [
+        "approximate_search_traffic_text"
+      ]
+    },
+    "instagram_graph": {
+      "mention_policy": "ALLOWED",
+      "confirmed_items": 1,
+      "mentions": 1,
+      "search_matched_items": 1,
+      "search_matches": 2,
+      "metric_storage": "STORED",
+      "metric_units": [
+        "unique_observed_post"
+      ]
+    },
+    "youtube": {
+      "mention_policy": "POLICY_BLOCKED",
+      "confirmed_items": 0,
+      "mentions": 0,
+      "search_matched_items": 1,
+      "search_matches": 3,
+      "metric_storage": "POLICY_BLOCKED",
+      "metric_units": []
+    },
+    "naver_datalab": {
+      "mention_policy": "NOT_APPLICABLE",
+      "confirmed_items": 0,
+      "mentions": 0,
+      "search_matched_items": 0,
+      "search_matches": 0,
+      "metric_storage": "TRANSIENT_ONLY",
+      "metric_units": []
+    }
+  },
+  "live_enabled": false,
+  "production_database_used": false
+}

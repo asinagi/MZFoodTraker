@@ -1,0 +1,85 @@
+{
+  "source": "data\\b3-preservation-20261027T082023Z\\snapshot.sqlite3",
+  "migration": {
+    "version": 10,
+    "applied": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  "original_tables": 30,
+  "original_tables_unchanged_by_ingestion": true,
+  "ingested_runs_first_pass": 87,
+  "legacy_logical_runs": [
+    "INGEST_18c95aa2256863228d812bbf7da430a1",
+    "INGEST_b2262f828512d3c71940229ac42dd656"
+  ],
+  "linked_runs": 89,
+  "counts": {
+    "ingest_runs": 89,
+    "source_items": 711,
+    "item_snapshots": 967,
+    "run_items": 1197,
+    "quality_results": 10978,
+    "item_query_matches": 400,
+    "food_mentions": 0,
+    "metric_observations": 820
+  },
+  "counts_after_second_pass": {
+    "ingest_runs": 89,
+    "source_items": 711,
+    "item_snapshots": 967,
+    "run_items": 1197,
+    "quality_results": 10978,
+    "item_query_matches": 400,
+    "food_mentions": 0,
+    "metric_observations": 820
+  },
+  "idempotent": true,
+  "source_items_by_source": {
+    "google_trends_rss": 334,
+    "instagram_graph": 129,
+    "youtube": 248
+  },
+  "source_items_by_first_origin": {
+    "legacy_unknown": 711
+  },
+  "runs_by_source_coverage": {
+    "google_trends_rss:COMPLETE": 82,
+    "google_trends_rss:NONE": 5,
+    "instagram_graph:UNKNOWN": 1,
+    "youtube:UNKNOWN": 1
+  },
+  "quality_by_rule_outcome": {
+    "coverage.scope:PASS": 82,
+    "coverage.scope:WARN": 7,
+    "encoding.text:PASS": 1197,
+    "fields.states:PASS": 1142,
+    "fields.states:WARN": 55,
+    "format.external_key:PASS": 1197,
+    "payload.json:PASS": 1197,
+    "policy.metric_storage:PASS": 820,
+    "request.metadata:PASS": 89,
+    "required.external_key:PASS": 1197,
+    "time.metric_period:NOT_APPLICABLE": 820,
+    "time.published_at:PASS": 1197,
+    "type.counts:PASS": 248,
+    "type.metric_value:PASS": 820,
+    "unit.defined:PASS": 820,
+    "version.api:NOT_APPLICABLE": 1,
+    "version.source_schema:PASS": 89
+  },
+  "youtube_mentions": 0,
+  "integrity": "ok",
+  "foreign_key_errors": 0,
+  "http_requests": 0,
+  "source_database_written": false
+}
