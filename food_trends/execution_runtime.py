@@ -12,10 +12,10 @@ from .ingestion import IngestionService, ingest_safely
 
 
 class ExecutionController:
-    def __init__(self, execution, adapters=None, ingestion=None):
+    def __init__(self, execution, adapters=None, ingestion=None, observations=None):
         self.execution=execution
         self.worker=ExecutionWorker(execution,adapters or {})
-        self.ingestion=ingestion
+        self.ingestion,self.observations=ingestion,observations
         self.stop_event=threading.Event()
         self.thread=None
 
@@ -24,6 +24,8 @@ class ExecutionController:
         if self.ingestion and result and result.get('status') in TERMINAL and result.get('run_id'):
             summary=ingest_safely(self.ingestion.execution_run,result['run_id']) or {}
             result['ingestion']={k:v for k,v in summary.items() if k not in ('storable_metrics','transient_metrics')}
+            if self.observations and summary.get('ingest_run_id'):
+                result['linking']=ingest_safely(self.observations.link_run,summary['ingest_run_id'])
         return result
 
     def status(self, job_id=None):
@@ -174,4 +176,6 @@ def live_controller(storage, registry_path, environ=None):
     settings=ExecutionSettings(live_enabled=True,automatic=readiness['automatic_requested'],exclusive_live_sources=exclusive)
     classes={'instagram_graph':GraphClient,'youtube':YouTubeClient,'naver_datalab':NaverClient}
     clients={(a.source_id,a.account_scope):classes[a.source_id](configs[a.source_id]) for a in accounts if (a.source_id,a.account_scope) in live}
-    return ExecutionController(ExecutionService(storage,planner,settings),adapters_from_clients(clients),IngestionService(storage))
+    from .food_observations import FoodObservationService
+    return ExecutionController(ExecutionService(storage,planner,settings),adapters_from_clients(clients),IngestionService(storage),
+                               FoodObservationService(storage))

@@ -48,8 +48,12 @@ class CollectionService:
 
     def _ingest(self, run_id):
         from .ingestion import IngestionService, ingest_safely
+        from .food_observations import FoodObservationService
         summary = ingest_safely(IngestionService(self.storage).rss_run, run_id) or {}
-        return {k: v for k, v in summary.items() if k not in ('storable_metrics', 'transient_metrics')}
+        result = {k: v for k, v in summary.items() if k not in ('storable_metrics', 'transient_metrics')}
+        if summary.get('ingest_run_id'):
+            result['linking'] = ingest_safely(FoodObservationService(self.storage).link_run, summary['ingest_run_id'])
+        return result
 
     def start(self):
         def loop():

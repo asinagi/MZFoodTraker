@@ -144,16 +144,25 @@ def main():
         videos = YouTubeStore(storage).purge()
         from .execution_maintenance import purge as purge_execution
         from .ingestion import IngestionService
+        from .food_observations import FoodObservationService
         execution_cleanup = purge_execution(storage)
         staging = IngestionService(storage).purge()
+        observations = FoodObservationService(storage)
+        links = observations.purge()
+        reprocessed = observations.apply_entity_changes()
         print(json.dumps({'success': True, 'purged_captions': captions, 'purged_videos': videos, 'api_requests': 0,
-                          'execution': execution_cleanup, 'staging': staging}))
+                          'execution': execution_cleanup, 'staging': staging, 'links': links,
+                          'entity_changes_reprocessed': len(reprocessed)}))
         return
     if args.ingest_pending or args.ingest_legacy:
         import json
         from .ingestion import IngestionService
         ingestion = IngestionService(storage)
+        from .food_observations import FoodObservationService
         result = ingestion.ingest_pending() if args.ingest_pending else ingestion.legacy_backfill(args.ingest_legacy)
+        observations = FoodObservationService(storage)
+        result['linking'] = (observations.link_run(result['ingest_run_id']) if args.ingest_legacy
+                             else observations.link_pending())
         print(json.dumps({k: v for k, v in result.items() if k not in ('storable_metrics', 'transient_metrics')}, ensure_ascii=False))
         return
     if args.execution_readiness:
