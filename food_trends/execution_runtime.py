@@ -3,6 +3,7 @@ import json
 import os
 import threading
 from dataclasses import replace
+from datetime import datetime, timezone
 from .contracts import validate_metadata
 from .execution import ExecutionService, ExecutionSettings, ExecutionWorker
 from .execution_sources import adapters_from_clients
@@ -69,24 +70,13 @@ class ExecutionController:
         self.thread.start()
 
 
-def live_controller(storage, registry_path, environ=None):
-    """Operator entrypoint; grants are credential-free, reviewed server configuration.
+# Legacy scheduler switch per source. Live B3 requires it explicitly false (the default is true).
+LEGACY_SCHEDULER_FLAGS={'instagram_graph':'INSTAGRAM_COLLECTION_ENABLED','youtube':'YOUTUBE_COLLECTION_ENABLED',
+                        'naver_datalab':'NAVER_DATALAB_ENABLED'}
 
-    Does not migrate, transfer writers, start threads or call APIs. The caller must do
-    those separately in an approved deployment window. HTTP cannot supply this registry.
-    """
-    env=os.environ if environ is None else environ
-    if env.get('B3_LIVE_ENABLED','false').lower()!='true':
-        raise FoodError('B3_LIVE_ENABLED=true 설정이 필요합니다.',403)
-    from .config import InstagramConfig,YouTubeConfig,NaverConfig
-    from .instagram_graph import GraphClient
-    from .youtube import YouTubeClient
-    from .naver_datalab import NaverClient
-    from .tracking_access import accounts_from_services
-    from .tracking_service import TrackingService
-    from .query_planner import QueryPlanner
+
+def _grants(registry_path):
     from pathlib import Path
-    from types import SimpleNamespace
     grants=json.loads(Path(registry_path).read_text(encoding='utf-8-sig'))
     validate_metadata(grants)
     if not isinstance(grants,list):raise FoodError('출처 승인 registry 목록이 필요합니다.')
@@ -94,15 +84,85 @@ def live_controller(storage, registry_path, environ=None):
     if any(not isinstance(g,dict) or set(g)!=allowed or g['permission_verified'] is not True or g['policy_allowed'] is not True
            or not isinstance(g['approved_by'],str) or not g['approved_by'].strip() or not isinstance(g['evidence'],str) or not g['evidence'].strip() for g in grants):
         raise FoodError('출처별 승인과 근거가 명시된 registry가 필요합니다.',403)
+    return grants
+
+
+def _configured_accounts():
+    from .config import InstagramConfig,YouTubeConfig,NaverConfig
+    from .tracking_access import accounts_from_services
+    from types import SimpleNamespace
     configs={'instagram_graph':InstagramConfig.from_env(),'youtube':YouTubeConfig.from_env(),'naver_datalab':NaverConfig.from_env()}
     accounts=accounts_from_services(SimpleNamespace(config=configs['instagram_graph']),SimpleNamespace(config=configs['naver_datalab']),SimpleNamespace(config=configs['youtube']))
-    lookup={(g['source_id'],g['account_scope']):g for g in grants}
-    if len(lookup)!=len(grants) or set(lookup)-{(a.source_id,a.account_scope) for a in accounts}:
-        raise FoodError('동일 공급자 계정을 여러 scope로 분할할 수 없습니다.')
-    accounts=[replace(a,permission_verified=True,policy_allowed=True) if (a.source_id,a.account_scope) in lookup else a for a in accounts]
-    tracking=TrackingService(storage,accounts);planner=QueryPlanner(storage,tracking)
+    return configs,accounts
+
+
+def live_readiness(storage, registry_path, environ=None):
+    """Read-only, fail-closed Live gate. Builds no client, sends no HTTP and writes nothing.
+
+    Every listed exclusive source needs: a reviewed registry grant, configured credentials, an
+    explicitly disabled legacy scheduler, transferred single-writer ownership and no active block.
+    Error codes only; credential values and registry evidence are never echoed.
+    """
+    from .migrations import schema_version,LATEST_VERSION
+    env=os.environ if environ is None else environ
+    blockers=[]
+    version=schema_version(storage.path)
+    if version!=LATEST_VERSION:blockers.append('SCHEMA_VERSION_MISMATCH')
+    if env.get('B3_LIVE_ENABLED','false').lower()!='true':blockers.append('B3_LIVE_DISABLED')
+    try:
+        grants={(g['source_id'],g['account_scope']) for g in _grants(registry_path)} if registry_path else None
+    except (OSError,ValueError,FoodError):
+        grants=None
+    if grants is None:blockers.append('REGISTRY_MISSING_OR_INVALID')
     exclusive=tuple(s for s in env.get('B3_EXCLUSIVE_SOURCES','').split(',') if s)
-    settings=ExecutionSettings(live_enabled=True,automatic=env.get('B3_AUTOMATIC_ENABLED','false').lower()=='true',exclusive_live_sources=exclusive)
+    if not exclusive:blockers.append('NO_EXCLUSIVE_SOURCE')
+    sources={}
+    _,accounts=_configured_accounts()
+    for source in exclusive:
+        reasons=[]
+        account=next((a for a in accounts if a.source_id==source),None)
+        if account is None:
+            sources[source]={'ready':False,'blockers':['UNKNOWN_SOURCE']};continue
+        if not grants or (source,account.account_scope) not in grants:reasons.append('NO_REGISTRY_GRANT')
+        if not account.configured:reasons.append('NOT_CONFIGURED')
+        if env.get(LEGACY_SCHEDULER_FLAGS[source],'true').lower() not in ('false','0','no'):reasons.append('LEGACY_SCHEDULER_ENABLED')
+        if version==LATEST_VERSION:
+            with storage.reader() as db:
+                owner=db.execute('SELECT owner FROM execution_source_ownership WHERE source_id=? AND account_scope=?',(source,account.account_scope)).fetchone()
+                block=db.execute('SELECT error_kind FROM execution_blocks WHERE source_id=? AND account_scope=? AND (until_at IS NULL OR until_at>?)',
+                                 (source,account.account_scope,datetime.now(timezone.utc).isoformat())).fetchone()
+            if not owner or owner[0]!='B3':reasons.append('LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED')
+            if block:reasons.append('ACCOUNT_BLOCKED_'+block[0])
+        sources[source]={'account_scope':account.account_scope,'ready':not reasons,'blockers':reasons}
+    ready=not blockers and bool(sources) and all(s['ready'] for s in sources.values())
+    return {'ready':ready,'blockers':blockers,'sources':sources,'schema_version':version,'required_version':LATEST_VERSION,
+            'automatic_requested':env.get('B3_AUTOMATIC_ENABLED','false').lower()=='true','http_requests':0,'database_writes':0}
+
+
+def live_controller(storage, registry_path, environ=None):
+    """Operator entrypoint; grants are credential-free, reviewed server configuration.
+
+    Refuses unless live_readiness passes. Does not migrate, transfer writers, start threads or
+    call APIs; those are separate approved deployment steps. HTTP cannot supply this registry.
+    Only exclusive, granted sources receive an adapter.
+    """
+    env=os.environ if environ is None else environ
+    readiness=live_readiness(storage,registry_path,env)
+    if not readiness['ready']:
+        codes=sorted(set(readiness['blockers']+[c for s in readiness['sources'].values() for c in s['blockers']]))
+        raise FoodError('Live 실행 준비 조건 미충족: '+', '.join(codes),403)
+    from .instagram_graph import GraphClient
+    from .youtube import YouTubeClient
+    from .naver_datalab import NaverClient
+    from .tracking_service import TrackingService
+    from .query_planner import QueryPlanner
+    configs,accounts=_configured_accounts()
+    exclusive=tuple(readiness['sources'])
+    live={(s,v['account_scope']) for s,v in readiness['sources'].items()}
+    # Legacy scheduler flags are off for these sources, so B3 enablement comes from the reviewed grant.
+    accounts=[replace(a,enabled=True,permission_verified=True,policy_allowed=True) if (a.source_id,a.account_scope) in live else a for a in accounts]
+    tracking=TrackingService(storage,accounts);planner=QueryPlanner(storage,tracking)
+    settings=ExecutionSettings(live_enabled=True,automatic=readiness['automatic_requested'],exclusive_live_sources=exclusive)
     classes={'instagram_graph':GraphClient,'youtube':YouTubeClient,'naver_datalab':NaverClient}
-    clients={(a.source_id,a.account_scope):classes[a.source_id](configs[a.source_id]) for a in accounts if (a.source_id,a.account_scope) in lookup}
+    clients={(a.source_id,a.account_scope):classes[a.source_id](configs[a.source_id]) for a in accounts if (a.source_id,a.account_scope) in live}
     return ExecutionController(ExecutionService(storage,planner,settings),adapters_from_clients(clients))

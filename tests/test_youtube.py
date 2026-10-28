@@ -363,7 +363,8 @@ class YouTubeTests(unittest.TestCase):
             with urlopen(base+'/api/youtube') as response:
                 self.assertEqual(json.load(response)['status'], 'unverified')
             self.assertEqual(len(self.sender.calls), 0)
-            request = Request(base+'/api/youtube/collect', data=b'{}', headers={'Content-Type': 'application/json'})
+            request = Request(base+'/api/youtube/collect', data=b'{}',
+                              headers={'Content-Type': 'application/json', 'X-MZ-Admin-Token': server.admin_token})
             with urlopen(request) as response:
                 self.assertTrue(json.load(response)['success'])
             request.add_header('Origin', 'https://other.example')

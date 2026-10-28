@@ -269,7 +269,7 @@ class NaverTests(unittest.TestCase):
         thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
         base = f'http://127.0.0.1:{server.server_port}'
         def post(body, origin=None):
-            headers = {'Content-Type': 'application/json'}
+            headers = {'Content-Type': 'application/json', 'X-MZ-Admin-Token': server.admin_token}
             if origin:
                 headers['Origin'] = origin
             return urlopen(Request(base+'/api/naver/query', data=json.dumps(body).encode(), headers=headers))

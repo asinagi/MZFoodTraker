@@ -10,6 +10,10 @@ from .query_planner import digest
 from .tracking_service import instant, stamp
 
 TERMINAL = ('SUCCEEDED', 'PARTIAL', 'LIMITED', 'BLOCKED', 'FAILED', 'CANCELLED')
+# Calls whose committed response is source data (lookup and usage checks are not data pages).
+CONTENT_ENDPOINTS = "('search','videos','recent_media','naver_search')"
+CHECKPOINT_KEYS = frozenset(('phase','page','cursor','hashtag_id','pending_ids','requested_ids','more','limited','done',
+                             'legacy_tag_id','legacy_query_id','looked_up_at','remote_usage'))
 
 
 class LostLease(FoodError):
@@ -200,10 +204,52 @@ class ExecutionService:
             db.execute('UPDATE execution_leases SET renewed_at=?,expires_at=? WHERE resource_key=?',
                        (stamp(self.now()), stamp(self.now() + timedelta(seconds=self.settings.lease_seconds)), claim['job']['job_id']))
 
+    def _result_contract(self, db, job, status, error):
+        """Execution status and data coverage are independent; committed pages are never discarded."""
+        calls = db.execute(f'''SELECT count(*),coalesce(sum(CASE WHEN endpoint IN ('recent_media','videos','naver_search') THEN returned_count ELSE 0 END),0),
+            coalesce(sum(accepted_count),0),coalesce(sum(endpoint IN {CONTENT_ENDPOINTS}),0)
+            FROM execution_calls WHERE job_id=? AND status='SUCCEEDED' ''', (job['job_id'],)).fetchone()
+        coverage = ('COMPLETE' if status == 'SUCCEEDED' else 'LIMITED' if status == 'LIMITED'
+                    else 'PARTIAL' if calls[3] else 'NONE')
+        steps = [r[0] for r in db.execute(f"SELECT step_key FROM execution_calls WHERE job_id=? AND status='SUCCEEDED' AND endpoint IN {CONTENT_ENDPOINTS} ORDER BY rowid", (job['job_id'],))]
+        checkpoint = db.execute('SELECT state_json FROM execution_checkpoints WHERE job_id=?', (job['job_id'],)).fetchone()
+        state = json.loads(checkpoint[0]) if checkpoint else {}
+        eligible = self._eligible(db, job, started_only=True) if coverage != 'NONE' else []
+        plan = self._plan(db, job['plan_id'])
+        contract = dict(run_id=job['run_id'], job_id=job['job_id'], source_code=job['source_id'], query_id=job['query_id'],
+            active_target_ids=[m['target_id'] for m in eligible], origin='mock' if job['mode']=='mock' else 'live_api',
+            contract_version=CONTRACT_VERSION, policy_version=plan['policy_version'], observed_at=stamp(self.now()),
+            request_context=plan['contract']['request_conditions'], execution_status=status,
+            coverage={'COMPLETE':'complete_request','PARTIAL':'partial_request','LIMITED':'limited_request','NONE':'no_committed_data'}[coverage],
+            result_coverage=coverage, committed_pages=calls[3], committed_steps=steps,
+            resume_state={k: state[k] for k in ('phase','page','more','limited','done') if k in state} or None,
+            remote_duplicate_possible=bool(job['remote_duplicate_possible']),
+            returned_count=calls[1], accepted_count=calls[2], error_kind=error,
+            allowed_result_reference=None if job['source_id']=='naver_datalab' or coverage == 'NONE' else
+                {'storage':'existing_source_tables','run_id':job['run_id'],'receipt_job_id':job['job_id'],
+                 'receipt_table':'execution_item_receipts','exclude_expired':True},
+            returned_count_basis='content_response_rows_or_transient_naver_groups',
+            accepted_count_basis='unique_persisted_items_or_transient_naver_groups',
+            mapping_semantics='search_provenance_only', remote_debit_confirmed=False)
+        validate_metadata(contract)
+        return contract, eligible
+
     def _terminal(self, db, job, status, error=None):
+        # Re-read flags set earlier in this transaction (for example an interrupted send).
+        job = self._job(db, job['job_id'])
+        contract, eligible = self._result_contract(db, job, status, error)
         db.execute('UPDATE execution_jobs SET status=?,error_kind=?,finished_at=?,next_retry_at=NULL WHERE job_id=?',
                    (status, error, stamp(self.now()), job['job_id']))
-        db.execute('UPDATE execution_runs SET execution_status=? WHERE run_id=?', (status, job['run_id']))
+        db.execute('''UPDATE execution_runs SET execution_status=?,result_coverage=?,committed_pages=?,observed_at=coalesce(observed_at,?),
+            returned_count=?,accepted_count=?,result_contract_json=? WHERE run_id=?''',
+            (status, contract['result_coverage'], contract['committed_pages'], stamp(self.now()),
+             contract['returned_count'], contract['accepted_count'], dump(contract), job['run_id']))
+        # Partial data keeps its target lineage; only a complete success advances last_success_at.
+        for m in eligible:
+            db.execute('INSERT OR IGNORE INTO execution_results VALUES (?,?,?,?,?)', (job['run_id'], m['target_id'], m['generation'], m['food_revision'], stamp(self.now())))
+            if status == 'SUCCEEDED':
+                db.execute('UPDATE tracking_targets SET last_success_at=? WHERE target_id=? AND generation=? AND food_revision=?',
+                           (stamp(self.now()), m['target_id'], m['generation'], m['food_revision']))
         db.execute('UPDATE execution_outbox SET delivered_at=? WHERE job_id=?', (stamp(self.now()), job['job_id']))
 
     def begin(self, claim):
@@ -237,31 +283,8 @@ class ExecutionService:
             if connection is None:
                 db.execute('BEGIN IMMEDIATE')
             job = self._fence(db, claim['job']['job_id'], claim['owner_id'], claim['fencing_generation'])
-            calls = db.execute('''SELECT count(*),coalesce(sum(CASE WHEN endpoint IN ('recent_media','videos','naver_search') THEN returned_count ELSE 0 END),0),
-                coalesce(sum(accepted_count),0) FROM execution_calls WHERE job_id=? AND status='SUCCEEDED' ''', (job['job_id'],)).fetchone()
-            if not calls[0]:
+            if not db.execute("SELECT 1 FROM execution_calls WHERE job_id=? AND status='SUCCEEDED'", (job['job_id'],)).fetchone():
                 raise FoodError('HTTP 성공 기록 없이 실행 성공을 확정할 수 없습니다.', 409)
-            eligible = self._eligible(db, job, started_only=True)
-            plan = self._plan(db, job['plan_id'])
-            contract = dict(run_id=job['run_id'], job_id=job['job_id'], source_code=job['source_id'], query_id=job['query_id'],
-                active_target_ids=[m['target_id'] for m in eligible], origin='mock' if job['mode']=='mock' else 'live_api',
-                contract_version=CONTRACT_VERSION, policy_version=plan['policy_version'], observed_at=stamp(self.now()),
-                request_context=plan['contract']['request_conditions'], execution_status=status,
-                coverage='complete_request' if status=='SUCCEEDED' else 'partial_request', returned_count=calls[1], accepted_count=calls[2],
-                error_kind=error, allowed_result_reference=None if job['source_id']=='naver_datalab' else
-                    {'storage':'existing_source_tables','run_id':job['run_id'],'receipt_job_id':job['job_id'],
-                     'receipt_table':'execution_item_receipts','exclude_expired':True},
-                returned_count_basis='content_response_rows_or_transient_naver_groups',
-                accepted_count_basis='unique_persisted_items_or_transient_naver_groups',
-                mapping_semantics='search_provenance_only', remote_debit_confirmed=False)
-            validate_metadata(contract)
-            db.execute('UPDATE execution_runs SET observed_at=?,returned_count=?,accepted_count=?,result_contract_json=? WHERE run_id=?',
-                       (stamp(self.now()), calls[1], calls[2], dump(contract), job['run_id']))
-            for m in eligible:
-                db.execute('INSERT OR IGNORE INTO execution_results VALUES (?,?,?,?,?)', (job['run_id'], m['target_id'], m['generation'], m['food_revision'], stamp(self.now())))
-                if status == 'SUCCEEDED':
-                    db.execute('UPDATE tracking_targets SET last_success_at=? WHERE target_id=? AND generation=? AND food_revision=?',
-                               (stamp(self.now()), m['target_id'], m['generation'], m['food_revision']))
             self._terminal(db, job, status, error)
 
     def fail(self, claim, error):
@@ -375,6 +398,22 @@ class RequestSession:
     def _fence(self, db):
         return self.execution._fence(db, self.claim['job']['job_id'], self.claim['owner_id'], self.claim['fencing_generation'])
 
+    @staticmethod
+    def _check_state(state):
+        validate_metadata(state)
+        if set(state) - CHECKPOINT_KEYS:
+            raise ExecutionError('validation')
+
+    def save_state(self, state):
+        """Fenced checkpoint update for verified metadata that is not itself a data page."""
+        self._check_state(state)
+        with self.execution.storage.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            job = self._fence(db)
+            db.execute('UPDATE execution_checkpoints SET state_json=?,updated_at=? WHERE job_id=?',
+                       (dump(state), stamp(self.execution.now()), job['job_id']))
+        self.state = state
+
     def _before(self, endpoint, step_key):
         e, p = self.execution, self.plan
         with e.storage.connect() as db:
@@ -425,8 +464,7 @@ class RequestSession:
             parsed = parse(payload)
             next_state = checkpoint(parsed)
             validate_metadata(next_state)
-            if set(next_state) - {'phase','page','cursor','hashtag_id','pending_ids','requested_ids','more','limited','done','legacy_tag_id','legacy_query_id','remote_hashtag_ids'}:
-                raise ExecutionError('validation')
+            self._check_state(next_state)
             with self.execution.storage.connect() as db:
                 db.execute('BEGIN IMMEDIATE')
                 job = self._fence(db)

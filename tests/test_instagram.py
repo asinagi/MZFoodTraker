@@ -433,7 +433,8 @@ class InstagramTests(unittest.TestCase):
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         base=f'http://127.0.0.1:{server.server_port}'
         def post(path,body,headers=None):
-            return urlopen(Request(base+path,data=json.dumps(body).encode(),headers=headers or {'Content-Type':'application/json'}))
+            return urlopen(Request(base+path,data=json.dumps(body).encode(),
+                headers={'X-MZ-Admin-Token':server.admin_token,**(headers or {'Content-Type':'application/json'})}))
         try:
             for body in [{'name':'두쫀쿠','candidate_id':self.candidate}, {'name':'두쫀쿠','candidate_id':'1','approved':True}]:
                 with self.assertRaises(HTTPError) as raised:

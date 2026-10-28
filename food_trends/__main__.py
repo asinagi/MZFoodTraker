@@ -50,6 +50,25 @@ def instagram_command(args, instagram):
         print(json.dumps({'success': False, 'error': '관리 명령 실패. 설정 또는 출력 파일의 존재 여부를 확인하세요.'}, ensure_ascii=False))
     return 1
 
+def execution_for_mode(storage, args, environ=None):
+    """Explicit B3 mode. Returns (controller or None, error). Live is fail-closed; nothing starts here."""
+    from .execution_runtime import live_controller
+    from .food_service import FoodError
+    if args.execution_mode == 'preview':
+        if args.execution_registry or args.execution_automatic:
+            return None, 'preview 모드에서는 Live registry·자동 실행을 사용할 수 없습니다.'
+        return None, None
+    if not args.execution_registry:
+        return None, 'Live 모드에는 --execution-registry가 필요합니다.'
+    try:
+        controller = live_controller(storage, args.execution_registry, environ)
+    except FoodError as exc:
+        return None, str(exc)
+    if args.execution_automatic and not controller.execution.settings.automatic:
+        return None, '자동 실행에는 B3_AUTOMATIC_ENABLED=true 설정도 필요합니다.'
+    return controller, None
+
+
 def main():
     load_env()
     parser = argparse.ArgumentParser(description='Google Trends 음식 트렌드 탐지')
@@ -82,6 +101,13 @@ def main():
     group.add_argument('--instagram-exchange-token', action='store_true')
     group.add_argument('--instagram-verify', action='store_true', help='두쫀쿠 한 태그의 실제 연결·수집·DB 집계 검증')
     group.add_argument('--instagram-reanalyze', action='store_true', help='저장된 캡션의 해시태그 재처리 (외부 호출 없음)')
+    parser.add_argument('--execution-readiness', metavar='REGISTRY',
+                        help='읽기 전용 B3 Live 준비 점검; API 호출·DB 쓰기 없음')
+    parser.add_argument('--execution-mode', choices=('preview', 'live'), default='preview',
+                        help='서버의 B3 실행 모드. 기본 preview는 실행 어댑터 없음. Mock은 격리 food_demo 전용')
+    parser.add_argument('--execution-registry', metavar='REGISTRY', help='Live 모드의 검토된 출처 승인 registry')
+    parser.add_argument('--execution-automatic', action='store_true',
+                        help='Live 자동 실행; B3_AUTOMATIC_ENABLED=true도 필요')
     parser.add_argument('--candidate-id', type=int)
     parser.add_argument('--hashtag-id', type=int)
     parser.add_argument('--token-output', default='data/instagram-long-lived.secret')
@@ -118,6 +144,15 @@ def main():
         print(json.dumps({'success': True, 'purged_captions': captions, 'purged_videos': videos, 'api_requests': 0,
                           'execution': execution_cleanup}))
         return
+    if args.execution_readiness:
+        import json
+        from .execution_runtime import live_readiness
+        result = live_readiness(storage, args.execution_readiness)
+        print(json.dumps(result, ensure_ascii=False))
+        raise SystemExit(0 if result['ready'] else 2)
+    execution, error = execution_for_mode(storage, args)
+    if error:
+        parser.exit(2, error + '\n')
     if args.export_json:
         import json
         from pathlib import Path
@@ -181,9 +216,12 @@ def main():
         raise SystemExit(instagram_command(args, instagram))
     port = int(os.getenv('PORT', '8000'))
     try:
-        server = make_server(service, port=port, instagram=instagram, naver=naver, youtube=youtube)
+        server = make_server(service, port=port, instagram=instagram, naver=naver, youtube=youtube, execution=execution,
+                             admin_token=os.getenv('MZ_ADMIN_TOKEN') or None)
     except OSError as exc:
         parser.exit(2, f'로컬 서버 시작 실패: 포트 {port} 사용 여부를 확인하세요. {exc}\n')
+    if execution is not None and args.execution_automatic:
+        execution.start()
     if not args.no_schedulers:
         service.start()
         naver.start()

@@ -391,7 +391,8 @@ class PlannerTests(unittest.TestCase):
             with patch.object(self.storage,'connect',side_effect=reader_only):
                 for route in ('preview','history','plans/'+p['plan_id']):
                     with urlopen(f'http://127.0.0.1:{server.server_port}/api/planner/'+route) as response:self.assertEqual(response.status,200)
-                req=Request(f'http://127.0.0.1:{server.server_port}/api/planner/preview',data=b'{}',headers={'Content-Type':'application/json'})
+                req=Request(f'http://127.0.0.1:{server.server_port}/api/planner/preview',data=b'{}',
+                            headers={'Content-Type':'application/json','X-MZ-Admin-Token':server.admin_token})
                 with urlopen(req) as response:self.assertEqual(response.status,200)
         finally:server.shutdown();server.server_close();thread.join()
         self.assertEqual(snapshot(self.storage),before)

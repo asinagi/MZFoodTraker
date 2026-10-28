@@ -223,7 +223,8 @@ class SourceTests(unittest.TestCase):
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         try:
             request=Request('http://127.0.0.1:'+str(server.server_port)+'/api/execution/enqueue',
-                data=json.dumps({'plan_ids':[job['plan_id']],'mode':'live','live_enabled':True}).encode(),headers={'Content-Type':'application/json'})
+                data=json.dumps({'plan_ids':[job['plan_id']],'mode':'live','live_enabled':True}).encode(),
+                headers={'Content-Type':'application/json','X-MZ-Admin-Token':server.admin_token})
             with self.assertRaises(HTTPError) as error:urlopen(request)
             self.assertEqual(error.exception.code,400);error.exception.close()
         finally:server.shutdown();server.server_close();thread.join()

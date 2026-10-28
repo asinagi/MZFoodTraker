@@ -90,7 +90,7 @@ class MVPTests(unittest.TestCase):
         thread.start()
         base = f'http://127.0.0.1:{server.server_port}'
         try:
-            with urlopen(Request(base+'/api/collect',method='POST')) as r:
+            with urlopen(Request(base+'/api/collect',method='POST',headers={'X-MZ-Admin-Token':server.admin_token})) as r:
                 self.assertTrue(json.load(r)['success'])
             with urlopen(base+'/api/trends?classification=REVIEW') as r:
                 items = json.load(r)['items']

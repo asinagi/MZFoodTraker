@@ -1,5 +1,7 @@
+import hmac
 import json
 import os
+import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
@@ -8,8 +10,22 @@ from .naver_datalab import NaverError
 from .youtube import YouTubeError
 
 STATIC = Path(__file__).parent.parent / 'static'
+LOOPBACK = ('127.0.0.1', 'localhost', '::1')
+TOKEN_HEADER = 'X-MZ-Admin-Token'
+TOKEN_META = b'<meta name="mz-admin-token" content="">'
 
-def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None, youtube=None, foods=None, tracking=None, planner=None, execution=None):
+
+def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None, youtube=None, foods=None, tracking=None, planner=None, execution=None, admin_token=None):
+    """Local single-operator server. Every state-changing POST needs this process's admin token.
+
+    The token proves the request came from a page this server served (or from someone who can
+    already read the local process configuration). actor_ref fields remain audit labels only.
+    """
+    if host not in LOOPBACK:
+        raise ValueError('관리 API는 루프백 주소에만 바인딩합니다.')
+    token = admin_token or secrets.token_urlsafe(32)
+    if not isinstance(token, str) or len(token) < 32 or not token.isascii() or '"' in token or not token.isprintable():
+        raise ValueError('관리 토큰은 32자 이상의 출력 가능한 ASCII 문자열이어야 합니다.')
     from .food_service import FoodService
     from . import food_http
     foods = foods or FoodService(service.storage)
@@ -37,10 +53,19 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
             self.end_headers()
             self.wfile.write(body)
 
+        def local_host(self):
+            # Rejects DNS-rebinding names even though the socket itself is loopback-only.
+            return urlsplit('http://' + self.headers.get('Host', '')).hostname in LOOPBACK
+
         def do_GET(self):
             url = urlsplit(self.path)
             params = parse_qs(url.query)
+            if not self.local_host():
+                return self.send(403, {'error': '로컬 주소에서 요청하세요'})
             try:
+                if url.path == '/':
+                    page = (STATIC / 'index.html').read_bytes()
+                    return self.send(200, page.replace(TOKEN_META, TOKEN_META[:-2] + token.encode() + b'">'), 'text/html; charset=utf-8')
                 if url.path.startswith('/api/execution/'):
                     return execution_http.get(self, execution, url.path, params)
                 if url.path.startswith('/api/planner/'):
@@ -95,7 +120,8 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
                         return self.send(400, {'error': '숫자 ID를 사용하세요'})
                     rows = service.storage.trends(item_id=item_id)
                     return self.send(200, rows[0]) if rows else self.send(404, {'error': '항목 없음'})
-                files = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}
+                files = {'/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'),
+                         '/admin.js': ('admin.js', 'text/javascript; charset=utf-8')}
                 if url.path in files:
                     filename, mime = files[url.path]
                     return self.send(200, (STATIC / filename).read_bytes(), mime)
@@ -120,9 +146,14 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
         def do_POST(self):
             if self.path != '/api/collect' and not self.path.startswith(('/api/instagram/', '/api/naver/', '/api/youtube/', '/api/foods/', '/api/tracking/', '/api/planner/', '/api/execution/')):
                 return self.send(404, {'error': '경로 없음'})
+            if not self.local_host():
+                return self.send(403, {'error': '로컬 주소에서 요청하세요'})
             origin = self.headers.get('Origin')
             if origin and urlsplit(origin).netloc != self.headers.get('Host'):
                 return self.send(403, {'error': '같은 로컬 페이지에서 요청하세요'})
+            # No detail about which check failed; the supplied value is never logged or echoed.
+            if not hmac.compare_digest(self.headers.get(TOKEN_HEADER, '').encode(), token.encode()):
+                return self.send(401, {'error': '관리 요청 인증이 필요합니다. 로컬 화면을 새로 고친 뒤 다시 시도하세요.'})
             if self.path.startswith('/api/execution/'):
                 return execution_http.post(self, execution)
             if self.path.startswith('/api/planner/'):
@@ -250,4 +281,6 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
         # Fail explicitly instead of returning responses from an older process.
         allow_reuse_address = os.name != 'nt'
 
-    return LocalServer((host, port), Handler)
+    server = LocalServer((host, port), Handler)
+    server.admin_token = token
+    return server

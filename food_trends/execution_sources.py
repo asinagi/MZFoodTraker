@@ -11,9 +11,35 @@ from .execution import RequestSession, ExecutionError
 from .instagram_service import InstagramService
 from .instagram_storage import InstagramStorage
 from .naver_datalab import request_body
+from .query_planner import digest
 from .tracking_service import stamp, instant
 from .youtube import items, video_id, parse_video
 from .youtube_storage import YouTubeStore
+
+
+USAGE_CHECK_TTL = timedelta(minutes=15)
+UNIQUE_TAG_WINDOW = timedelta(days=7)
+
+
+def usage_fingerprint(cfg, plan, tagname):
+    """Non-secret identity of what a provider usage check vouched for."""
+    return digest([cfg.user_id, cfg.version, plan['policy_version'], tagname])
+
+
+def remote_usage_check_needed(state, fingerprint, now):
+    """Instagram's 7-day unique-hashtag limit is consumed by ig_hashtag_search, not by recent_media.
+
+    Skip: this job already resolved the tag under the same account/API/policy/tag within 7 days, so
+    resuming media pages consumes no new unique tag. Reuse before lookup: a verified check from an
+    earlier attempt of this job, same fingerprint, younger than USAGE_CHECK_TTL. Anything else
+    (no check, failed check, account/version/policy/tag change, expiry) checks again.
+    """
+    check = state.get('remote_usage') or {}
+    current = check.get('verified') is True and check.get('fingerprint') == fingerprint
+    if state.get('phase') != 'lookup':
+        looked = state.get('looked_up_at')
+        return not (current and looked and now - instant(looked) < UNIQUE_TAG_WINDOW)
+    return not (current and now - instant(check['checked_at']) < USAGE_CHECK_TTL)
 
 
 class SourceAdapter:
@@ -133,7 +159,7 @@ class InstagramExecutor(SourceAdapter):
                 state={'phase':'lookup','page':0,'legacy_tag_id':tag['id'],'hashtag_id':tag['instagram_id']}
                 db.execute('INSERT INTO execution_checkpoints VALUES (?,?,?,?)',(claim['job']['job_id'],json.dumps(state),stamp(execution.now()),stamp(execution.now()+timedelta(days=7))))
                 s.state=state
-        if claim['job']['mode']=='live':
+        if claim['job']['mode']=='live' and remote_usage_check_needed(s.state,usage_fingerprint(cfg,plan,tagname),execution.now()):
             # Existing collector checks the provider's recent unique-tag set too.
             remote=[];cursor=None
             for page in range(3):
@@ -155,6 +181,10 @@ class InstagramExecutor(SourceAdapter):
             if cursor:raise ExecutionError('invalid_response')
             if len(set(remote))>=min(30,cfg.search_soft_limit) and s.state.get('hashtag_id') not in remote:
                 raise ExecutionError('budget',retry_after=7*86400)
+            # Provider-observed count, kept apart from local reservations; reused only per remote_usage_check_needed.
+            s.save_state(dict(s.state,remote_usage={'checked_at':stamp(execution.now()),'verified':True,
+                'fingerprint':usage_fingerprint(cfg,plan,tagname),'provider_unique_tags':len(set(remote)),
+                'tag_in_provider_window':s.state.get('hashtag_id') in remote}))
         if s.state['phase']=='lookup':
             def parse(payload):
                 rows=payload.get('data')
@@ -167,7 +197,8 @@ class InstagramExecutor(SourceAdapter):
                 db.execute('UPDATE instagram_hashtags SET instagram_id=?,last_searched_at=? WHERE id=?',(identifier,stamp(execution.now()),s.state['legacy_tag_id']))
                 return int(identifier is not None),0
             s.request('hashtag_lookup','lookup',lambda:self.client.get('ig_hashtag_search',{'user_id':cfg.user_id,'q':tagname},single_attempt=True),
-                parse,save,lambda identifier:dict(s.state,phase='media',hashtag_id=identifier,done=identifier is None))
+                parse,save,lambda identifier:dict(s.state,phase='media',hashtag_id=identifier,done=identifier is None,
+                                                   looked_up_at=stamp(execution.now())))
         while not s.state.get('done'):
             state=dict(s.state);page=state['page'];request={'user_id':cfg.user_id,'fields':','.join(params['fields']),'limit':params['limit']}
             if state.get('cursor'):request['after']=state['cursor']

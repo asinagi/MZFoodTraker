@@ -366,6 +366,7 @@ class FoodEntityTests(unittest.TestCase):
         server = make_server(self.rss, port=0, foods=self.foods)
         thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
         self.addCleanup(lambda: (server.shutdown(), server.server_close(), thread.join()))
+        self.admin = {'X-MZ-Admin-Token': server.admin_token}
         return f'http://127.0.0.1:{server.server_port}'
 
     def test_get_routes_and_ui_do_not_open_write_connections_or_create_candidates(self):
@@ -390,7 +391,7 @@ class FoodEntityTests(unittest.TestCase):
     def test_http_registration_review_and_exact_lookup_end_to_end(self):
         base = self.start_server()
         def post(operation, body):
-            with urlopen(Request(base + '/api/foods/' + operation, data=json.dumps(body).encode(), headers={'Content-Type': 'application/json'})) as response:
+            with urlopen(Request(base + '/api/foods/' + operation, data=json.dumps(body).encode(), headers={'Content-Type': 'application/json', **self.admin})) as response:
                 return json.load(response)
         c = post('submit', {'name': '두쫀쿠', 'aliases': ['두바이 쫀득 쿠키'], 'request_key': key()})
         result = post('review', {'candidate_id': c['candidate_id'], 'expected_revision': c['revision'], 'action': 'create',
@@ -408,7 +409,7 @@ class FoodEntityTests(unittest.TestCase):
                  ({}, {'request_key': key(), 'name': '쿠키', 'description': False}, 400),
                  ({}, {'request_key': key(), 'name': '쿠키', 'entity_kind': []}, 400)]
         for headers, body, status in cases:
-            request = Request(base + '/api/foods/submit', data=json.dumps(body).encode(), headers={'Content-Type': 'application/json', **headers})
+            request = Request(base + '/api/foods/submit', data=json.dumps(body).encode(), headers={'Content-Type': 'application/json', **self.admin, **headers})
             with self.assertRaises(HTTPError) as error:
                 urlopen(request)
             self.assertEqual(error.exception.code, status)
