@@ -17,12 +17,12 @@ MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적�
 | YouTube 영상 데이터 추적 | 설정 검색어 및 RSS FOOD 후보 기반 검색, 영상 상세·조회수 등 저장, 호출 예산·재시도·출처 구분·29일 TTL 구현. 영상에서 음식을 추출하는 파생 분석은 비활성화 |
 | 공통 Ingestion·품질 (B4) | 네 출처를 A2 Source Envelope → 정책 게이트 → 스테이징(회차·콘텐츠·Snapshot 해시·회차 관계) → 품질 결과로 처리. 원문은 기존 저장소에만 두고 참조만 기록. NAVER 값은 메모리 전용. legacy 출처 불명 행은 표시된 논리 회차 |
 | 음식 중심 관측 (B5) | 검색 근거(SEARCH_ONLY), 승인 정확 별칭 기반 음식 언급(RSS 검색어·뉴스 제목, Instagram 캡션 해시태그), 허용 지표(RSS 표시값, Instagram 관측 게시물 수). YouTube 언급·지표와 NAVER 저장은 정책상 차단. 별칭·병합·분리 재처리와 B8 무효화 계약 |
-| Oracle 대상·이관 (B6~B7) | 같은 명세로 Oracle/SQLite 대상 DDL 생성, `python-oracledb` Thin 어댑터, 이식 SQL Repository, SQLite→대상 단계 이관·대조, 기본 비활성 Shadow(SQLite 변경 기록→멱등 전달). **실제 Oracle에서는 미검증**(이 환경에 Oracle 없음), 운영 전환은 승인 게이트 대상 |
+| Oracle 대상·이관 (B6~B7) | 같은 명세로 Oracle/SQLite 대상 DDL 생성, `python-oracledb` Thin 어댑터, 이식 SQL Repository, SQLite→대상 단계 이관·대조, 기본 비활성 Shadow(SQLite 변경 기록→멱등 전달). 개발용 Oracle AI Database 26ai Free(23.26.3, WSL2 컨테이너)에서 계약·이관·Shadow 검증 통과([G-OPS-0](reports/development-g-ops-0-2026-11-02/REPORT.md)), 운영 전환은 승인 게이트 대상 |
 | 추이 분석 및 시각화 | 출처별 상태·그래프·관계 표 구현. 통합 일 집계(B8)와 통합 유행 점수는 미구현 |
 
 2026-10-27 A1~A3 개발 검증에서는 기존 97개와 신규 17개를 합친 114개 자동화 테스트가 통과했습니다. 2026-10-26 통합 감사의 최신 RSS 표본은 FOOD 0건이어서 실제 음식 양성의 전 출처 자동 연결은 검증되지 않았습니다. 테스트 통과는 탐지 정확도나 이용약관 준수의 인증이 아닙니다. 과거 실제 호출 결과와 제약은 [통합 감사](reports/integrated-audit-2026-10-26/REPORT.md)를 참고하세요.
 
-B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 280개, B6~B7 최종 **323개 실행 통과(실제 Oracle 계약 테스트 15개는 Oracle 미설치로 skip)**입니다. 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
+B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 280개, 실제 Oracle 포함 전체 **356개 통과(skip 0)**, Oracle 없는 기본 환경에서는 324개 통과·Oracle 32개 skip입니다. 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
 
 ## 디렉터리 구조
 

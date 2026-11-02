@@ -1,0 +1,17 @@
+{
+  "checked_at_utc": "2026-11-02T05:43:13.313885+00:00",
+  "access": "mode=ro query_only",
+  "table_count": 30,
+  "schema_migrations_present": false,
+  "integrity": "ok",
+  "row_counts": {
+    "runs": 95,
+    "items": 370,
+    "instagram_media": 185,
+    "youtube_videos": 431
+  },
+  "listeners_8000_8002": [],
+  "production_migrated": false,
+  "servers_started_or_stopped": false,
+  "live_api_calls": 0
+}

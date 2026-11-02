@@ -1,0 +1,20 @@
+{
+  "host_os": "Windows 11 Home 10.0.26200 x64",
+  "oracle_windows_edition_supported": false,
+  "chosen_method": "WSL2 Ubuntu 24.04 (D:/WSL) + Podman + official Oracle AI Database Free container",
+  "approvals": {
+    "install_method": "user approved WSL2 + container (2026-11-02)",
+    "driver": "user approved .venv pinned oracledb 26.1.0",
+    "uac_elevation": "wsl --install --no-distribution approved via UAC prompt",
+    "reboot": "performed by user"
+  },
+  "wsl": "3.0.3.0, kernel 6.18.54.1",
+  "distro": "Ubuntu 24.04.5 LTS at D:/WSL/Ubuntu-24.04",
+  "podman": "podman version 4.9.3",
+  "image": "container-registry.oracle.com/database/free:latest",
+  "image_id_created": "cdf2f86bedfa41904dfd7dbf27defe90d46a2fb8b34d85ad1c279f2bda839420 2026-07-05 22:08:53.656424127 +0000 UTC",
+  "oracle_server": "23.26.3.0.0 (Oracle AI Database 26ai Free), PDB FREEPDB1, AL32UTF8, port 127.0.0.1:1521 only",
+  "driver": "python-oracledb 26.1.0 thin, project .venv (git-ignored), Python 3.12.1",
+  "test_schema": "MZ_TEST: CREATE SESSION, CREATE TABLE, QUOTA 2G USERS; no roles; reset re-verifies account and owned objects",
+  "credentials": "generated randomly, stored only under data/oracle-dev (git-ignored); never printed or committed"
+}
