@@ -264,14 +264,15 @@ TABLES = (
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),
-          indexes=(('target_table', 'target_key'),)),
+          indexes=(('target_table', 'target_key'),), mutable=('source_hash', 'batch_key', 'mapped_at')),
     Table('migration_batches', (NN('batch_key', 'id'), NN('table_name', 'code'), NN('source_fingerprint', 'hash'), NN('status', 'code'),
           C('last_key', 'key'), NN('loaded_rows', 'int'), NN('excluded_rows', 'int'), NN('rejected_rows', 'int'), NN('started_at', 'ts'),
           C('finished_at', 'ts')), ('batch_key', 'table_name'), checks=(_status('status', ('RUNNING', 'COMPLETED', 'FAILED')),),
           mutable=('status', 'last_key', 'loaded_rows', 'excluded_rows', 'rejected_rows', 'finished_at')),
     Table('migration_rejections', (NN('rejection_key', 'hash'), NN('batch_key', 'id'), NN('table_name', 'code'), NN('subject_hash', 'hash'),
           NN('disposition', 'code'), NN('reason', 'code'), NN('recorded_at', 'ts')), ('rejection_key',),
-          checks=(_status('disposition', ('EXCLUDED_POLICY', 'EXCLUDED_EXPIRED', 'REJECTED_INVALID')),), indexes=(('batch_key', 'table_name'),)),
+          checks=(_status('disposition', ('EXCLUDED_POLICY', 'EXCLUDED_EXPIRED', 'REJECTED_INVALID')),), indexes=(('batch_key', 'table_name'),),
+          mutable=('disposition', 'reason', 'recorded_at')),
     Table('shadow_applied', (NN('event_id', 'int'), NN('entity_table', 'code'), NN('entity_key', 'key'), NN('operation', 'code'),
           NN('applied_at', 'ts')), ('event_id',), checks=(_status('operation', ('UPSERT', 'DELETE')),)),
 )
