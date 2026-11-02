@@ -18,13 +18,38 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+def oracle_server(repo):
+    with repo.db.transaction() as tx:
+        return {'version': tx.scalar("SELECT version_full FROM product_component_version WHERE product LIKE 'Oracle%'"),
+                'container': tx.scalar("SELECT sys_context('USERENV','CON_NAME') FROM dual"),
+                'session_time_zone': tx.scalar('SELECT sessiontimezone FROM dual'),
+                'charset': tx.scalar("SELECT value FROM nls_database_parameters WHERE parameter='NLS_CHARACTERSET'")}
+
+
+def target_bytes(repo, path):
+    if repo.db.dialect == 'oracle':
+        with repo.db.transaction() as tx:
+            return int(tx.scalar('SELECT nvl(sum(bytes),0) FROM user_segments'))
+    return path.stat().st_size
+
+
+def open_connections(repo):
+    if repo.db.dialect == 'oracle':
+        pool = repo.db.pool()
+        return {'pool_opened': pool.opened, 'pool_busy': pool.busy}
+    return repo.db.connections
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('source')
     parser.add_argument('--output', required=True)
+    parser.add_argument('--target', choices=('sqlite', 'oracle'), default='sqlite',
+                        help='oracle: the disposable ORACLE_TEST_* schema, re-verified before reset')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(root))
+    sys.path.insert(0, str(root / 'tests'))
     from food_trends.food_observations import FoodObservationService
     from food_trends.food_service import FoodService
     from food_trends.ingestion import IngestionService
@@ -58,7 +83,13 @@ def main():
             source_counts = {t: db.execute('SELECT count(*) FROM ' + t).fetchone()[0] for t in
                              ('items', 'youtube_videos', 'instagram_media', 'source_items', 'item_query_matches', 'food_mentions', 'metric_observations', 'food_events')}
         target_path = Path(directory) / 'target.sqlite3'
-        repo = TargetRepository(SQLiteTarget(target_path), clock=lambda: now)
+        if args.target == 'oracle':
+            from oracle_support import oracle_target, reset_target_schema
+            db = oracle_target()
+            reset_target_schema(db)
+        else:
+            db = SQLiteTarget(target_path)
+        repo = TargetRepository(db, clock=lambda: now)
         schema = repo.migrate()
         tracemalloc.start()
         started = time.perf_counter()
@@ -112,7 +143,8 @@ def main():
         loaded = sum(v['loaded_rows'] for v in first['tables'].values())
         report = {
             'source': str(source.relative_to(root)), 'source_sha256': fingerprint(source), 'verified_at': now.isoformat(),
-            'target': 'sqlite_stand_in', 'oracle_executed': False, 'sqlite_migration': sqlite_migration, 'target_schema': schema,
+            'target': 'oracle' if args.target == 'oracle' else 'sqlite_stand_in', 'oracle_executed': args.target == 'oracle',
+            'oracle_server': oracle_server(repo) if args.target == 'oracle' else None, 'sqlite_migration': sqlite_migration, 'target_schema': schema,
             'test_only_food_approved_in_copy': True, 'source_counts_after_backfill': source_counts,
             'tables': {t: {k: v[k] for k in ('candidates', 'loaded_rows', 'excluded_rows', 'rejected_rows', 'dispositions')}
                        for t, v in first['tables'].items()},
@@ -122,8 +154,8 @@ def main():
             'shadow': shadow_report,
             'performance_dev_only': dict(timings, loaded_rows=loaded, load_seconds=round(load_seconds, 3),
                                          rows_per_second=round(loaded / load_seconds, 1), reconcile_seconds=round(reconcile_seconds, 3),
-                                         python_peak_memory_mb=round(peak / 2 ** 20, 2), target_bytes=target_path.stat().st_size,
-                                         source_bytes=copy.stat().st_size, connections_open_after=repo.db.connections),
+                                         python_peak_memory_mb=round(peak / 2 ** 20, 2), target_bytes=target_bytes(repo, target_path),
+                                         source_bytes=copy.stat().st_size, connections_open_after=open_connections(repo)),
             'http_requests': 0, 'source_database_written': False}
     target = root / args.output
     target.parent.mkdir(parents=True, exist_ok=True)

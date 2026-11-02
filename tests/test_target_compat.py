@@ -2,19 +2,17 @@
 when ORACLE_TEST_DSN/USER/PASSWORD and ORACLE_TEST_ALLOW_RESET=true are set (it drops target objects).
 Without that environment the Oracle class is skipped and Oracle compatibility stays NOT_VERIFIED.
 """
-import os
 import tempfile
 import threading
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from food_trends.target_db import (ConversionError, IntegrityViolation, OracleSettings, OracleTarget, PolicyRefused,
-                                   SQLiteTarget, to_target)
+from food_trends.target_db import ConversionError, IntegrityViolation, PolicyRefused, SQLiteTarget, to_target
 from food_trends.target_repository import TargetRepository
-from food_trends.target_schema import BY_NAME, TABLES
+from food_trends.target_schema import BY_NAME
+from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema
 
 NOW = datetime(2026, 11, 2, tzinfo=timezone.utc)
-ORACLE_READY = bool(os.environ.get('ORACLE_TEST_DSN')) and os.environ.get('ORACLE_TEST_ALLOW_RESET') == 'true'
 
 
 def food(food_id='FOOD_a', name='두쫀쿠', **kw):
@@ -126,6 +124,17 @@ class ContractCases:
             self.assertEqual(self.repo.get('food_entities', {'food_id': 'FOOD_%d' % n})['created_at'], expected)
         with self.assertRaises(ConversionError):
             self.put(('food_entities', food('FOOD_naive', created_at='2026-10-27T09:00:00')))
+
+    def test_stored_instant_is_utc_whatever_the_session_time_zone(self):
+        """A Python round trip alone cannot catch a shifted instant; check what the database holds."""
+        self.put(('food_entities', food(created_at='2026-10-27T09:00:00+09:00')))
+        with self.repo.db.transaction() as tx:
+            if self.repo.db.dialect == 'oracle':
+                row = tx.rows('''SELECT to_char(sys_extract_utc(created_at),'YYYY-MM-DD"T"HH24:MI:SS') AS utc,
+                    to_char(created_at,'TZH:TZM') AS tz FROM food_entities''')[0]
+                self.assertEqual((row['utc'], row['tz']), ('2026-10-27T00:00:00', '+00:00'))
+            else:
+                self.assertEqual(tx.scalar('SELECT created_at FROM food_entities'), '2026-10-27T00:00:00.000000+00:00')
 
     # 7: '' versus NULL
     def test_empty_string_and_null_keep_their_meaning(self):
@@ -273,12 +282,10 @@ class SQLiteContractTests(ContractCases, unittest.TestCase):
         return SQLiteTarget(Path(self.temp.name) / 'target.sqlite3')
 
 
-@unittest.skipUnless(ORACLE_READY, 'Real Oracle test schema not configured (ORACLE_TEST_*): Oracle compatibility NOT_VERIFIED')
+@unittest.skipUnless(ORACLE_READY, SKIP_REASON)
 class OracleContractTests(ContractCases, unittest.TestCase):
     def make_db(self):
-        db = OracleTarget(OracleSettings.from_env(prefix='ORACLE_TEST_'))
-        with db.transaction() as tx:  # isolated test schema only (ORACLE_TEST_ALLOW_RESET=true)
-            for name in ['target_schema_migrations'] + [t.name for t in reversed(TABLES)]:
-                tx.execute("BEGIN EXECUTE IMMEDIATE 'DROP TABLE %s CASCADE CONSTRAINTS PURGE'; EXCEPTION WHEN OTHERS THEN NULL; END;" % name)
+        db = oracle_target()
         self.addCleanup(db.close)
+        reset_target_schema(db)  # re-verifies the account and schema contents before dropping
         return db

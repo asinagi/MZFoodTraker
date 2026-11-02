@@ -12,6 +12,7 @@ from food_trends.target_db import SQLiteTarget, TransientError
 from food_trends.target_migration import migrate
 from food_trends.target_repository import TargetRepository
 import test_execution as fixtures
+from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema
 from test_food_observations import rss_xml
 
 
@@ -33,9 +34,12 @@ class ShadowTests(unittest.TestCase):
     def setUp(self):
         self.setUp_base()
         self.transport = MockTransport()
-        self.repo = TargetRepository(SQLiteTarget(Path(self.temp.name) / 'target.sqlite3'), clock=lambda: self.now)
+        self.repo = TargetRepository(self.make_target(), clock=lambda: self.now)
         self.repo.migrate()
         self.shadow = ShadowService(self.storage, self.repo, clock=lambda: self.now)
+
+    def make_target(self):
+        return SQLiteTarget(Path(self.temp.name) / 'target.sqlite3')
 
     def activity(self, *sources, keyword='두쫀쿠'):
         for source in sources:
@@ -158,3 +162,14 @@ class ShadowTests(unittest.TestCase):
         self.assertFalse([r for r in self.repo.rows('source_contents') if r['source_code'] == 'youtube'])
         self.assertEqual({r['availability'] for r in self.repo.rows('source_items') if r['source_code'] == 'youtube'}, {'DELETED'})
         self.assertTrue(self.shadow.compare()['consistent'])
+
+
+@unittest.skipUnless(ORACLE_READY, SKIP_REASON)
+class OracleShadowTests(ShadowTests):
+    """Same shadow cases delivering to the real Oracle test schema."""
+
+    def make_target(self):
+        db = oracle_target()
+        self.addCleanup(db.close)
+        reset_target_schema(db)
+        return db
