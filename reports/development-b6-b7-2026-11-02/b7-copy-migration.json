@@ -1,0 +1,331 @@
+{
+  "source": "data\\b3-preservation-20261027T082023Z\\snapshot.sqlite3",
+  "source_sha256": "09e323f9ae97242348e29154924a7fab400ed98ee6da22aec641f9c8d427f090",
+  "verified_at": "2026-11-02T01:00:58.713258+00:00",
+  "target": "sqlite_stand_in",
+  "oracle_executed": false,
+  "sqlite_migration": {
+    "version": 11,
+    "applied": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "target_schema": {
+    "version": 1,
+    "applied": [
+      1
+    ],
+    "created_objects": 73
+  },
+  "test_only_food_approved_in_copy": true,
+  "source_counts_after_backfill": {
+    "items": 334,
+    "youtube_videos": 253,
+    "instagram_media": 129,
+    "source_items": 711,
+    "item_query_matches": 400,
+    "food_mentions": 99,
+    "metric_observations": 820,
+    "food_events": 7
+  },
+  "tables": {
+    "food_commands": {
+      "candidates": 2,
+      "loaded_rows": 2,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "food_entities": {
+      "candidates": 1,
+      "loaded_rows": 1,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "food_aliases": {
+      "candidates": 3,
+      "loaded_rows": 3,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "food_relations": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "food_candidates": {
+      "candidates": 1,
+      "loaded_rows": 1,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "food_events": {
+      "candidates": 7,
+      "loaded_rows": 7,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "tracking_targets": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "planner_queries": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "planner_plans": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "planner_query_targets": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "quota_reservations": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "execution_jobs": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "execution_runs": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "execution_calls": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "execution_outbox": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "execution_results": {
+      "candidates": 0,
+      "loaded_rows": 0,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "source_contents": {
+      "candidates": 716,
+      "loaded_rows": 716,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "rss_classifications": {
+      "candidates": 334,
+      "loaded_rows": 334,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "rss_classification_history": {
+      "candidates": 245,
+      "loaded_rows": 245,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "ingest_runs": {
+      "candidates": 89,
+      "loaded_rows": 89,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "source_items": {
+      "candidates": 711,
+      "loaded_rows": 711,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "item_snapshots": {
+      "candidates": 967,
+      "loaded_rows": 967,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "run_items": {
+      "candidates": 1197,
+      "loaded_rows": 1197,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "quality_results": {
+      "candidates": 10978,
+      "loaded_rows": 10978,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "item_query_matches": {
+      "candidates": 400,
+      "loaded_rows": 400,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "food_mentions": {
+      "candidates": 99,
+      "loaded_rows": 99,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "metric_observations": {
+      "candidates": 820,
+      "loaded_rows": 820,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "entity_change_effects": {
+      "candidates": 3,
+      "loaded_rows": 3,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    },
+    "aggregate_invalidations": {
+      "candidates": 3,
+      "loaded_rows": 3,
+      "excluded_rows": 0,
+      "rejected_rows": 0,
+      "dispositions": {}
+    }
+  },
+  "reconciliation": {
+    "consistent": true,
+    "summary": {
+      "missing": 0,
+      "extra": 0,
+      "changed": 0,
+      "hash_mismatch_tables": [],
+      "null_mismatch_tables": []
+    },
+    "checks": {
+      "foreign_key_errors": 0,
+      "unresolved_payload_refs": 0,
+      "blocked_policy_rows": 0,
+      "distinct_items_by_source": {
+        "google_trends_rss": 334,
+        "instagram_graph": 129,
+        "youtube": 248
+      },
+      "legacy_unknown_items": 711,
+      "not_observed_metrics_with_null_value": 0,
+      "expired_rows_in_target": 0,
+      "food_views_compared": 1,
+      "food_view_mismatches": []
+    },
+    "hashes": {
+      "food_commands": true,
+      "food_entities": true,
+      "food_aliases": true,
+      "food_relations": true,
+      "food_candidates": true,
+      "food_events": true,
+      "tracking_targets": true,
+      "planner_queries": true,
+      "planner_plans": true,
+      "planner_query_targets": true,
+      "quota_reservations": true,
+      "execution_jobs": true,
+      "execution_runs": true,
+      "execution_calls": true,
+      "execution_outbox": true,
+      "execution_results": true,
+      "source_contents": true,
+      "rss_classifications": true,
+      "rss_classification_history": true,
+      "ingest_runs": true,
+      "source_items": true,
+      "item_snapshots": true,
+      "run_items": true,
+      "quality_results": true,
+      "item_query_matches": true,
+      "food_mentions": true,
+      "metric_observations": true,
+      "entity_change_effects": true,
+      "aggregate_invalidations": true
+    }
+  },
+  "rerun": {
+    "writes": 0,
+    "counts_unchanged": true
+  },
+  "shadow": {
+    "captured_events": 7,
+    "delivered": 7,
+    "failed": 0,
+    "pending_after": 0,
+    "consistent_after_delivery": true,
+    "food_view_mismatches": [],
+    "delivery_seconds": 0.263,
+    "mean_event_latency_ms": 37.524
+  },
+  "performance_dev_only": {
+    "food_view_ms": 4.993,
+    "alias_lookup_ms": 1.759,
+    "single_upsert_transaction_ms": 13.297,
+    "loaded_rows": 16576,
+    "load_seconds": 9.189,
+    "rows_per_second": 1803.9,
+    "reconcile_seconds": 4.698,
+    "python_peak_memory_mb": 25.57,
+    "target_bytes": 11354112,
+    "source_bytes": 17592320,
+    "connections_open_after": 0
+  },
+  "http_requests": 0,
+  "source_database_written": false
+}

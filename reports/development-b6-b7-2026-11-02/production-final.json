@@ -1,0 +1,22 @@
+{
+  "checked_at_utc": "2026-11-02T01:08:00.295358+00:00",
+  "access": "mode=ro query_only",
+  "table_count": 30,
+  "schema_migrations_present": false,
+  "integrity": "ok",
+  "row_counts": {
+    "runs": 95,
+    "items": 370,
+    "observations": 900,
+    "instagram_runs": 16,
+    "instagram_media": 185,
+    "youtube_videos": 431,
+    "naver_calls": 10
+  },
+  "listeners_8000_8002": [],
+  "python_writers_running": false,
+  "note": "Both servers were already stopped at session start (no listener, no python process); last DB write 2026-10-28 14:20 local. Not stopped or restarted by this work.",
+  "production_migrated": false,
+  "oracle_created": false,
+  "live_api_calls": 0
+}
