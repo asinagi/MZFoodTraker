@@ -120,6 +120,9 @@ def main():
                         help='B6 대상 스키마 명시 생성(SQLite --migrate와 별개). oracle은 ORACLE_DSN/USER/PASSWORD 필요')
     parser.add_argument('--target-status', choices=('oracle', 'sqlite'), help='B6 대상 스키마 버전 조회')
     parser.add_argument('--target-sqlite', metavar='PATH', help='SQLite 대역 대상 DB 경로(운영 DB 경로 사용 불가)')
+    parser.add_argument('--shadow', choices=('status', 'enable', 'disable', 'deliver', 'compare', 'repair'),
+                        help='B7 Shadow: SQLite 확정 변경을 대상에 멱등 반영; API 호출 없음. enable은 운영 승인 후 사용')
+    parser.add_argument('--shadow-target', choices=('oracle', 'sqlite'), help='Shadow 대상(deliver/compare/repair에 필요)')
     parser.add_argument('--execution-readiness', metavar='REGISTRY',
                         help='읽기 전용 B3 Live 준비 점검; API 호출·DB 쓰기 없음')
     parser.add_argument('--execution-mode', choices=('preview', 'live'), default='preview',
@@ -191,6 +194,27 @@ def main():
         result['linking'] = (observations.link_run(result['ingest_run_id']) if args.ingest_legacy
                              else observations.link_pending())
         print(json.dumps({k: v for k, v in result.items() if k not in ('storable_metrics', 'transient_metrics')}, ensure_ascii=False))
+        return
+    if args.shadow:
+        import json
+        from .shadow import ShadowService
+        try:
+            needs_target = args.shadow in ('deliver', 'compare', 'repair')
+            if needs_target and not args.shadow_target:
+                raise ValueError('--shadow-target이 필요합니다.')
+            repository = target_repository(args.shadow_target, args.target_sqlite, database_path) if needs_target else None
+            shadow = ShadowService(storage, repository)
+            if args.shadow == 'status':
+                result = shadow.status()
+            elif args.shadow in ('enable', 'disable'):
+                result = shadow.enable(args.shadow == 'enable')
+            else:
+                result = getattr(shadow, args.shadow)()
+        except ValueError as exc:
+            parser.exit(2, str(exc) + '\n')
+        except Exception as exc:  # error codes only; DSN and credentials never printed
+            parser.exit(2, 'shadow error: %s\n' % getattr(exc, 'code', type(exc).__name__))
+        print(json.dumps(result, ensure_ascii=False, default=str))
         return
     if args.execution_readiness:
         import json

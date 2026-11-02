@@ -49,26 +49,26 @@ class Plan:
         self.src, self.now = src, now
         self.present, self.excluded, self.rows, self.legacy = {}, {}, {}, []
 
-    def _raw(self, table):
+    def _raw(self, table, where='', args=()):
         spec = BY_NAME[table]
-        for r in self.src.execute('SELECT * FROM %s' % spec.source_table):
+        for r in self.src.execute('SELECT * FROM %s %s' % (spec.source_table, where), args):
             r = dict(r)
             yield {c.name: r.get(c.src) for c in spec.columns}, r
 
-    def _source_rows(self, table):
+    def _source_rows(self, table, where='', args=()):
         if table == 'food_candidates':
             ids = {r['id']: r['source_id'] for r in self.src.execute('SELECT id,source_id FROM items')}
-            for row, raw in self._raw(table):
+            for row, raw in self._raw(table, where, args):
                 if raw['source_item_id'] is not None:
                     row['source_item_key'] = _rss_key(ids[raw['source_item_id']]) if raw['source_item_id'] in ids else '#missing'
                 yield row
         elif table == 'food_mentions':
             sources = dict(self.src.execute('SELECT item_key,source_code FROM source_items').fetchall())
-            for row, _ in self._raw(table):
+            for row, _ in self._raw(table, where, args):
                 row['source_code'] = sources.get(row['item_key'])
                 yield row
         elif table == 'rss_classifications':
-            for r in self.src.execute('SELECT c.*,i.source_id FROM candidates c JOIN items i ON i.id=c.item_id'):
+            for r in self.src.execute('SELECT c.*,i.source_id FROM candidates c JOIN items i ON i.id=c.item_id ' + where.replace('item_id', 'c.item_id'), args):
                 r = dict(r)
                 key = _rss_key(r['source_id'])
                 self.legacy.append(('candidates', str(r['item_id']), table, key, digest(r)))
@@ -76,34 +76,38 @@ class Plan:
                            classifier_version=r['classifier_version'], entity_type=r['entity_type'], rule_score=r['rule_score'],
                            score_basis=r['score_basis'], evidence_news_json=r['evidence_news'], classified_at=r['classified_at'])
         elif table == 'rss_classification_history':
-            for r in self.src.execute('SELECT h.*,i.source_id FROM classification_history h LEFT JOIN items i ON i.id=h.item_id'):
+            for r in self.src.execute('SELECT h.*,i.source_id FROM classification_history h LEFT JOIN items i ON i.id=h.item_id ' + where.replace('id=', 'h.id='), args):
                 r = dict(r)
                 key = _rss_key(r['source_id']) if r['source_id'] else None
                 history = 'CLSH_' + digest([key, r['recorded_at'], r['result_json']])[:32]
                 self.legacy.append(('classification_history', str(r['id']), table, history, digest(r)))
                 yield dict(history_key=history, item_key=key, recorded_at=r['recorded_at'], result_json=r['result_json'])
         elif table == 'source_contents':
-            yield from self._contents()
+            yield from self._contents(args[0] if args else None)
         else:
-            for row, _ in self._raw(table):
+            for row, _ in self._raw(table, where, args):
                 yield row
 
-    def _contents(self):
+    def _contents(self, ref=None):
         """Allowed source content keyed by the existing payload_ref; original times and expiry kept."""
+        kind, _, key = (ref or '').partition(':')
         staged = dict(self.src.execute('SELECT payload_ref,first_origin FROM source_items').fetchall())
-        for r in self.src.execute('SELECT * FROM items ORDER BY id'):
-            ref, key = 'items:%d' % r['id'], _rss_key(r['source_id'])
-            self.legacy.append(('items', str(r['id']), 'source_contents', ref, hashlib.sha256(r['payload'].encode()).hexdigest()))
-            yield dict(payload_ref=ref, item_key=key, source_code='google_trends_rss', origin=staged.get(ref, 'legacy_unknown'),
+        for r in self.src.execute('SELECT * FROM items %s ORDER BY id' % ('WHERE id=?' if kind == 'items' else 'WHERE 0' if ref else ''),
+                                  (int(key),) if kind == 'items' else ()):
+            row_ref = 'items:%d' % r['id']
+            self.legacy.append(('items', str(r['id']), 'source_contents', row_ref, hashlib.sha256(r['payload'].encode()).hexdigest()))
+            yield dict(payload_ref=row_ref, item_key=_rss_key(r['source_id']), source_code='google_trends_rss', origin=staged.get(row_ref, 'legacy_unknown'),
                        content_json=r['payload'], content_hash=hashlib.sha256(canonical_json(r['payload']).encode()).hexdigest(),
                        captured_at=r['first_seen'], refreshed_at=r['last_seen'], expires_at=None, field_expires_at=None, field_purged_at=None)
         provenance = dict(self.src.execute('SELECT video_id,origin FROM youtube_video_provenance').fetchall())
-        for r in self.src.execute('SELECT * FROM youtube_videos ORDER BY video_id'):
+        for r in self.src.execute('SELECT * FROM youtube_videos %s ORDER BY video_id' % ('WHERE video_id=?' if kind == 'youtube_videos' else 'WHERE 0' if ref else ''),
+                                  (key,) if kind == 'youtube_videos' else ()):
             yield dict(payload_ref='youtube_videos:' + r['video_id'], item_key=item_key('youtube', r['video_id']), source_code='youtube',
                        origin=provenance.get(r['video_id'], 'legacy_unknown'), content_json=r['payload'],
                        content_hash=hashlib.sha256(canonical_json(r['payload']).encode()).hexdigest(), captured_at=r['collected_at'],
                        refreshed_at=r['refreshed_at'], expires_at=r['expires_at'], field_expires_at=None, field_purged_at=None)
-        for r in self.src.execute('SELECT * FROM instagram_media ORDER BY id'):
+        for r in self.src.execute('SELECT * FROM instagram_media %s ORDER BY id' % ('WHERE id=?' if kind == 'instagram_media' else 'WHERE 0' if ref else ''),
+                                  (key,) if kind == 'instagram_media' else ()):
             content = {k: r[k] for k in ('id', 'published_at', 'media_type', 'permalink', 'source')}
             field_expires = field_purged = None
             if r['caption_purged_at']:
@@ -296,3 +300,68 @@ def reconcile(source_path, repo, now=None, source_storage=None):
                          and out['checks']['foreign_key_errors'] in (0, 'enforced_by_deferred_constraints')
                          and not out['checks'].get('food_view_mismatches'))
     return out
+
+
+CONTENT_REFS = {'items': 'items:%s', 'youtube_videos': 'youtube_videos:%s', 'youtube_video_provenance': 'youtube_videos:%s',
+                'instagram_media': 'instagram_media:%s', 'instagram_caption_tags': 'instagram_media:%s'}
+
+
+def derive(src, entity_table, key, now):
+    """Target rows for one captured source entity from the current committed state.
+
+    Returns (target_table, key_row, row_or_None, disposition). None means the source row is gone.
+    """
+    from .shadow_schema import CAPTURED
+    plan, out = Plan(src, utc(now)), []
+
+    def emit(table, key_row, rows):
+        rows = list(rows)
+        if not rows:
+            out.append((table, key_row, None, None))
+        for row in rows:
+            out.append((table, {k: row[k] for k in BY_NAME[table].pk}, row, plan.classify(table, row)[0]))
+
+    if entity_table in CONTENT_REFS:
+        ref = CONTENT_REFS[entity_table] % key[0]
+        emit('source_contents', {'payload_ref': ref}, plan._source_rows('source_contents', args=(ref,)))
+    elif entity_table == 'candidates':
+        item = src.execute('SELECT source_id FROM items WHERE id=?', tuple(key)).fetchone()
+        emit('rss_classifications', {'item_key': _rss_key(item[0]) if item else None},
+             plan._source_rows('rss_classifications', 'WHERE item_id=?', tuple(key)))
+    elif entity_table == 'classification_history':
+        emit('rss_classification_history', {'history_key': None}, plan._source_rows('rss_classification_history', 'WHERE id=?', tuple(key)))
+    else:
+        spec = next(t for t in TABLES if t.source_table == entity_table and t.name != 'rss_classifications')
+        where = 'WHERE ' + ' AND '.join('%s=?' % c for c in CAPTURED[entity_table])
+        emit(spec.name, dict(zip(spec.pk, key)), plan._source_rows(spec.name, where, tuple(key)))
+        if entity_table == 'source_items':  # RSS content origin follows the staged first origin
+            ref = src.execute('SELECT payload_ref FROM source_items WHERE item_key=?', tuple(key)).fetchone()
+            if ref and ref[0].startswith('items:'):
+                emit('source_contents', {'payload_ref': ref[0]}, plan._source_rows('source_contents', args=(ref[0],)))
+    return out
+
+
+def repair(source_path, repo, now=None):
+    """Make the target equal to the eligible source rows: delete extra/changed, restore missing/changed.
+
+    One transaction; deletes run child-first and restores parent-first, foreign keys are checked at commit.
+    """
+    now = utc(now or datetime.now(timezone.utc))
+    with closing(open_source(source_path)) as src:
+        plan = Plan(src, now).build()
+    work = []
+    for table in ORDER:
+        spec = BY_NAME[table]
+        expected = {k: row for k, row, d, _ in plan.rows[table] if d == LOAD}
+        actual = {json.dumps([r[c] for c in spec.key], ensure_ascii=False, default=str): r for r in repo.rows(table)}
+        stale = [actual[k] for k in actual if k not in expected or _canonical(table, expected[k]) != json.dumps(actual[k], ensure_ascii=False, sort_keys=True, default=str)]
+        restore = [expected[k] for k in expected if k not in actual or actual[k] in stale]
+        work.append((table, stale, restore))
+    with repo.db.transaction() as tx:
+        for table, stale, _ in reversed(work):
+            for row in stale:
+                repo.delete(tx, table, row)
+        for table, _, restore in work:
+            for row in restore:
+                repo.upsert(tx, table, row)
+    return {'deleted': sum(len(w[1]) for w in work), 'restored': sum(len(w[2]) for w in work), 'http_requests': 0}

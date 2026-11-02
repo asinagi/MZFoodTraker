@@ -75,6 +75,25 @@ def main():
         second = migrate(copy, repo, now=now)
         rerun_writes = sum(v['writes']['inserted'] + v['writes']['updated'] for v in second['tables'].values())
         counts_after = {t: repo.count(t) for t in first['tables']}
+        # Shadow: capture local changes in the copy after the initial load, deliver, compare. No provider call.
+        from food_trends.shadow import ShadowService
+        shadow = ShadowService(storage, repo, clock=lambda: now)
+        shadow.enable()
+        food = foods.foods()[0]
+        foods.command('alias', dict(request_key='b7-shadow-alias', food_id=food['food_id'], surface_form='두쫀', action='approve',
+                                    expected_revision=food['revision'], approved=True, actor_ref='b7-verification-copy-only',
+                                    reason='Shadow 검증용 복제본 별칭'))
+        links.apply_entity_changes()
+        captured = shadow.status()['pending']
+        started = time.perf_counter()
+        delivery = shadow.deliver(limit=100000)
+        shadow_seconds = time.perf_counter() - started
+        shadow_result = shadow.compare()
+        shadow_report = {'captured_events': captured, 'delivered': delivery['delivered'], 'failed': delivery['failed'],
+                         'pending_after': delivery['pending'], 'consistent_after_delivery': shadow_result['consistent'],
+                         'food_view_mismatches': shadow_result['checks']['food_view_mismatches'],
+                         'delivery_seconds': round(shadow_seconds, 3),
+                         'mean_event_latency_ms': round(shadow_seconds * 1000 / max(1, delivery['delivered']), 3)}
         # Micro-measurements on the stand-in (development hardware; not an Oracle or production figure).
         food_id = repo.rows('food_entities')[0]['food_id']
         timings = {}
@@ -100,6 +119,7 @@ def main():
             'reconciliation': {'consistent': result['consistent'], 'summary': result['summary'], 'checks': result['checks'],
                                'hashes': {t: v['source_hash'] == v['target_hash'] for t, v in result['tables'].items()}},
             'rerun': {'writes': rerun_writes, 'counts_unchanged': counts_before == counts_after},
+            'shadow': shadow_report,
             'performance_dev_only': dict(timings, loaded_rows=loaded, load_seconds=round(load_seconds, 3),
                                          rows_per_second=round(loaded / load_seconds, 1), reconcile_seconds=round(reconcile_seconds, 3),
                                          python_peak_memory_mb=round(peak / 2 ** 20, 2), target_bytes=target_path.stat().st_size,
@@ -108,8 +128,8 @@ def main():
     target = root / args.output
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(json.dumps({k: report[k] for k in ('reconciliation', 'rerun')}, ensure_ascii=False)[:1500])
-    return 0 if result['consistent'] and rerun_writes == 0 and counts_before == counts_after else 1
+    print(json.dumps({k: report[k] for k in ('rerun', 'shadow')}, ensure_ascii=False), report['reconciliation']['consistent'])
+    return 0 if result['consistent'] and rerun_writes == 0 and counts_before == counts_after and shadow_report['consistent_after_delivery'] else 1
 
 
 if __name__ == '__main__':

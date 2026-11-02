@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from .migration_definitions import BASE_SQL, LEGACY_ADDITIONS
 
-LATEST_VERSION = 10
+LATEST_VERSION = 11
 
 
 class MigrationRequired(RuntimeError):
@@ -79,6 +79,11 @@ def _food_observations(db):
     apply(db)
 
 
+def _shadow_capture(db):
+    from .shadow_schema import apply
+    apply(db)
+
+
 MIGRATIONS = ((1, 'legacy_additive_schema', _legacy_schema),
               (2, 'source_contract_metadata', _contracts),
               (3, 'reviewed_food_entities', _food_entities),
@@ -88,7 +93,8 @@ MIGRATIONS = ((1, 'legacy_additive_schema', _legacy_schema),
               (7, 'tracking_collector_ownership', _execution_collectors),
               (8, 'execution_result_coverage', _execution_coverage),
               (9, 'common_ingestion_staging', _ingestion),
-              (10, 'food_observation_model', _food_observations))
+              (10, 'food_observation_model', _food_observations),
+              (11, 'oracle_shadow_capture', _shadow_capture))
 
 
 def schema_version(path):
