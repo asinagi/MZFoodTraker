@@ -16,6 +16,7 @@ from food_trends.target_db import SQLiteTarget, TransientError
 from food_trends.target_migration import migrate, reconcile
 from food_trends.target_repository import TargetRepository
 import test_execution as fixtures
+from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema
 from test_food_observations import rss_xml
 
 AT = datetime(2026, 10, 28, tzinfo=timezone.utc)
@@ -39,9 +40,6 @@ class SourceFixture(unittest.TestCase):
     active = fixtures.ExecutionTests.active
     job = fixtures.ExecutionTests.job
     advance = fixtures.ExecutionTests.advance
-
-    def runTest(self):  # pragma: no cover - fixture builder only
-        pass
 
     def build(self, path):
         fixtures.ExecutionTests.setUp(self)
@@ -74,7 +72,7 @@ class MigrationTests(unittest.TestCase):
     def setUpClass(cls):
         cls.fixture_dir = tempfile.TemporaryDirectory()
         cls.fixture = Path(cls.fixture_dir.name) / 'source.sqlite3'
-        SourceFixture().build(cls.fixture)
+        SourceFixture('build').build(cls.fixture)  # a builder, not a discovered test
 
     @classmethod
     def tearDownClass(cls):
@@ -85,8 +83,15 @@ class MigrationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.source = Path(self.temp.name) / 'source.sqlite3'
         backup(self.fixture, self.source)
-        self.repo = TargetRepository(SQLiteTarget(Path(self.temp.name) / 'target.sqlite3'), clock=lambda: AT)
-        self.repo.migrate()
+        self.repo = self.fresh_repo()
+
+    def make_target(self, name='target'):
+        return SQLiteTarget(Path(self.temp.name) / (name + '.sqlite3'))
+
+    def fresh_repo(self, name='target'):
+        repo = TargetRepository(self.make_target(name), clock=lambda: AT)
+        repo.migrate()
+        return repo
 
     def run_migration(self, **kw):
         return migrate(self.source, self.repo, now=kw.pop('now', AT), **kw)
@@ -138,8 +143,7 @@ class MigrationTests(unittest.TestCase):
         self.assertTrue(all(r['field_purged_at'] for r in self.repo.rows('source_contents')
                             if r['source_code'] == 'instagram_graph' and r['field_expires_at']))
         self.assertTrue(reconcile(self.source, self.repo, now=late)['consistent'])
-        on_time = TargetRepository(SQLiteTarget(Path(self.temp.name) / 'on-time.sqlite3'), clock=lambda: AT)
-        on_time.migrate()
+        on_time = self.fresh_repo('on-time')
         migrate(self.source, on_time, now=AT)
         with closing(sqlite3.connect(self.source)) as src:
             source_expiry = dict(src.execute("SELECT item_key,expires_at FROM source_items WHERE source_code='youtube'").fetchall())
@@ -205,3 +209,35 @@ class MigrationTests(unittest.TestCase):
         self.run_migration()
         reconcile(self.source, self.repo, now=AT)
         self.assertEqual(self.source.read_bytes(), before)
+
+
+
+class OrphanDetectionTests(unittest.TestCase):
+    """The FK check counts orphans itself; prove it is not vacuous (SQLite allows creating one)."""
+    setUpClass = MigrationTests.__dict__['setUpClass']
+    tearDownClass = MigrationTests.__dict__['tearDownClass']
+    setUp = MigrationTests.setUp
+    make_target = MigrationTests.make_target
+    fresh_repo = MigrationTests.fresh_repo
+    run_migration = MigrationTests.run_migration
+
+    def test_orphan_rows_are_counted_and_break_consistency(self):
+        self.run_migration()
+        with closing(sqlite3.connect(self.repo.db.path)) as raw:
+            raw.execute('PRAGMA foreign_keys=OFF')
+            raw.execute('DELETE FROM source_items WHERE item_key=(SELECT min(item_key) FROM run_items)')
+            raw.commit()
+        result = reconcile(self.source, self.repo, now=AT)
+        self.assertGreater(result['checks']['foreign_key_errors'], 0)
+        self.assertFalse(result['consistent'])
+
+
+@unittest.skipUnless(ORACLE_READY, SKIP_REASON)
+class OracleMigrationTests(MigrationTests):
+    """Same B7 cases against the real Oracle test schema (re-verified and reset per target)."""
+
+    def make_target(self, name='target'):
+        db = oracle_target()
+        self.addCleanup(db.close)
+        reset_target_schema(db)
+        return db

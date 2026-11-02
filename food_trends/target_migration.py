@@ -256,10 +256,18 @@ def reconcile(source_path, repo, now=None, source_storage=None):
             'source_hash': hashlib.sha256('\n'.join(expected[k] for k in sorted(expected)).encode()).hexdigest(),
             'target_hash': hashlib.sha256('\n'.join(actual[k] for k in sorted(actual)).encode()).hexdigest()}
     with repo.db.transaction() as tx:
-        if repo.db.dialect == 'sqlite':
-            out['checks']['foreign_key_errors'] = len(tx.rows('PRAGMA foreign_key_check'))
-        else:
-            out['checks']['foreign_key_errors'] = 'enforced_by_deferred_constraints'
+        # Measured, not assumed: orphan rows per declared foreign key (portable SQL, both dialects).
+        orphans = 0
+        for spec in TABLES:
+            for cols, parent, pcols in spec.fks:
+                match = ' AND '.join('p.%s=c.%s' % (pc, cc) for pc, cc in zip(pcols, cols))
+                present = ' AND '.join('c.%s IS NOT NULL' % cc for cc in cols)
+                orphans += int(tx.scalar('SELECT count(*) FROM %s c WHERE %s AND NOT EXISTS (SELECT 1 FROM %s p WHERE %s)'
+                                         % (spec.name, present, parent, match)))
+        out['checks']['foreign_key_errors'] = orphans
+        if repo.db.dialect == 'oracle':
+            out['checks']['foreign_keys_not_enabled_validated'] = int(tx.scalar(
+                "SELECT count(*) FROM user_constraints WHERE constraint_type='R' AND (status<>'ENABLED' OR validated<>'VALIDATED')"))
         refs = {r['payload_ref'] for r in tx.rows('SELECT payload_ref FROM source_contents')}
         out['checks']['unresolved_payload_refs'] = (
             sum(r['payload_ref'] not in refs for r in tx.rows("SELECT payload_ref FROM source_items WHERE availability='AVAILABLE'")) +
@@ -297,7 +305,8 @@ def reconcile(source_path, repo, now=None, source_storage=None):
     out['consistent'] = (not any(out['summary'][k] for k in ('missing', 'extra', 'changed')) and not out['summary']['hash_mismatch_tables']
                          and not out['summary']['null_mismatch_tables'] and out['checks']['unresolved_payload_refs'] == 0
                          and out['checks']['blocked_policy_rows'] == 0 and out['checks']['expired_rows_in_target'] == 0
-                         and out['checks']['foreign_key_errors'] in (0, 'enforced_by_deferred_constraints')
+                         and out['checks']['foreign_key_errors'] == 0
+                         and not out['checks'].get('foreign_keys_not_enabled_validated')
                          and not out['checks'].get('food_view_mismatches'))
     return out
 
