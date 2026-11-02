@@ -20,7 +20,7 @@ class Storage:
     def create(cls, path):
         """Explicit schema creation/upgrade, primarily for isolated fixture databases."""
         from .migrations import migrate
-        migrate(path)
+        migrate(path, create=True)
         return cls(path)
 
     def _classify(self, db, item_id, item):

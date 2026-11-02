@@ -6,7 +6,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
-from contextlib import closing
+from contextlib import redirect_stderr, closing
 from contextlib import redirect_stdout
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -214,11 +214,16 @@ class FoundationTests(unittest.TestCase):
         path = Path(self.temp.name) / 'cli.sqlite3'
         with patch.dict(os.environ, {'DATABASE_PATH': str(path)}, clear=True), \
                 patch('food_trends.__main__.load_env'):
-            for command in ('--migration-status', '--migrate'):
-                with patch('sys.argv', ['food_trends', command]), redirect_stdout(io.StringIO()) as stream:
+            # A missing database is never created by a bare --migrate (S1); creation is explicit.
+            with patch('sys.argv', ['food_trends', '--migrate']), redirect_stdout(io.StringIO()),                     redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as refused:
+                main()
+            self.assertEqual(refused.exception.code, 2)
+            self.assertFalse(path.exists())
+            for command in (['--migration-status'], ['--migrate', '--create-database']):
+                with patch('sys.argv', ['food_trends', *command]), redirect_stdout(io.StringIO()) as stream:
                     main()
                 result = json.loads(stream.getvalue())
-                if command == '--migration-status':
+                if command == ['--migration-status']:
                     self.assertEqual(result['version'], 0)
                     self.assertFalse(path.exists())
                 else:
@@ -263,7 +268,7 @@ class FoundationTests(unittest.TestCase):
             raise RuntimeError('synthetic migration failure')
         with patch('food_trends.migrations.MIGRATIONS', ((1, 'fixture_failure', failed),)):
             with self.assertRaises(RuntimeError):
-                migrate(fresh)
+                migrate(fresh, create=True)
         with closing(sqlite3.connect(fresh)) as db:
             self.assertEqual(db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall(), [])
         self.assertEqual(schema_version(fresh), 0)

@@ -347,7 +347,7 @@ class FoodEntityTests(unittest.TestCase):
     def test_v2_migration_preserves_original_columns_and_is_idempotent(self):
         path = Path(self.temp.name) / 'v2.sqlite3'
         with patch('food_trends.migrations.LATEST_VERSION', 2), patch('food_trends.migrations.MIGRATIONS', MIGRATIONS[:2]):
-            migrate(path)
+            migrate(path, create=True)
         with closing(sqlite3.connect(path)) as db:
             before = list(db.iterdump())
         self.assertEqual(migrate(path)['applied'], list(range(3, LATEST_VERSION + 1)))

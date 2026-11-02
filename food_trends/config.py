@@ -49,8 +49,9 @@ class YouTubeConfig:
         return bool(self.api_key)
 
 
-def load_env(path='.env'):
-    path = Path(path)
+def load_env(path=None):
+    from .paths import ENV_FILE
+    path = ENV_FILE if path is None else Path(path)
     if not path.exists():
         return
     for line in path.read_text(encoding='utf-8-sig').splitlines():

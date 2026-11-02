@@ -26,7 +26,8 @@ def main():
     parser.add_argument('--days', type=int, choices=(7, 30, 90), default=30)
     args = parser.parse_args()
     load_env()
-    service = NaverService(Storage(os.getenv('DATABASE_PATH', 'data/trends.sqlite3')), NaverConfig.from_env())
+    from .paths import database_path
+    service = NaverService(Storage(database_path()), NaverConfig.from_env())
     print(json.dumps(verify(service, args.days), ensure_ascii=False))
 
 

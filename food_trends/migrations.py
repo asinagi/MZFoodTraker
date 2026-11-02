@@ -116,9 +116,15 @@ def require_current(path):
         raise MigrationRequired('Database migration required. Back up first, then run python -m food_trends --migrate.')
 
 
-def migrate(path):
-    """Caller explicitly authorizes DDL. Existing source rows are never reprocessed."""
+def migrate(path, create=False):
+    """Caller explicitly authorizes DDL. Existing source rows are never reprocessed.
+
+    A missing file is never created implicitly: only create=True (tests, Storage.create, or the
+    CLI's --create-database) may start a new database, so a wrong path cannot spawn an empty one.
+    """
     path = Path(path)
+    if not path.is_file() and not create:
+        raise MigrationRequired('No database at %s; refusing to create one. Check DATABASE_PATH or use --create-database.' % path.resolve())
     version = schema_version(path)
     if version > LATEST_VERSION:
         raise MigrationRequired('Database is newer than this application; refusing downgrade.')

@@ -88,6 +88,8 @@ def main():
     maintenance_group = parser.add_mutually_exclusive_group()
     maintenance_group.add_argument('--migrate', action='store_true', help='Explicit local schema migration; no API calls')
     maintenance_group.add_argument('--migration-status', action='store_true', help='Read-only schema version check')
+    parser.add_argument('--create-database', action='store_true',
+                        help='--migrate와 함께: 지정 경로에 DB 파일이 없을 때만 새로 생성(명시적 초기화)')
     maintenance_group.add_argument('--maintenance', action='store_true', help='Local expiry cleanup; no API calls or reprocessing')
     maintenance_group.add_argument('--ingest-pending', action='store_true', help='완료 회차의 공통 스테이징 처리; API 호출 없음')
     maintenance_group.add_argument('--ingest-legacy', choices=('youtube', 'instagram_graph'),
@@ -135,12 +137,15 @@ def main():
     parser.add_argument('--token-output', default='data/instagram-long-lived.secret')
     parser.add_argument('--verification-output', default='data/instagram-live-verification.json')
     args = parser.parse_args()
+    if args.create_database and not args.migrate:
+        parser.error('--create-database는 --migrate와 함께만 사용할 수 있습니다')
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     interval = float(os.getenv('COLLECT_INTERVAL_SECONDS', '1800'))
     timeout = float(os.getenv('RSS_TIMEOUT_SECONDS', '20'))
     if interval <= 0 or timeout <= 0:
         parser.error('수집 간격과 타임아웃은 양수여야 합니다')
-    database_path = os.getenv('DATABASE_PATH', 'data/trends.sqlite3')
+    from .paths import database_path as resolve_database
+    database_path = str(resolve_database())
     if args.target_migrate or args.target_status:
         import json
         try:
@@ -155,9 +160,16 @@ def main():
     from .migrations import migrate, schema_version, LATEST_VERSION, MigrationRequired
     if args.migrate or args.migration_status:
         import json
-        result = (migrate(database_path) if args.migrate else
-                  {'version': schema_version(database_path), 'required_version': LATEST_VERSION})
-        print(json.dumps(result))
+        before = {'path': database_path, 'exists': os.path.isfile(database_path), 'version': schema_version(database_path),
+                  'required_version': LATEST_VERSION}
+        if not args.migrate:
+            print(json.dumps(before, ensure_ascii=False))
+            return
+        try:
+            result = migrate(database_path, create=args.create_database)
+        except MigrationRequired as exc:
+            parser.exit(2, str(exc) + '\n')
+        print(json.dumps(dict(result, path=database_path, from_version=before['version']), ensure_ascii=False))
         return
     try:
         storage = Storage(database_path)

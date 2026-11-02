@@ -141,7 +141,8 @@ def audit(database, output, compare=None, labels=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--database', default='data/trends.sqlite3')
+    from .paths import DEFAULT_DATABASE
+    parser.add_argument('--database', default=str(DEFAULT_DATABASE))
     parser.add_argument('--output', required=True)
     parser.add_argument('--compare')
     parser.add_argument('--labels', help='JSON list with item_id, actual_food boolean, review_status=human_verified')
