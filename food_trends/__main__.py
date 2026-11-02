@@ -50,6 +50,18 @@ def instagram_command(args, instagram):
         print(json.dumps({'success': False, 'error': '관리 명령 실패. 설정 또는 출력 파일의 존재 여부를 확인하세요.'}, ensure_ascii=False))
     return 1
 
+def target_repository(dialect, sqlite_path, database_path, environ=None):
+    """B6 target selection. The SQLite stand-in may never be the application's own database."""
+    from pathlib import Path
+    from .target_db import OracleSettings, OracleTarget, SQLiteTarget
+    from .target_repository import TargetRepository
+    if dialect == 'oracle':
+        return TargetRepository(OracleTarget(OracleSettings.from_env(environ)))
+    if not sqlite_path or Path(sqlite_path).resolve() == Path(database_path).resolve():
+        raise ValueError('--target-sqlite에 운영 DB와 다른 경로가 필요합니다.')
+    return TargetRepository(SQLiteTarget(sqlite_path))
+
+
 def execution_for_mode(storage, args, environ=None):
     """Explicit B3 mode. Returns (controller or None, error). Live is fail-closed; nothing starts here."""
     from .execution_runtime import live_controller
@@ -104,6 +116,10 @@ def main():
     group.add_argument('--instagram-exchange-token', action='store_true')
     group.add_argument('--instagram-verify', action='store_true', help='두쫀쿠 한 태그의 실제 연결·수집·DB 집계 검증')
     group.add_argument('--instagram-reanalyze', action='store_true', help='저장된 캡션의 해시태그 재처리 (외부 호출 없음)')
+    parser.add_argument('--target-migrate', choices=('oracle', 'sqlite'),
+                        help='B6 대상 스키마 명시 생성(SQLite --migrate와 별개). oracle은 ORACLE_DSN/USER/PASSWORD 필요')
+    parser.add_argument('--target-status', choices=('oracle', 'sqlite'), help='B6 대상 스키마 버전 조회')
+    parser.add_argument('--target-sqlite', metavar='PATH', help='SQLite 대역 대상 DB 경로(운영 DB 경로 사용 불가)')
     parser.add_argument('--execution-readiness', metavar='REGISTRY',
                         help='읽기 전용 B3 Live 준비 점검; API 호출·DB 쓰기 없음')
     parser.add_argument('--execution-mode', choices=('preview', 'live'), default='preview',
@@ -122,6 +138,17 @@ def main():
     if interval <= 0 or timeout <= 0:
         parser.error('수집 간격과 타임아웃은 양수여야 합니다')
     database_path = os.getenv('DATABASE_PATH', 'data/trends.sqlite3')
+    if args.target_migrate or args.target_status:
+        import json
+        try:
+            repository = target_repository(args.target_migrate or args.target_status, args.target_sqlite, database_path)
+            result = repository.migrate() if args.target_migrate else {'version': repository.schema_version()}
+        except ValueError as exc:
+            parser.exit(2, str(exc) + '\n')
+        except Exception as exc:  # error codes only; DSN and credentials never printed
+            parser.exit(2, 'target error: %s\n' % getattr(exc, 'code', type(exc).__name__))
+        print(json.dumps(result))
+        return
     from .migrations import migrate, schema_version, LATEST_VERSION, MigrationRequired
     if args.migrate or args.migration_status:
         import json
