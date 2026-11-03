@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 1
+TARGET_SCHEMA_VERSION = 2
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -175,10 +175,12 @@ TABLES = (
     # Allowed source content so payload_ref stays resolvable; never longer than the source keeps it.
     Table('source_contents', (NN('payload_ref', 'key'), NN('item_key', 'id'), NN('source_code', 'code'), NN('origin', 'code'),
           NN('content_json', 'json'), NN('content_hash', 'hash'), NN('captured_at', 'ts'), NN('refreshed_at', 'ts'), C('expires_at', 'ts'),
-          C('field_expires_at', 'ts'), C('field_purged_at', 'ts')), ('payload_ref',),
+          C('field_expires_at', 'ts'), C('field_purged_at', 'ts'),
+          # v2: SHA-256 of the payload exactly as the source store serialized it (B4 snapshot key parity).
+          C('source_payload_hash', 'hash')), ('payload_ref',),
           checks=("source_code IN ('google_trends_rss','instagram_graph','youtube')", 'origin IN ' + ORIGINS),
           indexes=(('item_key',), ('expires_at',), ('field_expires_at',)),
-          mutable=('content_json', 'content_hash', 'refreshed_at', 'expires_at', 'field_expires_at', 'field_purged_at')),
+          mutable=('content_json', 'content_hash', 'refreshed_at', 'expires_at', 'field_expires_at', 'field_purged_at', 'source_payload_hash')),
     Table('rss_classifications', (NN('item_key', 'id'), NN('normalized_name', 'text'), NN('classification', 'code'), NN('reasons_json', 'json', source='reasons'),
           NN('classifier_version', 'code'), NN('entity_type', 'code'), C('rule_score', 'int'), C('score_basis', 'code'),
           NN('evidence_news_json', 'json', source='evidence_news'), C('classified_at', 'ts')), ('item_key',),
@@ -261,6 +263,25 @@ TABLES = (
           NN('reason', 'code'), NN('cause_ref', 'key'), NN('created_at', 'ts'), C('consumed_at', 'ts')), ('invalidation_id',),
           natural_key=('invalidation_key',), unique=(('invalidation_key',),), fks=((('food_id',), 'food_entities', ('food_id',)),),
           mutable=('consumed_at',), source_table='aggregate_invalidations'),
+    # v2 Oracle execution runtime state (owned by the Oracle runtime; never migrated from SQLite).
+    Table('execution_mappings', (NN('job_id', 'id'), NN('plan_id', 'id'), NN('target_id', 'id'), NN('generation', 'int'),
+          NN('food_revision', 'int'), NN('mapping_json', 'json'), NN('started', 'int')), ('job_id', 'target_id'),
+          fks=((('job_id',), 'execution_jobs', ('job_id',)), (('plan_id',), 'planner_plans', ('plan_id',)),
+               (('target_id',), 'tracking_targets', ('target_id',))), checks=('started IN (0,1)',), mutable=('started',)),
+    Table('execution_leases', (NN('resource_key', 'id'), NN('owner_id', 'text'), NN('fencing_generation', 'int'), NN('acquired_at', 'ts'),
+          NN('renewed_at', 'ts'), NN('expires_at', 'ts')), ('resource_key',), fks=((('resource_key',), 'execution_jobs', ('job_id',)),),
+          checks=('fencing_generation>0',), mutable=('owner_id', 'fencing_generation', 'acquired_at', 'renewed_at', 'expires_at')),
+    Table('execution_checkpoints', (NN('job_id', 'id'), NN('state_json', 'json'), NN('updated_at', 'ts'), NN('expires_at', 'ts')),
+          ('job_id',), fks=((('job_id',), 'execution_jobs', ('job_id',)),), mutable=('state_json', 'updated_at', 'expires_at')),
+    Table('execution_item_receipts', (NN('job_id', 'id'), NN('item_id', 'key'), NN('observed_at', 'ts'), NN('expires_at', 'ts')),
+          ('job_id', 'item_id'), fks=((('job_id',), 'execution_jobs', ('job_id',)),), indexes=(('expires_at',),)),
+    Table('execution_blocks', (NN('source_id', 'code'), NN('account_scope', 'code'), NN('error_kind', 'code'), NN('blocked_at', 'ts'),
+          C('until_at', 'ts')), ('source_id', 'account_scope'), mutable=('error_kind', 'blocked_at', 'until_at')),
+    Table('quota_charges', (NN('reservation_id', 'id'), NN('resource_code', 'code', source='resource'), NN('cost', 'int'), C('distinct_key', 'text'),
+          NN('window_start', 'ts'), NN('window_end', 'ts'), NN('reset_timezone', 'code'), C('local_limit', 'int'), C('provider_limit', 'int')),
+          ('reservation_id', 'resource_code'), fks=((('reservation_id',), 'quota_reservations', ('reservation_id',)),),
+          checks=('cost>=0',), indexes=(('resource_code', 'window_start', 'window_end'),),
+          mutable=('cost', 'distinct_key', 'window_start', 'window_end', 'reset_timezone', 'local_limit', 'provider_limit')),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),
@@ -323,6 +344,12 @@ def ddl(dialect):
         for cols in dict.fromkeys(tuple(i) for i in indexes):
             out.append('CREATE INDEX %s ON %s (%s)' % (_short('IX', t.name, *cols), t.name, ','.join(cols)))
     return out
+
+
+def add_column(dialect, table, column):
+    """ALTER statement that brings an older target table up to the specification."""
+    kind = KINDS[column.kind][0 if dialect == 'oracle' else 1]
+    return ('ALTER TABLE %s ADD (%s %s)' if dialect == 'oracle' else 'ALTER TABLE %s ADD COLUMN %s %s') % (table, column.name, kind)
 
 
 def identifiers():

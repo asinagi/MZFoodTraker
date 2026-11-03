@@ -6,7 +6,7 @@ from pathlib import Path
 from food_trends.storage import Storage
 from food_trends.target_db import OracleSettings, OracleUnavailable, SQLiteTarget
 from food_trends.target_repository import TargetRepository
-from food_trends.target_schema import BY_NAME, ORACLE_RESERVED, TABLES, ddl, identifiers
+from food_trends.target_schema import BY_NAME, ORACLE_RESERVED, TABLES, TARGET_SCHEMA_VERSION, ddl, identifiers
 
 
 class TargetSchemaTests(unittest.TestCase):
@@ -70,9 +70,9 @@ class TargetSchemaTests(unittest.TestCase):
     def test_migration_is_explicit_repeatable_and_checksummed(self):
         self.assertEqual(self.repo.schema_version(), 0)  # construction created nothing
         first = self.repo.migrate()
-        self.assertEqual((first['version'], first['applied']), (1, [1]))
+        self.assertEqual((first['version'], first['applied']), (TARGET_SCHEMA_VERSION, list(range(1, TARGET_SCHEMA_VERSION + 1))))
         self.assertGreater(first['created_objects'], len(TABLES))
-        self.assertEqual(self.repo.migrate(), {'version': 1, 'applied': [], 'created_objects': 0})
+        self.assertEqual(self.repo.migrate(), {'version': TARGET_SCHEMA_VERSION, 'applied': [], 'created_objects': 0})
         with self.repo.db.transaction() as tx:
             tx.execute("UPDATE target_schema_migrations SET checksum='tampered'")
         with self.assertRaises(Exception) as error:

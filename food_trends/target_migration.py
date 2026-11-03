@@ -98,14 +98,16 @@ class Plan:
             self.legacy.append(('items', str(r['id']), 'source_contents', row_ref, hashlib.sha256(r['payload'].encode()).hexdigest()))
             yield dict(payload_ref=row_ref, item_key=_rss_key(r['source_id']), source_code='google_trends_rss', origin=staged.get(row_ref, 'legacy_unknown'),
                        content_json=r['payload'], content_hash=hashlib.sha256(canonical_json(r['payload']).encode()).hexdigest(),
-                       captured_at=r['first_seen'], refreshed_at=r['last_seen'], expires_at=None, field_expires_at=None, field_purged_at=None)
+                       captured_at=r['first_seen'], refreshed_at=r['last_seen'], expires_at=None, field_expires_at=None, field_purged_at=None,
+                       source_payload_hash=hashlib.sha256(r['payload'].encode()).hexdigest())
         provenance = dict(self.src.execute('SELECT video_id,origin FROM youtube_video_provenance').fetchall())
         for r in self.src.execute('SELECT * FROM youtube_videos %s ORDER BY video_id' % ('WHERE video_id=?' if kind == 'youtube_videos' else 'WHERE 0' if ref else ''),
                                   (key,) if kind == 'youtube_videos' else ()):
             yield dict(payload_ref='youtube_videos:' + r['video_id'], item_key=item_key('youtube', r['video_id']), source_code='youtube',
                        origin=provenance.get(r['video_id'], 'legacy_unknown'), content_json=r['payload'],
                        content_hash=hashlib.sha256(canonical_json(r['payload']).encode()).hexdigest(), captured_at=r['collected_at'],
-                       refreshed_at=r['refreshed_at'], expires_at=r['expires_at'], field_expires_at=None, field_purged_at=None)
+                       refreshed_at=r['refreshed_at'], expires_at=r['expires_at'], field_expires_at=None, field_purged_at=None,
+                       source_payload_hash=hashlib.sha256(r['payload'].encode()).hexdigest())
         for r in self.src.execute('SELECT * FROM instagram_media %s ORDER BY id' % ('WHERE id=?' if kind == 'instagram_media' else 'WHERE 0' if ref else ''),
                                   (key,) if kind == 'instagram_media' else ()):
             content = {k: r[k] for k in ('id', 'published_at', 'media_type', 'permalink', 'source')}
@@ -125,7 +127,8 @@ class Plan:
             yield dict(payload_ref='instagram_media:' + r['id'], item_key=item_key('instagram_graph', r['id']), source_code='instagram_graph',
                        origin=r['origin'], content_json=json.dumps(content, ensure_ascii=False),
                        content_hash=hashlib.sha256(canonical_json(content).encode()).hexdigest(), captured_at=r['first_seen'],
-                       refreshed_at=r['last_seen'], expires_at=None, field_expires_at=field_expires, field_purged_at=field_purged)
+                       refreshed_at=r['last_seen'], expires_at=None, field_expires_at=field_expires, field_purged_at=field_purged,
+                       source_payload_hash=None)
 
     def classify(self, table, row):
         spec = BY_NAME[table]

@@ -45,10 +45,10 @@ class MockTransport:
         return MockResponse(json.dumps(result,ensure_ascii=False).encode())
 
 
-def mock_controller(storage, planner, transport=None):
-    transport=transport or MockTransport()
+def mock_clients(accounts, transport):
+    """Existing provider clients bound to a mock transport, one per mock-mode account."""
     clients={}
-    for account in planner.tracking.accounts.values():
+    for account in accounts:
         if account.mode!='mock':continue
         if account.source_id=='instagram_graph':
             config=InstagramConfig(token='synthetic-mock-token',version=account.options.get('api_version','v26.0'),
@@ -59,6 +59,11 @@ def mock_controller(storage, planner, transport=None):
         else:
             client=NaverClient(NaverConfig(client_id='synthetic-mock-id',client_secret='synthetic-mock-secret',retries=0),transport)
         clients[(account.source_id,account.account_scope)]=client
+    return clients
+
+
+def mock_controller(storage, planner, transport=None):
+    clients=mock_clients(planner.tracking.accounts.values(),transport or MockTransport())
     from .ingestion import IngestionService
     from .food_observations import FoodObservationService
     clock=planner.tracking.clock

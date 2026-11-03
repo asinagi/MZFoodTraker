@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from food_trends.target_db import ConversionError, IntegrityViolation, PolicyRefused, SQLiteTarget, to_target
 from food_trends.target_repository import TargetRepository
-from food_trends.target_schema import BY_NAME
+from food_trends.target_schema import BY_NAME, TARGET_SCHEMA_VERSION
 from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema
 
 NOW = datetime(2026, 11, 2, tzinfo=timezone.utc)
@@ -88,7 +88,7 @@ class ContractCases:
     # 2, 3: migration repeat
     def test_migration_repeat_is_a_no_op(self):
         self.assertEqual(self.repo.migrate()['created_objects'], 0)
-        self.assertEqual(self.repo.schema_version(), 1)
+        self.assertEqual(self.repo.schema_version(), TARGET_SCHEMA_VERSION)
 
     # 4: PK/FK/UNIQUE/CHECK enforced by the database itself
     def test_constraints_are_enforced_by_the_database(self):

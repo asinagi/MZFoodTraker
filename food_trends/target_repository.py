@@ -9,7 +9,7 @@ import hashlib
 from datetime import datetime, timezone
 from .ingestion import METRIC_DEFINITIONS
 from .target_db import IntegrityViolation, PolicyRefused, TargetError, UniqueViolation, convert, logical, to_target, utc
-from .target_schema import BY_NAME, TARGET_SCHEMA_VERSION, ddl
+from .target_schema import BY_NAME, TABLES, TARGET_SCHEMA_VERSION, add_column, ddl
 
 ORIGIN_VALUES = ('live_api', 'mock', 'user', 'legacy_unknown')
 MENTION_SOURCES = ('google_trends_rss', 'instagram_graph')
@@ -55,6 +55,11 @@ class TargetRepository:
             return bool(tx.scalar('SELECT count(*) FROM user_objects WHERE object_name=UPPER(:b_name)', {'b_name': name}))
         return bool(tx.scalar('SELECT count(*) FROM sqlite_master WHERE lower(name)=lower(:b_name)', {'b_name': name}))
 
+    def _columns(self, tx, table):
+        if self.db.dialect == 'oracle':
+            return {r['column_name'] for r in tx.rows('SELECT column_name FROM user_tab_columns WHERE table_name=UPPER(:b_t)', {'b_t': table})}
+        return {r['name'].upper() for r in tx.rows('PRAGMA table_info(%s)' % table)}
+
     def checksum(self):
         return hashlib.sha256('\n'.join(ddl(self.db.dialect)).encode()).hexdigest()
 
@@ -80,10 +85,17 @@ class TargetRepository:
                 if not self._exists(tx, name):
                     tx.execute(statement)
                     created += 1
+            # Upgrade path (v1 -> v2): add columns introduced after a table was first created.
+            for spec in TABLES:
+                present = self._columns(tx, spec.name)
+                for column in spec.columns:
+                    if column.name.upper() not in present:
+                        tx.execute(add_column(self.db.dialect, spec.name, column))
+                        created += 1
             stamp = self.now() if oracle else self.now().isoformat(timespec='microseconds')
             tx.execute('INSERT INTO target_schema_migrations VALUES (:b_v,:b_c,:b_t)',
                        {'b_v': TARGET_SCHEMA_VERSION, 'b_c': self.checksum(), 'b_t': stamp}, ts_binds=('b_t',) if oracle else ())
-        return {'version': TARGET_SCHEMA_VERSION, 'applied': [TARGET_SCHEMA_VERSION], 'created_objects': created}
+        return {'version': TARGET_SCHEMA_VERSION, 'applied': list(range(current + 1, TARGET_SCHEMA_VERSION + 1)), 'created_objects': created}
 
     def schema_version(self):
         with self.db.transaction() as tx:

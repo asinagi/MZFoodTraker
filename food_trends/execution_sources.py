@@ -42,6 +42,76 @@ def remote_usage_check_needed(state, fingerprint, now):
     return not (current and now - instant(check['checked_at']) < USAGE_CHECK_TTL)
 
 
+# Provider page parsing and checkpoint transitions, shared by the SQLite and Oracle runtimes.
+
+def parse_search(payload, state):
+    rows = items(payload)
+    if len(rows)>50:
+        raise ExecutionError('invalid_response')
+    ids = [video_id(r.get('id',{}).get('videoId')) for r in rows if isinstance(r,dict)]
+    if len(ids)!=len(rows):raise ExecutionError('invalid_response')
+    cursor = payload.get('nextPageToken')
+    if cursor is not None and (not isinstance(cursor,str) or not cursor or len(cursor)>2048 or cursor==state.get('cursor')):
+        raise ExecutionError('invalid_response')
+    return {'ids':list(dict.fromkeys(ids)), 'count':len(rows), 'cursor':cursor}
+
+
+def search_checkpoint(state, parsed, max_pages):
+    page = state['page'];more = bool(parsed['cursor']);limited=more and page+1>=max_pages
+    return dict(state,phase='details' if parsed['ids'] else 'search',pending_ids=parsed['ids'],
+                cursor=parsed['cursor'],more=more,limited=limited,
+                page=page if parsed['ids'] else page+1,done=not parsed['ids'] and (not more or limited))
+
+
+def parse_videos(payload, requested):
+    videos=[parse_video(r) for r in items(payload)]
+    if any(v['video_id'] not in requested for v in videos) or len(videos)>50:
+        raise ExecutionError('invalid_response')
+    return videos
+
+
+def videos_checkpoint(state):
+    return dict(state,phase='search',page=state['page']+1,pending_ids=[],done=not state['more'] or state['limited'])
+
+
+def public_videos(videos):
+    return [v for v in videos if v['privacy_status']=='public' and v.get('upload_status') not in ('deleted','failed','rejected')]
+
+
+def parse_lookup(payload):
+    rows=payload.get('data')
+    if not isinstance(rows,list):raise ExecutionError('invalid_response')
+    if not rows:return None
+    value=rows[0].get('id') if isinstance(rows[0],dict) else None
+    if not isinstance(value,str) or not value.isdigit():raise ExecutionError('invalid_response')
+    return value
+
+
+def lookup_checkpoint(state, identifier, now):
+    return dict(state,phase='media',hashtag_id=identifier,done=identifier is None,looked_up_at=stamp(now))
+
+
+def media_request(cfg, params, state):
+    request={'user_id':cfg.user_id,'fields':','.join(params['fields']),'limit':params['limit']}
+    if state.get('cursor'):request['after']=state['cursor']
+    return request
+
+
+def parse_media(payload, state):
+    rows=payload.get('data');paging=payload.get('paging') or {}
+    if not isinstance(rows,list) or len(rows)>50 or not isinstance(paging,dict):raise ExecutionError('invalid_response')
+    media=[InstagramService.clean_media(r) for r in rows]
+    more=bool(paging.get('next'));cursor=(paging.get('cursors') or {}).get('after') if more else None
+    if more and (not isinstance(cursor,str) or not cursor or len(cursor)>2048 or cursor==state.get('cursor')):raise ExecutionError('invalid_response')
+    return media,more,cursor
+
+
+def media_checkpoint(state, parsed, max_pages):
+    page=state['page']
+    return dict(state,page=page+1,cursor=parsed[2],more=parsed[1],
+                limited=parsed[1] and page+1>=max_pages,done=not parsed[1] or page+1>=max_pages)
+
+
 class SourceAdapter:
     def __init__(self, client):
         # Isolate request hooks/counters from a legacy service instance.
@@ -61,7 +131,8 @@ class SourceAdapter:
                 raise ExecutionError('policy')
         if plan['source_id']=='instagram_graph' and self.client.config.version != plan['canonical_query']['parameters']['api_version']:
             raise ExecutionError('policy')
-        return RequestSession(execution, claim, plan, fault)
+        # The Oracle runtime supplies its own fenced session over the target schema.
+        return getattr(execution, 'session_class', RequestSession)(execution, claim, plan, fault)
 
     @staticmethod
     def _new_items(db, session, values, key, days):
@@ -97,38 +168,19 @@ class YouTubeExecutor(SourceAdapter):
                 request = dict(params)
                 if state.get('cursor'):
                     request['pageToken'] = state['cursor']
-                def parse(payload):
-                    rows = items(payload)
-                    if len(rows)>50:
-                        raise ExecutionError('invalid_response')
-                    ids = [video_id(r.get('id',{}).get('videoId')) for r in rows if isinstance(r,dict)]
-                    if len(ids)!=len(rows):raise ExecutionError('invalid_response')
-                    cursor = payload.get('nextPageToken')
-                    if cursor is not None and (not isinstance(cursor,str) or not cursor or len(cursor)>2048 or cursor==state.get('cursor')):
-                        raise ExecutionError('invalid_response')
-                    return {'ids':list(dict.fromkeys(ids)), 'count':len(rows), 'cursor':cursor}
-                def checkpoint(parsed):
-                    more = bool(parsed['cursor']);limited=more and page+1>=plan['canonical_query']['max_pages']
-                    return dict(state,phase='details' if parsed['ids'] else 'search',pending_ids=parsed['ids'],
-                                cursor=parsed['cursor'],more=more,limited=limited,
-                                page=page if parsed['ids'] else page+1,done=not parsed['ids'] and (not more or limited))
                 def save_search(db, parsed, targets):
                     db.execute('UPDATE youtube_queries SET page_token=?,token_at=?,last_attempt=?,after_at=?,before_at=? WHERE id=?',
                         (parsed['cursor'],stamp(execution.now()),stamp(execution.now()),params['publishedAfter'],params['publishedBefore'],state['legacy_query_id']))
                     return parsed['count'],0
                 s.request('search','search:'+str(page),
                     lambda:self.client.get('search',request,lambda endpoint:None,lambda *args:None,single_attempt=True),
-                    parse,save_search,checkpoint)
+                    lambda payload:parse_search(payload,state),save_search,
+                    lambda parsed:search_checkpoint(state,parsed,plan['canonical_query']['max_pages']))
             else:
                 requested=state['pending_ids']
                 detail={'part':'snippet,statistics,contentDetails,status','id':','.join(requested)}
-                def parse(payload):
-                    videos=[parse_video(r) for r in items(payload)]
-                    if any(v['video_id'] not in requested for v in videos) or len(videos)>50:
-                        raise ExecutionError('invalid_response')
-                    return videos
                 def persist(db, videos, targets):
-                    public=[v for v in videos if v['privacy_status']=='public' and v.get('upload_status') not in ('deleted','failed','rejected')]
+                    public=public_videos(videos)
                     fresh=self._new_items(db,s,public,'video_id',29)
                     absent=set(requested)-{v['video_id'] for v in public}
                     saved=store.save_videos([v['video_id'] for v in fresh]+sorted(absent),fresh,'mock' if claim['job']['mode']=='mock' else 'live_api',
@@ -141,7 +193,7 @@ class YouTubeExecutor(SourceAdapter):
                     return len(videos),len(saved)
                 s.request('videos','videos:'+str(page),
                     lambda:self.client.get('videos',detail,lambda endpoint:None,lambda *args:None,single_attempt=True),
-                    parse,persist,lambda parsed:dict(state,phase='search',page=page+1,pending_ids=[],done=not state['more'] or state['limited']))
+                    lambda payload:parse_videos(payload,requested),persist,lambda parsed:videos_checkpoint(state))
         return {'status':'LIMITED' if s.state.get('limited') else 'SUCCEEDED'}
 
 
@@ -186,29 +238,13 @@ class InstagramExecutor(SourceAdapter):
                 'fingerprint':usage_fingerprint(cfg,plan,tagname),'provider_unique_tags':len(set(remote)),
                 'tag_in_provider_window':s.state.get('hashtag_id') in remote}))
         if s.state['phase']=='lookup':
-            def parse(payload):
-                rows=payload.get('data')
-                if not isinstance(rows,list):raise ExecutionError('invalid_response')
-                if not rows:return None
-                value=rows[0].get('id') if isinstance(rows[0],dict) else None
-                if not isinstance(value,str) or not value.isdigit():raise ExecutionError('invalid_response')
-                return value
             def save(db, identifier, targets):
                 db.execute('UPDATE instagram_hashtags SET instagram_id=?,last_searched_at=? WHERE id=?',(identifier,stamp(execution.now()),s.state['legacy_tag_id']))
                 return int(identifier is not None),0
             s.request('hashtag_lookup','lookup',lambda:self.client.get('ig_hashtag_search',{'user_id':cfg.user_id,'q':tagname},single_attempt=True),
-                parse,save,lambda identifier:dict(s.state,phase='media',hashtag_id=identifier,done=identifier is None,
-                                                   looked_up_at=stamp(execution.now())))
+                parse_lookup,save,lambda identifier:lookup_checkpoint(s.state,identifier,execution.now()))
         while not s.state.get('done'):
-            state=dict(s.state);page=state['page'];request={'user_id':cfg.user_id,'fields':','.join(params['fields']),'limit':params['limit']}
-            if state.get('cursor'):request['after']=state['cursor']
-            def parse(payload):
-                rows=payload.get('data');paging=payload.get('paging') or {}
-                if not isinstance(rows,list) or len(rows)>50 or not isinstance(paging,dict):raise ExecutionError('invalid_response')
-                media=[InstagramService.clean_media(r) for r in rows]
-                more=bool(paging.get('next'));cursor=(paging.get('cursors') or {}).get('after') if more else None
-                if more and (not isinstance(cursor,str) or not cursor or len(cursor)>2048 or cursor==state.get('cursor')):raise ExecutionError('invalid_response')
-                return media,more,cursor
+            state=dict(s.state);page=state['page'];request=media_request(cfg,params,state)
             def save(db,parsed,targets):
                 require_operation('instagram_graph','existing_caption_hashtags')
                 media,more,cursor=parsed
@@ -222,8 +258,7 @@ class InstagramExecutor(SourceAdapter):
                     truncated=more,connection=db,observed_at=now)
                 return len(media),len(fresh)
             s.request('recent_media','media:'+str(page),lambda:self.client.get(state['hashtag_id']+'/recent_media',request,single_attempt=True),
-                parse,save,lambda parsed:dict(state,page=page+1,cursor=parsed[2],more=parsed[1],
-                    limited=parsed[1] and page+1>=plan['canonical_query']['max_pages'],done=not parsed[1] or page+1>=plan['canonical_query']['max_pages']))
+                lambda payload:parse_media(payload,state),save,lambda parsed:media_checkpoint(state,parsed,plan['canonical_query']['max_pages']))
         return {'status':'LIMITED' if s.state.get('limited') else 'SUCCEEDED'}
 
 

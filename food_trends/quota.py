@@ -67,12 +67,9 @@ class QuotaManager:
             return requirements
         return [line('rss.feed_calls',1,None,None,'UTC')]
 
-    def _usage(self, db, plan, requirement, now, exclude=None, simulated=()):
-        """Existing local adapters and new reservations share a conservative budget view."""
-        resource=requirement['resource'];source,scope=plan['source_id'],plan['account_scope']
-        start,end=instant(requirement['window_start']),instant(requirement['window_end'])
-        observed,reserved,known=0,0,{}
-        observed_tags=set();reserved_tags=set()
+    def _observed(self, db, plan, resource, now):
+        """Usage recorded by the existing local adapters (legacy call tables)."""
+        scope=plan['account_scope'];observed,known=0,{}
         if resource.startswith('youtube.') and scope=='local-default':
             endpoint='search' if resource.endswith('search_calls') else 'videos'
             observed=db.execute('SELECT count(*) FROM youtube_calls WHERE endpoint=? AND day=?',(endpoint,daily_window(now,'America/Los_Angeles')['day'])).fetchone()[0]
@@ -83,10 +80,22 @@ class QuotaManager:
             for row in db.execute('SELECT name,searched_at FROM instagram_searches WHERE user_id=? AND searched_at>?',(scope[3:],cutoff)):
                 tag=row['name'].lstrip('#').casefold();known[tag]=stamp(instant(row['searched_at'])+timedelta(days=7))
             observed=len(known)
-            observed_tags=set(known)
-        charges=[dict(r) for r in db.execute('''SELECT c.*,r.state,r.expires_at FROM quota_charges c JOIN quota_reservations r USING(reservation_id)
+        return observed,known
+
+    def _recorded(self, db, source, scope, resource):
+        """Workflow charges of live (RESERVED or ATTEMPTED) reservations."""
+        return [dict(r) for r in db.execute('''SELECT c.*,r.state,r.expires_at FROM quota_charges c JOIN quota_reservations r USING(reservation_id)
             JOIN planner_queries q ON q.query_id=r.query_id WHERE q.source_id=? AND q.account_scope=? AND c.resource=?
             AND r.state IN ('RESERVED','ATTEMPTED')''',(source,scope,resource))]
+
+    def _usage(self, db, plan, requirement, now, exclude=None, simulated=()):
+        """Existing local adapters and new reservations share a conservative budget view."""
+        resource=requirement['resource'];source,scope=plan['source_id'],plan['account_scope']
+        start,end=instant(requirement['window_start']),instant(requirement['window_end'])
+        reserved=0;reserved_tags=set()
+        observed,known=self._observed(db,plan,resource,now)
+        observed_tags=set(known) if resource=='instagram.unique_tags' else set()
+        charges=self._recorded(db,source,scope,resource)
         charges += [dict(c, state='RESERVED',expires_at=c['window_end']) for c in simulated
                     if c.get('source_id')==source and c.get('account_scope')==scope and c['resource']==resource]
         for c in charges:
