@@ -851,10 +851,17 @@ def oracle_adapters(clients):
     return {key: classes[key[0]](client) for key, client in clients.items()}
 
 
-def oracle_mock_controller(repo, accounts, clock=None, transport=None, settings=None, ingestion=None, observations=None):
-    """Explicit Oracle-runtime assembly with mock transports; constructs no worker thread and runs no DDL."""
+def oracle_mock_controller(repo, accounts, clock=None, transport=None, settings=None, pipeline=True):
+    """Explicit Oracle-runtime assembly with mock transports; constructs no worker thread and runs no DDL.
+
+    With pipeline (the default, as mock_controller) a terminal job is staged by B4 on the same target.
+    """
     from .execution_mock import MockTransport, mock_clients
     from .execution_runtime import ExecutionController
     execution = OracleExecution(repo, accounts, clock, settings)
     clients = mock_clients(execution.accounts.values(), transport or MockTransport())
-    return ExecutionController(execution, oracle_adapters(clients), ingestion, observations)
+    ingestion = None
+    if pipeline:
+        from .oracle_ingestion import OracleIngestionService
+        ingestion = OracleIngestionService(execution)
+    return ExecutionController(execution, oracle_adapters(clients), ingestion)

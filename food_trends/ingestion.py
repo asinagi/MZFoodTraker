@@ -8,6 +8,7 @@ make re-ingesting the same input a no-op.
 import hashlib
 import json
 import logging
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from . import data_quality as dq
 from .contracts import envelope, validate_metadata
@@ -55,11 +56,49 @@ class IngestionService:
     def now(self):
         return instant(self.clock())
 
+    # Staging primitives. The Oracle runtime (oracle_ingestion) overrides only these.
+
+    @contextmanager
+    def _transaction(self):
+        with self.storage.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            yield db
+
+    def _run_exists(self, db, run_id):
+        return bool(db.execute('SELECT 1 FROM ingest_runs WHERE ingest_run_id=?', (run_id,)).fetchone())
+
+    def _insert_run(self, db, row):
+        db.execute('INSERT INTO ingest_runs (%s) VALUES (%s)' % (','.join(row), ','.join('?' * len(row))), tuple(row.values()))
+
+    def _finish_run(self, db, run_id, staged, rejected):
+        db.execute('UPDATE ingest_runs SET staged_items=?,rejected_items=? WHERE ingest_run_id=?', (staged, rejected, run_id))
+
+    def _staged_count(self, db, run_id):
+        return db.execute('SELECT count(*) FROM run_items WHERE ingest_run_id=?', (run_id,)).fetchone()[0]
+
+    def _quality_counts(self, db, run_id):
+        return dict(db.execute('SELECT outcome,count(*) FROM quality_results WHERE ingest_run_id=? GROUP BY outcome', (run_id,)).fetchall())
+
+    def _put_quality(self, db, row):
+        db.execute('INSERT OR IGNORE INTO quality_results VALUES (?,?,?,?,?,?,?,?,?,?,?)', tuple(row.values()))
+
+    def _put_item(self, db, row):
+        db.execute('''INSERT INTO source_items VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(item_key) DO UPDATE SET first_seen=min(first_seen,excluded.first_seen),
+            last_seen=max(last_seen,excluded.last_seen), published_at=coalesce(source_items.published_at,excluded.published_at),
+            payload_ref=excluded.payload_ref, expires_at=excluded.expires_at, availability='AVAILABLE' ''', tuple(row.values()))
+
+    def _put_snapshot(self, db, row):
+        db.execute('INSERT OR IGNORE INTO item_snapshots VALUES (?,?,?,?,?,?,?,?,?,?)', tuple(row.values()))
+
+    def _put_run_item(self, db, row):
+        db.execute('INSERT OR IGNORE INTO run_items VALUES (?,?,?,?,?,?,?)', tuple(row.values()))
+
     def _quality(self, db, run_id, item, subject, rule):
         key = digest([run_id, item or subject, rule['rule_code'], dq.RULE_VERSION])
-        db.execute('INSERT OR IGNORE INTO quality_results VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-                   (identity('DQ'), key, run_id, item, subject, rule['rule_code'], dq.RULE_VERSION, rule['severity'],
-                    rule['outcome'], dq.details_json(rule['details']), stamp(self.now())))
+        self._put_quality(db, dict(result_id=identity('DQ'), event_key=key, ingest_run_id=run_id, item_key=item, subject_hash=subject,
+            rule_code=rule['rule_code'], rule_version=dq.RULE_VERSION, severity=rule['severity'], outcome=rule['outcome'],
+            details_json=dq.details_json(rule['details']), checked_at=stamp(self.now())))
 
     def ingest(self, run, contents=(), metrics=()):
         """One transaction per logical run. Returns storable and transient metric records for B5."""
@@ -73,16 +112,17 @@ class IngestionService:
         contract = envelope(source, run['origin'], run['observed_at'], request=run['request_context'])
         now = self.now()
         run_id = 'INGEST_' + digest([source, run['run_ref']])[:32]
-        with self.storage.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            created = not db.execute('SELECT 1 FROM ingest_runs WHERE ingest_run_id=?', (run_id,)).fetchone()
+        with self._transaction() as db:
+            created = not self._run_exists(db, run_id)
             if created:
-                db.execute('''INSERT INTO ingest_runs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?)''',
-                    (run_id, source, run['run_ref'], run['origin'], run.get('job_id'), run.get('query_id'),
-                     contract['contract_version'], contract['adapter_version'], run['source_schema_version'],
-                     contract['policy_version'], INGESTION_VERSION, run['observed_at'], run.get('execution_status'),
-                     run['coverage'], run.get('error_kind'), dump(run['request_context']), digest(run['request_context']),
-                     run.get('returned_count'), run.get('accepted_count'), METRIC_STORAGE[source], stamp(now)))
+                self._insert_run(db, dict(ingest_run_id=run_id, source_code=source, run_ref=run['run_ref'], origin=run['origin'],
+                    job_id=run.get('job_id'), query_id=run.get('query_id'), contract_version=contract['contract_version'],
+                    adapter_version=contract['adapter_version'], source_schema_version=run['source_schema_version'],
+                    policy_version=contract['policy_version'], ingestion_version=INGESTION_VERSION, observed_at=run['observed_at'],
+                    execution_status=run.get('execution_status'), coverage=run['coverage'], error_kind=run.get('error_kind'),
+                    request_context_json=dump(run['request_context']), context_hash=digest(run['request_context']),
+                    returned_count=run.get('returned_count'), accepted_count=run.get('accepted_count'), staged_items=0,
+                    rejected_items=0, metric_storage=METRIC_STORAGE[source], ingested_at=stamp(now)))
             for rule in dq.run_rules(run):
                 self._quality(db, run_id, None, None, rule)
             batch = {}
@@ -118,10 +158,10 @@ class IngestionService:
                     self._quality(db, run_id, None, subject, rule)
                 checked = dict(metric, quality=dq.status(rules))
                 (stored if storable and checked['quality'] != 'FAIL' else transient).append(checked)
-            staged = db.execute('SELECT count(*) FROM run_items WHERE ingest_run_id=?', (run_id,)).fetchone()[0]
+            staged = self._staged_count(db, run_id)
             if created:
-                db.execute('UPDATE ingest_runs SET staged_items=?,rejected_items=? WHERE ingest_run_id=?', (staged, rejected, run_id))
-            quality = dict(db.execute('SELECT outcome,count(*) FROM quality_results WHERE ingest_run_id=? GROUP BY outcome', (run_id,)).fetchall())
+                self._finish_run(db, run_id, staged, rejected)
+            quality = self._quality_counts(db, run_id)
         return {'ingest_run_id': run_id, 'created': created, 'staged_items': staged, 'rejected_items': rejected,
                 'expired_items': expired, 'source_absent_items': absent, 'quality': quality,
                 'storable_metrics': stored, 'transient_metrics': transient, 'http_requests': 0}
@@ -130,19 +170,16 @@ class IngestionService:
         key = item_key(source, record['external_key'])
         seen = record.get('observed_at', run['observed_at'])
         first = record.get('first_seen', seen)
-        db.execute('''INSERT INTO source_items VALUES (?,?,?,?,?,?,?,'AVAILABLE',?,?,?)
-            ON CONFLICT(item_key) DO UPDATE SET first_seen=min(first_seen,excluded.first_seen),
-            last_seen=max(last_seen,excluded.last_seen), published_at=coalesce(source_items.published_at,excluded.published_at),
-            payload_ref=excluded.payload_ref, expires_at=excluded.expires_at, availability='AVAILABLE' ''',
-            (key, source, record['external_key'], KEY_KINDS[source], record.get('published_at'), first, seen,
-             record.get('origin', run['origin']), record['payload_ref'], record.get('expires_at')))
+        self._put_item(db, dict(item_key=key, source_code=source, external_key=record['external_key'], key_kind=KEY_KINDS[source],
+            published_at=record.get('published_at'), first_seen=first, last_seen=seen, availability='AVAILABLE',
+            first_origin=record.get('origin', run['origin']), payload_ref=record['payload_ref'], expires_at=record.get('expires_at')))
         adapter = envelope(source, run['origin'], run['observed_at'])['adapter_version']
         snapshot = 'SNAP_' + digest([key, record['payload_hash'], adapter])[:32]
-        db.execute('INSERT OR IGNORE INTO item_snapshots VALUES (?,?,?,?,?,?,?,?,?,NULL)',
-                   (snapshot, key, record['payload_hash'], adapter, run['source_schema_version'],
-                    dump(record.get('field_states', {})), record['payload_ref'], seen, record.get('expires_at')))
-        db.execute('INSERT OR IGNORE INTO run_items VALUES (?,?,?,?,?,?,?)',
-                   (run_id, key, snapshot, seen, record.get('origin', run['origin']), count, dq.status(rules)))
+        self._put_snapshot(db, dict(snapshot_id=snapshot, item_key=key, payload_hash=record['payload_hash'], adapter_version=adapter,
+            source_schema_version=run['source_schema_version'], field_states_json=dump(record.get('field_states', {})),
+            payload_ref=record['payload_ref'], captured_at=seen, expires_at=record.get('expires_at'), purged_at=None))
+        self._put_run_item(db, dict(ingest_run_id=run_id, item_key=key, snapshot_id=snapshot, observed_at=seen,
+            origin=record.get('origin', run['origin']), multiplicity=count, quality_status=dq.status(rules)))
         for rule in rules:
             self._quality(db, run_id, key, None, rule)
 
