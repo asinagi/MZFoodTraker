@@ -233,6 +233,44 @@ def _canonical(table, row):
     return json.dumps(logical(table, row), ensure_ascii=False, sort_keys=True, default=str)
 
 
+def integrity_checks(repo, now):
+    """Target-only integrity, measured in portable SQL: FK orphans, unresolved payload_refs, policy-blocked
+    rows, expired rows still present, NOT_OBSERVED values. Shared by reconcile and the Oracle runtime checks."""
+    now = utc(now)
+    checks = {}
+    with repo.db.transaction() as tx:
+        # Measured, not assumed: orphan rows per declared foreign key (portable SQL, both dialects).
+        orphans = 0
+        for spec in TABLES:
+            for cols, parent, pcols in spec.fks:
+                match = ' AND '.join('p.%s=c.%s' % (pc, cc) for pc, cc in zip(pcols, cols))
+                present = ' AND '.join('c.%s IS NOT NULL' % cc for cc in cols)
+                orphans += int(tx.scalar('SELECT count(*) FROM %s c WHERE %s AND NOT EXISTS (SELECT 1 FROM %s p WHERE %s)'
+                                         % (spec.name, present, parent, match)))
+        checks['foreign_key_errors'] = orphans
+        if repo.db.dialect == 'oracle':
+            checks['foreign_keys_not_enabled_validated'] = int(tx.scalar(
+                "SELECT count(*) FROM user_constraints WHERE constraint_type='R' AND (status<>'ENABLED' OR validated<>'VALIDATED')"))
+        refs = {r['payload_ref'] for r in tx.rows('SELECT payload_ref FROM source_contents')}
+        checks['unresolved_payload_refs'] = (
+            sum(r['payload_ref'] not in refs for r in tx.rows("SELECT payload_ref FROM source_items WHERE availability='AVAILABLE'")) +
+            sum(r['payload_ref'] not in refs for r in tx.rows('SELECT payload_ref FROM item_snapshots WHERE purged_at IS NULL')))
+        checks['blocked_policy_rows'] = tx.scalar("""SELECT count(*) FROM metric_observations WHERE source_code NOT IN ('google_trends_rss','instagram_graph')""") + \
+            tx.scalar("""SELECT count(*) FROM food_mentions WHERE source_code NOT IN ('google_trends_rss','instagram_graph')""")
+        checks['distinct_items_by_source'] = {r['source_code']: int(r['n']) for r in tx.rows(
+            'SELECT source_code,count(DISTINCT external_key) AS n FROM source_items GROUP BY source_code')}
+        checks['legacy_unknown_items'] = int(tx.scalar("SELECT count(*) FROM source_items WHERE first_origin='legacy_unknown'"))
+        checks['not_observed_metrics_with_null_value'] = int(tx.scalar(
+            "SELECT count(*) FROM metric_observations WHERE value_state='NOT_OBSERVED' AND count_value IS NULL"))
+        foods = [r['food_id'] for r in tx.rows("SELECT food_id FROM food_entities ORDER BY food_id")]
+    retained_expired = 0
+    for table in ORDER:
+        if 'expires_at' in [c.name for c in BY_NAME[table].columns] and table not in TTL_EXEMPT:
+            retained_expired += sum(1 for r in repo.rows(table) if r['expires_at'] and utc(r['expires_at']) <= now)
+    checks['expired_rows_in_target'] = retained_expired
+    return checks, foods
+
+
 def reconcile(source_path, repo, now=None, source_storage=None):
     """Logical comparison after normalization: keys, values, hashes, nulls, references, TTL, policy, FOOD_ID view."""
     now = utc(now or datetime.now(timezone.utc))
@@ -258,36 +296,8 @@ def reconcile(source_path, repo, now=None, source_storage=None):
             'rejected': sum(d == INVALID for _, _, d, _ in plan.rows[table]),
             'source_hash': hashlib.sha256('\n'.join(expected[k] for k in sorted(expected)).encode()).hexdigest(),
             'target_hash': hashlib.sha256('\n'.join(actual[k] for k in sorted(actual)).encode()).hexdigest()}
-    with repo.db.transaction() as tx:
-        # Measured, not assumed: orphan rows per declared foreign key (portable SQL, both dialects).
-        orphans = 0
-        for spec in TABLES:
-            for cols, parent, pcols in spec.fks:
-                match = ' AND '.join('p.%s=c.%s' % (pc, cc) for pc, cc in zip(pcols, cols))
-                present = ' AND '.join('c.%s IS NOT NULL' % cc for cc in cols)
-                orphans += int(tx.scalar('SELECT count(*) FROM %s c WHERE %s AND NOT EXISTS (SELECT 1 FROM %s p WHERE %s)'
-                                         % (spec.name, present, parent, match)))
-        out['checks']['foreign_key_errors'] = orphans
-        if repo.db.dialect == 'oracle':
-            out['checks']['foreign_keys_not_enabled_validated'] = int(tx.scalar(
-                "SELECT count(*) FROM user_constraints WHERE constraint_type='R' AND (status<>'ENABLED' OR validated<>'VALIDATED')"))
-        refs = {r['payload_ref'] for r in tx.rows('SELECT payload_ref FROM source_contents')}
-        out['checks']['unresolved_payload_refs'] = (
-            sum(r['payload_ref'] not in refs for r in tx.rows("SELECT payload_ref FROM source_items WHERE availability='AVAILABLE'")) +
-            sum(r['payload_ref'] not in refs for r in tx.rows('SELECT payload_ref FROM item_snapshots WHERE purged_at IS NULL')))
-        out['checks']['blocked_policy_rows'] = tx.scalar("""SELECT count(*) FROM metric_observations WHERE source_code NOT IN ('google_trends_rss','instagram_graph')""") + \
-            tx.scalar("""SELECT count(*) FROM food_mentions WHERE source_code NOT IN ('google_trends_rss','instagram_graph')""")
-        out['checks']['distinct_items_by_source'] = {r['source_code']: int(r['n']) for r in tx.rows(
-            'SELECT source_code,count(DISTINCT external_key) AS n FROM source_items GROUP BY source_code')}
-        out['checks']['legacy_unknown_items'] = int(tx.scalar("SELECT count(*) FROM source_items WHERE first_origin='legacy_unknown'"))
-        out['checks']['not_observed_metrics_with_null_value'] = int(tx.scalar(
-            "SELECT count(*) FROM metric_observations WHERE value_state='NOT_OBSERVED' AND count_value IS NULL"))
-        foods = [r['food_id'] for r in tx.rows("SELECT food_id FROM food_entities ORDER BY food_id")]
-    retained_expired = 0
-    for table in ORDER:
-        if 'expires_at' in [c.name for c in BY_NAME[table].columns] and table not in TTL_EXEMPT:
-            retained_expired += sum(1 for r in repo.rows(table) if r['expires_at'] and utc(r['expires_at']) <= now)
-    out['checks']['expired_rows_in_target'] = retained_expired
+    checks, foods = integrity_checks(repo, now)
+    out['checks'].update(checks)
     if source_storage is not None:
         from .food_observations import FoodObservationService
         service, mismatches = FoodObservationService(source_storage, lambda: now), []

@@ -125,6 +125,8 @@ def main():
     parser.add_argument('--shadow', choices=('status', 'enable', 'disable', 'deliver', 'compare', 'repair'),
                         help='B7 Shadow: SQLite 확정 변경을 대상에 멱등 반영; API 호출 없음. enable은 운영 승인 후 사용')
     parser.add_argument('--shadow-target', choices=('oracle', 'sqlite'), help='Shadow 대상(deliver/compare/repair에 필요)')
+    parser.add_argument('--runtime-status', choices=('sqlite', 'oracle-test', 'oracle-production'),
+                        help='실행 저장소 선택 점검(읽기 전용). oracle-test는 ORACLE_TEST_* 필요, oracle-production은 승인 전 비활성')
     parser.add_argument('--execution-readiness', metavar='REGISTRY',
                         help='읽기 전용 B3 Live 준비 점검; API 호출·DB 쓰기 없음')
     parser.add_argument('--execution-mode', choices=('preview', 'live'), default='preview',
@@ -146,6 +148,15 @@ def main():
         parser.error('수집 간격과 타임아웃은 양수여야 합니다')
     from .paths import database_path as resolve_database
     database_path = str(resolve_database())
+    if args.runtime_status:
+        import json
+        from .runtime_storage import status as runtime_status
+        try:
+            result = runtime_status(args.runtime_status, database_path)
+        except Exception as exc:  # error codes only; DSN and credentials never printed
+            parser.exit(2, 'runtime storage error: %s\n' % getattr(exc, 'code', type(exc).__name__))
+        print(json.dumps(result, ensure_ascii=False))
+        return
     if args.target_migrate or args.target_status:
         import json
         try:
