@@ -2,7 +2,7 @@
 
 MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. B3에서 Outbox·Lease/Fencing 기반 실행기를 기존 출처 클라이언트·저장소에 연결했고, B4~B5에서 네 출처의 공통 스테이징·품질 검사와 FOOD_ID 중심 검색 근거·음식 언급·지표 모델을 구현했습니다. 기본은 Mock 전용이며 Live와 자동 실행은 꺼져 있습니다.
 
-아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md), [B3 보완·B4~B5 개발 결과](reports/development-b4-b5-2026-10-28/REPORT.md), [B6~B7 Oracle 이관 준비](reports/development-b6-b7-2026-11-02/REPORT.md)를 반영합니다. 현재 코드의 명시적 SQLite migration 버전은 **11**, Oracle 대상 스키마 버전은 **1**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
+아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md), [B3 보완·B4~B5 개발 결과](reports/development-b4-b5-2026-10-28/REPORT.md), [B6~B7 Oracle 이관 준비](reports/development-b6-b7-2026-11-02/REPORT.md), [ORACLE-RUNTIME-1 Oracle 실행 연결](reports/development-oracle-runtime-1-2026-11-03/REPORT.md)을 반영합니다. 현재 코드의 명시적 SQLite migration 버전은 **11**, Oracle 대상 스키마 버전은 **2**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
 
 ## 현재 구현 현황
 
@@ -18,11 +18,12 @@ MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적�
 | 공통 Ingestion·품질 (B4) | 네 출처를 A2 Source Envelope → 정책 게이트 → 스테이징(회차·콘텐츠·Snapshot 해시·회차 관계) → 품질 결과로 처리. 원문은 기존 저장소에만 두고 참조만 기록. NAVER 값은 메모리 전용. legacy 출처 불명 행은 표시된 논리 회차 |
 | 음식 중심 관측 (B5) | 검색 근거(SEARCH_ONLY), 승인 정확 별칭 기반 음식 언급(RSS 검색어·뉴스 제목, Instagram 캡션 해시태그), 허용 지표(RSS 표시값, Instagram 관측 게시물 수). YouTube 언급·지표와 NAVER 저장은 정책상 차단. 별칭·병합·분리 재처리와 B8 무효화 계약 |
 | Oracle 대상·이관 (B6~B7) | 같은 명세로 Oracle/SQLite 대상 DDL 생성, `python-oracledb` Thin 어댑터, 이식 SQL Repository, SQLite→대상 단계 이관·대조, 기본 비활성 Shadow(SQLite 변경 기록→멱등 전달). 개발용 Oracle AI Database 26ai Free(23.26.3, WSL2 컨테이너)에서 계약·이관·Shadow 검증 통과([G-OPS-0](reports/development-g-ops-0-2026-11-02/REPORT.md)), 운영 전환은 승인 게이트 대상 |
+| Oracle 실행 연결 (ORACLE-RUNTIME-1) | B3 실행(Outbox·Lease/Fencing·`FOR UPDATE SKIP LOCKED` claim·예산·재시도), B4 스테이징·DQ, B5 검색 근거·언급·지표·재처리를 대상 스키마에서 실행. SQLite 경로와 같은 Mock 입력의 논리 결과를 표 단위로 대조해 실제 Oracle(MZ_TEST)에서 일치 확인. Mock 전용, `--runtime-status sqlite\|oracle-test\|oracle-production`으로 저장소를 명시 선택(운영 Oracle은 비활성). 계획 수립·Live·역방향 복구는 후속 과제 |
 | 추이 분석 및 시각화 | 출처별 상태·그래프·관계 표 구현. 통합 일 집계(B8)와 통합 유행 점수는 미구현 |
 
 2026-10-27 A1~A3 개발 검증에서는 기존 97개와 신규 17개를 합친 114개 자동화 테스트가 통과했습니다. 2026-10-26 통합 감사의 최신 RSS 표본은 FOOD 0건이어서 실제 음식 양성의 전 출처 자동 연결은 검증되지 않았습니다. 테스트 통과는 탐지 정확도나 이용약관 준수의 인증이 아닙니다. 과거 실제 호출 결과와 제약은 [통합 감사](reports/integrated-audit-2026-10-26/REPORT.md)를 참고하세요.
 
-B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 280개, 실제 Oracle 포함 전체 **356개 통과(skip 0)**, Oracle 없는 기본 환경에서는 324개 통과·Oracle 32개 skip입니다. 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
+B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 280개, 실제 Oracle 포함 전체 **356개 통과(skip 0)**, Oracle 없는 기본 환경에서는 324개 통과·Oracle 32개 skip이었습니다. ORACLE-RUNTIME-1 이후 기본 환경 373개 통과·Oracle 74개 skip, 실제 Oracle 포함 447개 통과(skip 0)입니다. 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
 
 ## 디렉터리 구조
 
@@ -41,6 +42,7 @@ B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B
 │   ├── ingestion*.py, data_quality.py # B4 공통 스테이징·품질 검사
 │   ├── food_observation*.py   # B5 검색 근거·음식 언급·지표·재처리
 │   ├── target_*.py, shadow*.py # B6~B7 Oracle 대상 스키마·Repository·이관·Shadow
+│   ├── oracle_*.py, runtime_storage.py # B3~B5 서비스의 Oracle 실행 계층·저장소 선택
 │   ├── service.py             # RSS 수집·잠금·스케줄
 │   ├── api.py                 # 로컬 HTTP API
 │   ├── audit.py               # 저장 데이터 감사
@@ -164,6 +166,7 @@ py -3.12 -B tests/run_offline.py --output data/publication-tests
 
 - [통합 감사](reports/integrated-audit-2026-10-26/REPORT.md), [Oracle 모델](reports/integrated-audit-2026-10-26/ORACLE_MODEL.md), [탐지→추적 설계](reports/integrated-audit-2026-10-26/TRACKING_DESIGN.md), [로드맵](reports/integrated-audit-2026-10-26/ROADMAP.md)
 - [A1~A3 개발·마이그레이션·검증 결과](reports/development-a1-a3-2026-10-27/REPORT.md)
+- [ORACLE-RUNTIME-1 Oracle 실행 연결·동등성 검증](reports/development-oracle-runtime-1-2026-11-03/REPORT.md)
 - [RSS 검증](VERIFICATION.md), [분류 감사](AUDIT_REPORT.md)
 - [Instagram 연동](INSTAGRAM_INTEGRATION.md), [해시태그 분석](INSTAGRAM_HASHTAG_ANALYSIS.md), [실환경 검증](INSTAGRAM_LIVE_VERIFICATION.md), [토큰 적용 검증](INSTAGRAM_TOKEN_APPLICATION.md)
 - [NAVER 연동](NAVER_DATALAB_INTEGRATION.md), [실환경 검증](NAVER_LIVE_VERIFICATION.md)
