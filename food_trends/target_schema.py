@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 4
+TARGET_SCHEMA_VERSION = 5
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -299,6 +299,15 @@ TABLES = (
           checks=(_status('status', ('SCHEDULED', 'CLAIMED', 'COMPLETED', 'FAILED', 'CANCELLED')),),
           indexes=(('plan_id',), ('job_id',), ('status', 'due_slot')),
           mutable=('status', 'claimed_at', 'completed_at', 'cancellation_reason'), meta={'since': 4}),
+    # v5 exclusive write ownership (runtime_ownership): one mode row and one lease row per writing process.
+    Table('runtime_ownership', (NN('owner_scope', 'code'), NN('owner_mode', 'code'), NN('mode_epoch', 'int'), NN('changed_at', 'ts'),
+          NN('changed_by', 'id')), ('owner_scope',),
+          checks=(_status('owner_mode', ('IDLE', 'SHADOW', 'RUNTIME_TEST', 'RUNTIME_PRODUCTION')), 'mode_epoch>=0'),
+          mutable=('owner_mode', 'mode_epoch', 'changed_at', 'changed_by'), meta={'since': 5}),
+    Table('runtime_participants', (NN('participant_id', 'id'), NN('owner_mode', 'code'), NN('mode_epoch', 'int'), NN('environment', 'code'),
+          NN('joined_at', 'ts'), NN('renewed_at', 'ts'), NN('expires_at', 'ts'), C('released_at', 'ts')), ('participant_id',),
+          checks=(_status('owner_mode', ('SHADOW', 'RUNTIME_TEST', 'RUNTIME_PRODUCTION')),), indexes=(('owner_mode', 'mode_epoch'),),
+          mutable=('owner_mode', 'mode_epoch', 'environment', 'renewed_at', 'expires_at', 'released_at'), meta={'since': 5}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),

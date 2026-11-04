@@ -210,7 +210,8 @@ class OracleExecution:
     """ExecutionService's method contract (enqueue/claim/renew/begin/finish/fail/status) on the target schema."""
     session_class = None  # set below to OracleRequestSession
 
-    def __init__(self, repo, accounts, clock=None, settings=None):
+    def __init__(self, repo, accounts, clock=None, settings=None, ownership=None):
+        from .runtime_ownership import RuntimeOwnership
         self.repo, self.db = repo, repo.db
         self.accounts = accounts if isinstance(accounts, dict) else {(a.source_id, a.account_scope): a for a in accounts}
         self.clock = clock or repo.clock
@@ -228,9 +229,29 @@ class OracleExecution:
         self.planner = None  # an OracleQueryPlanner attaches itself (schedule() needs one)
         self.claim_locked = lambda job_id: None  # test hook: runs while the claim holds the job lock
         self.fault = lambda stage: None  # test hook: failure injection inside write transactions
+        # R3: every write transaction runs under this process's RUNTIME_TEST ownership lease (joined lazily).
+        self.ownership = ownership or RuntimeOwnership(repo)
+        self.participant_id = identity('RUNTIME')
+        self.lease, self._renew_at = None, None
 
     def now(self):
         return instant(self.clock())
+
+    def _owned(self):
+        moment = self.ownership.now()
+        if self.lease is None:
+            self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
+            self._renew_at = moment + self.ownership.ttl / 2
+        elif moment >= self._renew_at:
+            self.ownership.renew(self.lease)
+            self._renew_at = moment + self.ownership.ttl / 2
+        return self.lease
+
+    def release(self):
+        """Leave the runtime mode (the target returns to IDLE when no runtime lease or unfinished job remains)."""
+        if self.lease is not None:
+            self.ownership.release(self.lease)
+            self.lease = None
 
     def account(self, source, scope):
         account = self.accounts.get((source, scope))
@@ -240,9 +261,12 @@ class OracleExecution:
 
     @contextmanager
     def transaction(self):
-        """A runtime write transaction."""
+        """A runtime write transaction, guarded by the ownership lease (refused while Shadow owns the target)."""
+        lease = self._owned()
         with self.db.transaction() as cursor:
-            yield _Tx(cursor)
+            t = _Tx(cursor)
+            self.ownership.guard(t, lease)
+            yield t
 
     @contextmanager
     def reader(self):
