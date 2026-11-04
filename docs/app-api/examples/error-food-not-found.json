@@ -1,0 +1,30 @@
+{
+  "summary": "없는 음식",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods/FOOD_UNKNOWN",
+    "query": {}
+  },
+  "status": 404,
+  "response": {
+    "error": {
+      "code": "FOOD_NOT_FOUND",
+      "message": "음식을 찾을 수 없습니다.",
+      "details": [
+        {
+          "parameter": "food_id",
+          "reason": "not_found",
+          "allowed": null
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

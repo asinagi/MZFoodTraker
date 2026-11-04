@@ -1,0 +1,26 @@
+{
+  "summary": "연결 확인",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "query": {}
+  },
+  "status": 200,
+  "response": {
+    "data": {
+      "status": "ok",
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "schema_ready": true
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

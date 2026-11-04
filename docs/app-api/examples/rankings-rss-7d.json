@@ -1,0 +1,135 @@
+{
+  "summary": "Google 트렌드 RSS 7일 순위",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/trends/rankings",
+    "query": {
+      "source": "google_trends_rss",
+      "period": "7d"
+    }
+  },
+  "status": 200,
+  "response": {
+    "data": {
+      "basis": {
+        "source_code": "google_trends_rss",
+        "source_name": "Google 트렌드 RSS",
+        "metric": {
+          "metric_code": "confirmed_items",
+          "unit": "distinct_items",
+          "item_label": "트렌드 항목"
+        },
+        "period": {
+          "start_date": "2026-10-27",
+          "end_date": "2026-11-02",
+          "days": 7,
+          "timezone": "Asia/Seoul"
+        },
+        "previous_period": {
+          "start_date": "2026-10-20",
+          "end_date": "2026-10-26",
+          "days": 7,
+          "timezone": "Asia/Seoul"
+        },
+        "scope": "SINGLE_SOURCE",
+        "observation_scope": "SHARED_FEED",
+        "notes": [
+          "같은 출처·단위·기간의 고유 콘텐츠 수만 비교합니다. 출처를 합친 종합 점수는 제공하지 않습니다."
+        ]
+      },
+      "items": [
+        {
+          "rank": 1,
+          "food": {
+            "food_id": "FOOD_MOCK_DUJJONKU",
+            "canonical_name": "[MOCK] 두쫀쿠",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 9,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 6,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": 3,
+            "ratio": 0.5
+          }
+        },
+        {
+          "rank": 2,
+          "food": {
+            "food_id": "FOOD_MOCK_MALATANG",
+            "canonical_name": "[MOCK] 마라탕",
+            "entity_kind": "DISH"
+          },
+          "current": {
+            "value": 4,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 5,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": -1,
+            "ratio": -0.2
+          }
+        }
+      ],
+      "excluded": {
+        "insufficient_coverage": 0,
+        "not_observed": 0,
+        "zero_value": 3
+      }
+    },
+    "page": {
+      "limit": 20,
+      "total_items": 2,
+      "has_more": false,
+      "next_cursor": null
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

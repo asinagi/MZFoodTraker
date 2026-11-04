@@ -1,0 +1,53 @@
+{
+  "summary": "별칭으로 음식 검색",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods",
+    "query": {
+      "q": "쫀득"
+    }
+  },
+  "status": 200,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "food_id": "FOOD_MOCK_DUJJONKU",
+          "canonical_name": "[MOCK] 두쫀쿠",
+          "entity_kind": "PRODUCT",
+          "aliases": [
+            "[MOCK] 두쫀쿠",
+            "두바이 쫀득 쿠키",
+            "두바이쫀득쿠키",
+            "두쫀쿠"
+          ],
+          "last_observed_at": "2026-11-02T11:00:00Z",
+          "match": {
+            "field": "alias",
+            "text": "두바이 쫀득 쿠키",
+            "kind": "contains"
+          }
+        }
+      ],
+      "query": {
+        "q": "쫀득",
+        "kind": null,
+        "sort": "relevance"
+      }
+    },
+    "page": {
+      "limit": 20,
+      "total_items": 1,
+      "has_more": false,
+      "next_cursor": null
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

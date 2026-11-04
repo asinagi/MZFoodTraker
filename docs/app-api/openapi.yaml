@@ -1,0 +1,2365 @@
+openapi: "3.0.3"
+info:
+  title: "MZFoodTraker 앱 데이터 API"
+  version: "1.0.0"
+  description: |-
+    MZFoodTraker의 읽기 전용 앱 데이터 API입니다. 모바일·웹 프레임워크와 무관한 HTTP/JSON 계약입니다.
+
+    - 인증 없음(읽기 전용). 관리 토큰(X-MZ-Admin-Token)은 받지 않으며 앱에 넣으면 안 됩니다.
+    - 성공 응답은 data·meta(목록은 page 포함), 오류 응답은 error·meta 형식입니다.
+    - 시각은 UTC 초 단위 RFC 3339(Z), 일자는 Asia/Seoul(UTC+09:00) 달력일(YYYY-MM-DD)입니다.
+    - value=null은 관측되지 않았거나 계산할 수 없음을 뜻하며 0(정상 관측 0)과 다릅니다. 상태는 value_state로 확인하세요.
+    - 출처가 다른 수치는 합산하지 않으며 종합 유행 점수는 제공하지 않습니다.
+    - 알 수 없는 필드와 enum 값은 무시하거나 "알 수 없음"으로 처리하세요(1.x에서는 필드·값이 추가될 수 있습니다).
+    - meta.data_mode가 mock이면 가상 데이터입니다. 실제 유행 분석 결과로 표시하지 마세요.
+servers:
+  - url: "http://127.0.0.1:8030"
+    description: "Mock 서버 (가상 데이터, python -m food_trends.app_mock)"
+  - url: "http://10.0.2.2:8030"
+    description: "Android 에뮬레이터에서 호스트의 Mock 서버"
+  - url: "http://127.0.0.1:8020"
+    description: "로컬 실제 데이터 서버 (읽기 전용, python -m food_trends.app_api)"
+tags:
+  - name: "Health"
+    description: "연결 확인"
+  - name: "Foods"
+    description: "음식 목록·검색·상세"
+  - name: "Analytics"
+    description: "음식별 추이·출처 통계"
+  - name: "Rankings"
+    description: "출처별 순위"
+  - name: "Sources"
+    description: "데이터 갱신·수집 범위"
+security: []
+paths:
+  "/api/v1/health":
+    get:
+      operationId: "getHealth"
+      tags:
+        - "Health"
+      summary: "연결 확인"
+      description: "Base URL 설정 확인용. 데이터 모드(mock/database)와 계약 버전을 반환합니다."
+      parameters: []
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples:
+                health:
+                  summary: "연결 확인"
+                  value:
+                    data:
+                      status: "ok"
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      schema_ready: true
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  "/api/v1/foods":
+    get:
+      operationId: "listFoods"
+      tags:
+        - "Foods"
+      summary: "음식 목록·검색"
+      description: "승인된 활성 음식만 반환합니다(병합·검토 대기 후보 제외). q는 대표 음식명과 승인 별칭을 공백·대소문자 무시로 검색합니다."
+      parameters:
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/Kind"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/FoodListResponse"
+              examples:
+                "foods-search":
+                  summary: "별칭으로 음식 검색"
+                  value:
+                    data:
+                      items:
+                        - food_id: "FOOD_MOCK_DUJJONKU"
+                          canonical_name: "[MOCK] 두쫀쿠"
+                          entity_kind: "PRODUCT"
+                          aliases:
+                            - "[MOCK] 두쫀쿠"
+                            - "두바이 쫀득 쿠키"
+                            - "두바이쫀득쿠키"
+                            - "두쫀쿠"
+                          last_observed_at: "2026-11-02T11:00:00Z"
+                          match:
+                            field: "alias"
+                            text: "두바이 쫀득 쿠키"
+                            kind: "contains"
+                      query:
+                        q: "쫀득"
+                        kind: null
+                        sort: "relevance"
+                    page:
+                      limit: 20
+                      total_items: 1
+                      has_more: false
+                      next_cursor: null
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  "/api/v1/foods/{food_id}":
+    get:
+      operationId: "getFood"
+      tags:
+        - "Foods"
+      summary: "음식 상세"
+      description: "병합된 이전 ID로 요청하면 대상 음식을 200으로 반환하고 redirect에 요청 ID를 넣습니다. 앱은 data.food_id를 저장하세요."
+      parameters:
+        - $ref: "#/components/parameters/FoodId"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/FoodDetailResponse"
+              examples:
+                "food-detail":
+                  summary: "음식 상세"
+                  value:
+                    data:
+                      food_id: "FOOD_MOCK_DUJJONKU"
+                      canonical_name: "[MOCK] 두쫀쿠"
+                      entity_kind: "PRODUCT"
+                      status: "ACTIVE"
+                      aliases:
+                        - text: "[MOCK] 두쫀쿠"
+                          scope: "food:ko"
+                        - text: "두바이 쫀득 쿠키"
+                          scope: "food:ko"
+                        - text: "두바이쫀득쿠키"
+                          scope: "food:ko"
+                        - text: "두쫀쿠"
+                          scope: "food:ko"
+                      relations:
+                        - relation_type: "HAS_VARIANT"
+                          food:
+                            food_id: "FOOD_MOCK_JJAPJJONKU"
+                            canonical_name: "[MOCK] 짭쫀쿠"
+                            entity_kind: "PRODUCT"
+                      merged_food_ids:
+                        - "FOOD_MOCK_DUBAI_COOKIE"
+                      redirect: null
+                      created_at: "2026-09-01T00:00:00Z"
+                      updated_at: "2026-10-01T00:00:00Z"
+                      sources:
+                        - source_code: "google_trends_rss"
+                          source_name: "Google 트렌드 RSS"
+                          availability: "INCLUDED"
+                          availability_reason: null
+                          last_observed_at: "2026-11-02T12:00:00Z"
+                        - source_code: "instagram_graph"
+                          source_name: "Instagram"
+                          availability: "INCLUDED"
+                          availability_reason: null
+                          last_observed_at: "2026-11-02T11:00:00Z"
+                        - source_code: "youtube"
+                          source_name: "YouTube"
+                          availability: "POLICY_BLOCKED"
+                          availability_reason: "YouTube 영상의 음식 언급 추출·파생 지표는 현재 정책상 비활성입니다."
+                          last_observed_at: null
+                        - source_code: "naver_datalab"
+                          source_name: "NAVER 데이터랩"
+                          availability: "NOT_STORED"
+                          availability_reason: "NAVER 상대 검색 지수는 요청 범위 안에서만 의미가 있고 저장하지 않으므로 B8 집계에 포함하지 않습니다."
+                          last_observed_at: null
+                      freshness:
+                        last_observed_at: "2026-11-02T12:00:00Z"
+                        reprocessing_pending: false
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "음식 없음 (FOOD_NOT_FOUND)"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                "error-food-not-found":
+                  summary: "없는 음식"
+                  value:
+                    error:
+                      code: "FOOD_NOT_FOUND"
+                      message: "음식을 찾을 수 없습니다."
+                      details:
+                        - parameter: "food_id"
+                          reason: "not_found"
+                          allowed: null
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  "/api/v1/foods/{food_id}/timeline":
+    get:
+      operationId: "getFoodTimeline"
+      tags:
+        - "Analytics"
+      summary: "음식별 관측 추이"
+      description: "출처별 일·주 단위 고유 콘텐츠 수. 관측이 없는 날은 value=null(NOT_OBSERVED)이며 0과 다릅니다. 출처끼리 합산하지 않습니다."
+      parameters:
+        - $ref: "#/components/parameters/FoodId"
+        - $ref: "#/components/parameters/TimelinePeriod"
+        - $ref: "#/components/parameters/EndDate"
+        - $ref: "#/components/parameters/Granularity"
+        - $ref: "#/components/parameters/SourceFilter"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/TimelineResponse"
+              examples:
+                "food-timeline-7d":
+                  summary: "일별 추이 (미관측일 포함)"
+                  value:
+                    data:
+                      food:
+                        food_id: "FOOD_MOCK_DUJJONKU"
+                        canonical_name: "[MOCK] 두쫀쿠"
+                        entity_kind: "PRODUCT"
+                      period:
+                        start_date: "2026-10-27"
+                        end_date: "2026-11-02"
+                        days: 7
+                        timezone: "Asia/Seoul"
+                      granularity: "day"
+                      series:
+                        - source_code: "google_trends_rss"
+                          source_name: "Google 트렌드 RSS"
+                          availability: "INCLUDED"
+                          availability_reason: null
+                          metric:
+                            metric_code: "confirmed_items"
+                            unit: "distinct_items"
+                            item_label: "트렌드 항목"
+                          points:
+                            - start_date: "2026-10-27"
+                              end_date: "2026-10-27"
+                              days: 1
+                              value: 1
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-28"
+                              end_date: "2026-10-28"
+                              days: 1
+                              value: 0
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-29"
+                              end_date: "2026-10-29"
+                              days: 1
+                              value: 2
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-30"
+                              end_date: "2026-10-30"
+                              days: 1
+                              value: 1
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-31"
+                              end_date: "2026-10-31"
+                              days: 1
+                              value: 2
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-11-01"
+                              end_date: "2026-11-01"
+                              days: 1
+                              value: 3
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-11-02"
+                              end_date: "2026-11-02"
+                              days: 1
+                              value: 2
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                        - source_code: "instagram_graph"
+                          source_name: "Instagram"
+                          availability: "INCLUDED"
+                          availability_reason: null
+                          metric:
+                            metric_code: "confirmed_items"
+                            unit: "distinct_items"
+                            item_label: "게시물"
+                          points:
+                            - start_date: "2026-10-27"
+                              end_date: "2026-10-27"
+                              days: 1
+                              value: 8
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-28"
+                              end_date: "2026-10-28"
+                              days: 1
+                              value: 9
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-29"
+                              end_date: "2026-10-29"
+                              days: 1
+                              value: null
+                              value_state: "NOT_OBSERVED"
+                              coverage: "NONE"
+                              observed_days: 0
+                              complete: true
+                              runs:
+                                successful: 0
+                                failed: 2
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-30"
+                              end_date: "2026-10-30"
+                              days: 1
+                              value: 11
+                              value_state: "OBSERVED"
+                              coverage: "PARTIAL"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 1
+                                failed: 1
+                              legacy_unknown_value: null
+                            - start_date: "2026-10-31"
+                              end_date: "2026-10-31"
+                              days: 1
+                              value: 14
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-11-01"
+                              end_date: "2026-11-01"
+                              days: 1
+                              value: 0
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                            - start_date: "2026-11-02"
+                              end_date: "2026-11-02"
+                              days: 1
+                              value: 17
+                              value_state: "OBSERVED"
+                              coverage: "COMPLETE"
+                              observed_days: 1
+                              complete: true
+                              runs:
+                                successful: 2
+                                failed: 0
+                              legacy_unknown_value: null
+                        - source_code: "youtube"
+                          source_name: "YouTube"
+                          availability: "POLICY_BLOCKED"
+                          availability_reason: "YouTube 영상의 음식 언급 추출·파생 지표는 현재 정책상 비활성입니다."
+                          metric: null
+                          points: []
+                        - source_code: "naver_datalab"
+                          source_name: "NAVER 데이터랩"
+                          availability: "NOT_STORED"
+                          availability_reason: "NAVER 상대 검색 지수는 요청 범위 안에서만 의미가 있고 저장하지 않으므로 B8 집계에 포함하지 않습니다."
+                          metric: null
+                          points: []
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          description: "잘못된 파라미터·커서 또는 관리 토큰 포함 (INVALID_PARAMETER, INVALID_CURSOR, ADMIN_TOKEN_NOT_ACCEPTED)"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                "error-invalid-parameter":
+                  summary: "지원하지 않는 기간"
+                  value:
+                    error:
+                      code: "INVALID_PARAMETER"
+                      message: "요청 파라미터를 확인하세요."
+                      details:
+                        - parameter: "period"
+                          reason: "unsupported_value"
+                          allowed:
+                            - "7d"
+                            - "30d"
+                            - "90d"
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/FoodNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  "/api/v1/foods/{food_id}/metrics":
+    get:
+      operationId: "getFoodMetrics"
+      tags:
+        - "Analytics"
+      summary: "음식별 출처 관측 통계"
+      description: "기간 전체 고유 콘텐츠 수(기간 집합 재계산), 이전 기간 대비 변화, coverage·품질·출처 불명 데이터. 기간 전체가 관측된 경우에만 값을 제공합니다."
+      parameters:
+        - $ref: "#/components/parameters/FoodId"
+        - $ref: "#/components/parameters/Period"
+        - $ref: "#/components/parameters/EndDate"
+        - $ref: "#/components/parameters/SourceFilter"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/FoodMetricsResponse"
+              examples:
+                "food-metrics-7d":
+                  summary: "출처별 7일 통계"
+                  value:
+                    data:
+                      food:
+                        food_id: "FOOD_MOCK_DUJJONKU"
+                        canonical_name: "[MOCK] 두쫀쿠"
+                        entity_kind: "PRODUCT"
+                      period:
+                        start_date: "2026-10-27"
+                        end_date: "2026-11-02"
+                        days: 7
+                        timezone: "Asia/Seoul"
+                      previous_period:
+                        start_date: "2026-10-20"
+                        end_date: "2026-10-26"
+                        days: 7
+                        timezone: "Asia/Seoul"
+                      sources:
+                        - source_code: "google_trends_rss"
+                          source_name: "Google 트렌드 RSS"
+                          availability: "INCLUDED"
+                          availability_reason: null
+                          metrics:
+                            - metric_code: "confirmed_items"
+                              unit: "distinct_items"
+                              item_label: "트렌드 항목"
+                              origin: "mock"
+                              current:
+                                value: 9
+                                value_state: "OBSERVED"
+                                coverage: "COMPLETE"
+                                day_counts:
+                                  observed: 7
+                                  not_observed: 0
+                                  evidence_expired: 0
+                                includes_incomplete_day: false
+                              previous:
+                                value: 6
+                                value_state: "OBSERVED"
+                                coverage: "COMPLETE"
+                                day_counts:
+                                  observed: 7
+                                  not_observed: 0
+                                  evidence_expired: 0
+                                includes_incomplete_day: false
+                              change:
+                                state: "COMPARABLE"
+                                reason: null
+                                absolute: 3
+                                ratio: 0.5
+                              rankable: true
+                          provider_values:
+                            - metric_code: "rss.approx_traffic"
+                              unit: "approximate_search_traffic_text"
+                              raw_value: "2,000+"
+                              keyword: "두쫀쿠"
+                              observed_at: "2026-11-02T12:00:00Z"
+                              aggregatable: false
+                          quality:
+                            checked_items: 9
+                            warn_items: 0
+                            failed_runs: 0
+                          last_observed_at: "2026-11-02T12:00:00Z"
+                          legacy_unknown: null
+                        - source_code: "instagram_graph"
+                          source_name: "Instagram"
+                          availability: "INCLUDED"
+                          availability_reason: null
+                          metrics:
+                            - metric_code: "confirmed_items"
+                              unit: "distinct_items"
+                              item_label: "게시물"
+                              origin: "mock"
+                              current:
+                                value: null
+                                value_state: "INSUFFICIENT_COVERAGE"
+                                coverage: "NONE"
+                                day_counts:
+                                  observed: 6
+                                  not_observed: 1
+                                  evidence_expired: 0
+                                includes_incomplete_day: false
+                              previous:
+                                value: 52
+                                value_state: "OBSERVED"
+                                coverage: "COMPLETE"
+                                day_counts:
+                                  observed: 7
+                                  not_observed: 0
+                                  evidence_expired: 0
+                                includes_incomplete_day: false
+                              change:
+                                state: "NOT_COMPARABLE"
+                                reason: "CURRENT_PERIOD_INSUFFICIENT"
+                                absolute: null
+                                ratio: null
+                              rankable: true
+                          provider_values: []
+                          quality:
+                            checked_items: 59
+                            warn_items: 2
+                            failed_runs: 3
+                          last_observed_at: "2026-11-02T11:00:00Z"
+                          legacy_unknown: null
+                        - source_code: "youtube"
+                          source_name: "YouTube"
+                          availability: "POLICY_BLOCKED"
+                          availability_reason: "YouTube 영상의 음식 언급 추출·파생 지표는 현재 정책상 비활성입니다."
+                          metrics: []
+                          provider_values: []
+                          quality: null
+                          last_observed_at: null
+                          legacy_unknown: null
+                        - source_code: "naver_datalab"
+                          source_name: "NAVER 데이터랩"
+                          availability: "NOT_STORED"
+                          availability_reason: "NAVER 상대 검색 지수는 요청 범위 안에서만 의미가 있고 저장하지 않으므로 B8 집계에 포함하지 않습니다."
+                          metrics: []
+                          provider_values: []
+                          quality: null
+                          last_observed_at: null
+                          legacy_unknown: null
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/FoodNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  "/api/v1/trends/rankings":
+    get:
+      operationId: "listRankings"
+      tags:
+        - "Rankings"
+      summary: "출처별 관측 기준 순위"
+      description: "한 출처·한 지표·한 기간의 값으로만 순위를 만듭니다. 기간 전체가 관측된 음식만 포함하며 종합 유행 점수는 제공하지 않습니다."
+      parameters:
+        - $ref: "#/components/parameters/RankingSource"
+        - $ref: "#/components/parameters/Metric"
+        - $ref: "#/components/parameters/Period"
+        - $ref: "#/components/parameters/EndDate"
+        - $ref: "#/components/parameters/Kind"
+        - $ref: "#/components/parameters/IncludeZero"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/RankingsResponse"
+              examples:
+                "rankings-rss-7d":
+                  summary: "Google 트렌드 RSS 7일 순위"
+                  value:
+                    data:
+                      basis:
+                        source_code: "google_trends_rss"
+                        source_name: "Google 트렌드 RSS"
+                        metric:
+                          metric_code: "confirmed_items"
+                          unit: "distinct_items"
+                          item_label: "트렌드 항목"
+                        period:
+                          start_date: "2026-10-27"
+                          end_date: "2026-11-02"
+                          days: 7
+                          timezone: "Asia/Seoul"
+                        previous_period:
+                          start_date: "2026-10-20"
+                          end_date: "2026-10-26"
+                          days: 7
+                          timezone: "Asia/Seoul"
+                        scope: "SINGLE_SOURCE"
+                        observation_scope: "SHARED_FEED"
+                        notes:
+                          - "같은 출처·단위·기간의 고유 콘텐츠 수만 비교합니다. 출처를 합친 종합 점수는 제공하지 않습니다."
+                      items:
+                        - rank: 1
+                          food:
+                            food_id: "FOOD_MOCK_DUJJONKU"
+                            canonical_name: "[MOCK] 두쫀쿠"
+                            entity_kind: "PRODUCT"
+                          current:
+                            value: 9
+                            value_state: "OBSERVED"
+                            coverage: "COMPLETE"
+                            day_counts:
+                              observed: 7
+                              not_observed: 0
+                              evidence_expired: 0
+                            includes_incomplete_day: false
+                          previous:
+                            value: 6
+                            value_state: "OBSERVED"
+                            coverage: "COMPLETE"
+                            day_counts:
+                              observed: 7
+                              not_observed: 0
+                              evidence_expired: 0
+                            includes_incomplete_day: false
+                          change:
+                            state: "COMPARABLE"
+                            reason: null
+                            absolute: 3
+                            ratio: 0.5
+                        - rank: 2
+                          food:
+                            food_id: "FOOD_MOCK_MALATANG"
+                            canonical_name: "[MOCK] 마라탕"
+                            entity_kind: "DISH"
+                          current:
+                            value: 4
+                            value_state: "OBSERVED"
+                            coverage: "COMPLETE"
+                            day_counts:
+                              observed: 7
+                              not_observed: 0
+                              evidence_expired: 0
+                            includes_incomplete_day: false
+                          previous:
+                            value: 5
+                            value_state: "OBSERVED"
+                            coverage: "COMPLETE"
+                            day_counts:
+                              observed: 7
+                              not_observed: 0
+                              evidence_expired: 0
+                            includes_incomplete_day: false
+                          change:
+                            state: "COMPARABLE"
+                            reason: null
+                            absolute: -1
+                            ratio: -0.2
+                      excluded:
+                        insufficient_coverage: 0
+                        not_observed: 0
+                        zero_value: 3
+                    page:
+                      limit: 20
+                      total_items: 2
+                      has_more: false
+                      next_cursor: null
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/SourceNotRankable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  "/api/v1/sources/status":
+    get:
+      operationId: "getSourcesStatus"
+      tags:
+        - "Sources"
+      summary: "데이터 갱신·수집 범위"
+      description: "출처별 마지막 회차·성공 시각, 조회 기간(오늘을 끝으로 하는 period 일수) 회차·coverage·품질, 정책상 제공 여부와 출처 불명 데이터."
+      parameters:
+        - $ref: "#/components/parameters/Period"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/SourcesStatusResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  schemas:
+    Meta:
+      type: "object"
+      required:
+        - "api_version"
+        - "data_mode"
+        - "generated_at"
+        - "notice"
+        - "observation_origin"
+        - "timezone"
+      properties:
+        api_version:
+          type: "string"
+          description: "계약 버전 (SemVer). 1.x 안에서는 필드 추가만 합니다."
+        data_mode:
+          type: "string"
+          enum:
+            - "database"
+            - "mock"
+          description: "database=설정된 DB에서 계산, mock=가상 데이터 Mock 서버. mock은 실제 유행이 아닙니다."
+        observation_origin:
+          type: "string"
+          enum:
+            - "live_api"
+            - "mock"
+          description: "집계에 포함한 관측 회차의 origin. 운영 기본값은 live_api."
+        generated_at:
+          type: "string"
+          format: "date-time"
+          description: "응답 생성 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+        timezone:
+          type: "string"
+          enum:
+            - "Asia/Seoul"
+          description: "일자 계산 시간대"
+        notice:
+          type: "string"
+          description: "Mock·테스트 데이터일 때 화면에 함께 표시할 안내문. 실제 데이터면 null."
+          nullable: true
+      description: "모든 응답의 공통 메타데이터."
+    ErrorDetail:
+      type: "object"
+      required:
+        - "allowed"
+        - "parameter"
+        - "reason"
+      properties:
+        parameter:
+          type: "string"
+          description: "문제가 된 파라미터 또는 헤더 이름"
+          nullable: true
+        reason:
+          type: "string"
+          description: "기계 판독용 사유: unknown_parameter, repeated_parameter, required, unsupported_value, invalid_format, out_of_range, requires_parameter, malformed, mismatched_query, forbidden_header, not_ip_or_localhost, not_found, unknown_route, method_not_allowed, policy_blocked, not_stored, schema_not_ready, storage_unavailable, internal, mock_simulated"
+        allowed:
+          type: "array"
+          items:
+            type: "string"
+          description: "허용 값 목록이 있으면 제공"
+          nullable: true
+      description: "오류 세부 항목."
+    Error:
+      type: "object"
+      required:
+        - "code"
+        - "details"
+        - "message"
+      properties:
+        code:
+          type: "string"
+          enum:
+            - "INVALID_PARAMETER"
+            - "INVALID_CURSOR"
+            - "ADMIN_TOKEN_NOT_ACCEPTED"
+            - "FORBIDDEN_HOST"
+            - "FOOD_NOT_FOUND"
+            - "ROUTE_NOT_FOUND"
+            - "METHOD_NOT_ALLOWED"
+            - "SOURCE_NOT_RANKABLE"
+            - "INTERNAL_ERROR"
+            - "DATA_UNAVAILABLE"
+          description: "오류 코드 (docs/app-api/ERRORS.md)"
+        message:
+          type: "string"
+          description: "사용자에게 보여도 되는 한국어 설명"
+        details:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+      description: "오류 본문."
+    ErrorResponse:
+      type: "object"
+      required:
+        - "error"
+        - "meta"
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
+        meta:
+          $ref: "#/components/schemas/Meta"
+      description: "모든 오류 응답 형식."
+    Page:
+      type: "object"
+      required:
+        - "has_more"
+        - "limit"
+        - "next_cursor"
+        - "total_items"
+      properties:
+        limit:
+          type: "integer"
+          minimum: 1
+          maximum: 100
+          description: "이번 요청의 최대 항목 수"
+        total_items:
+          type: "integer"
+          minimum: 0
+          description: "조건에 맞는 전체 항목 수"
+        has_more:
+          type: "boolean"
+          description: "다음 페이지 존재 여부"
+        next_cursor:
+          type: "string"
+          description: "다음 페이지 요청에 그대로 넣을 불투명 커서. 마지막 페이지면 null."
+          nullable: true
+      description: "커서 기반 페이지 정보. 커서는 같은 조건의 요청에만 사용할 수 있습니다."
+    FoodRef:
+      type: "object"
+      required:
+        - "canonical_name"
+        - "entity_kind"
+        - "food_id"
+      properties:
+        food_id:
+          type: "string"
+          description: "안정적인 음식 ID. 병합되어도 이전 ID는 상세 조회에서 대상 음식으로 안내됩니다."
+        canonical_name:
+          type: "string"
+          description: "대표 음식명"
+        entity_kind:
+          type: "string"
+          enum:
+            - "DISH"
+            - "PRODUCT"
+            - "INGREDIENT"
+            - "FOOD_CONCEPT"
+          description: "음식 유형"
+      description: "음식 요약 참조."
+    Period:
+      type: "object"
+      required:
+        - "days"
+        - "end_date"
+        - "start_date"
+        - "timezone"
+      properties:
+        start_date:
+          type: "string"
+          format: "date"
+          description: "시작일(포함, KST)"
+        end_date:
+          type: "string"
+          format: "date"
+          description: "종료일(포함, KST)"
+        days:
+          type: "integer"
+          minimum: 0
+          description: "일수"
+        timezone:
+          type: "string"
+          enum:
+            - "Asia/Seoul"
+          description: "일자 계산 기준 시간대 (UTC+09:00 고정)"
+      description: "측정 기간."
+    MetricDefinition:
+      type: "object"
+      required:
+        - "item_label"
+        - "metric_code"
+        - "unit"
+      properties:
+        metric_code:
+          type: "string"
+          enum:
+            - "confirmed_items"
+          description: "confirmed_items=승인된 정확 별칭이 확인된 고유 콘텐츠 수(FOOD_MENTION 기준). 검색 결과 일치(ITEM_QUERY_MATCH)는 포함하지 않습니다."
+        unit:
+          type: "string"
+          enum:
+            - "distinct_items"
+          description: "고유 콘텐츠 개수. 같은 콘텐츠는 별칭이 여러 개여도 한 번만 셉니다."
+        item_label:
+          type: "string"
+          description: "화면 표시용 콘텐츠 단위 (트렌드 항목, 게시물)."
+      description: "지표 정의."
+    SeriesMetric:
+      type: "object"
+      required:
+        - "item_label"
+        - "metric_code"
+        - "unit"
+      properties:
+        metric_code:
+          type: "string"
+          enum:
+            - "confirmed_items"
+          description: "confirmed_items=승인된 정확 별칭이 확인된 고유 콘텐츠 수(FOOD_MENTION 기준). 검색 결과 일치(ITEM_QUERY_MATCH)는 포함하지 않습니다."
+        unit:
+          type: "string"
+          enum:
+            - "distinct_items"
+          description: "고유 콘텐츠 개수. 같은 콘텐츠는 별칭이 여러 개여도 한 번만 셉니다."
+        item_label:
+          type: "string"
+          description: "화면 표시용 콘텐츠 단위 (트렌드 항목, 게시물)."
+      description: "지표 정의. availability가 INCLUDED가 아니면 null."
+      nullable: true
+    PeriodValue:
+      type: "object"
+      required:
+        - "coverage"
+        - "day_counts"
+        - "includes_incomplete_day"
+        - "value"
+        - "value_state"
+      properties:
+        value:
+          type: "integer"
+          minimum: 0
+          description: "기간 전체 고유 콘텐츠 수. 기간 집합을 다시 계산하며 일별 값을 더하지 않습니다. value_state가 OBSERVED일 때만 숫자이고 0은 정상 관측 0입니다."
+          nullable: true
+        value_state:
+          type: "string"
+          enum:
+            - "OBSERVED"
+            - "NOT_OBSERVED"
+            - "INSUFFICIENT_COVERAGE"
+          description: "OBSERVED=기간 모든 일자 관측, INSUFFICIENT_COVERAGE=일부 일자 미관측·근거 만료·진행 중 일자 포함, NOT_OBSERVED=관측 일자 없음."
+        coverage:
+          type: "string"
+          enum:
+            - "COMPLETE"
+            - "LIMITED"
+            - "PARTIAL"
+            - "NONE"
+          description: "수집 범위. COMPLETE=요청 전체 수신, LIMITED=페이지 상한 도달, PARTIAL=일부 회차·페이지만 성공, NONE=성공 관측 없음. LIMITED·PARTIAL 값은 하한값입니다."
+        day_counts:
+          type: "object"
+          required:
+            - "evidence_expired"
+            - "not_observed"
+            - "observed"
+          properties:
+            observed:
+              type: "integer"
+              minimum: 0
+              description: "관측된 일수"
+            not_observed:
+              type: "integer"
+              minimum: 0
+              description: "성공 관측이 없는 일수"
+            evidence_expired:
+              type: "integer"
+              minimum: 0
+              description: "근거 보존 기한이 지나 값을 다시 만들 수 없는 일수"
+          description: "기간에 포함된 일자의 상태별 개수."
+        includes_incomplete_day:
+          type: "boolean"
+          description: "기간에 오늘(KST, 수집 진행 중)이 포함되면 true."
+      description: "한 기간의 값과 관측 상태."
+    Change:
+      type: "object"
+      required:
+        - "absolute"
+        - "ratio"
+        - "reason"
+        - "state"
+      properties:
+        state:
+          type: "string"
+          enum:
+            - "COMPARABLE"
+            - "NOT_COMPARABLE"
+          description: "두 기간이 모두 OBSERVED이고 COMPLETE일 때만 COMPARABLE."
+        reason:
+          type: "string"
+          enum:
+            - "CURRENT_PERIOD_INSUFFICIENT"
+            - "PREVIOUS_PERIOD_INSUFFICIENT"
+            - "COVERAGE_LIMITED"
+            - "PREVIOUS_ZERO"
+            - null
+          description: "NOT_COMPARABLE 사유, 또는 COMPARABLE이지만 ratio가 null인 사유(PREVIOUS_ZERO)."
+          nullable: true
+        absolute:
+          type: "integer"
+          description: "current.value - previous.value. COMPARABLE일 때만 숫자."
+          nullable: true
+        ratio:
+          type: "number"
+          description: "(current - previous) / previous. 이전 값이 0이면 null."
+          nullable: true
+      description: "이전 동일 길이 기간 대비 변화. 미관측 기간을 0으로 보지 않습니다."
+    LegacyUnknown:
+      type: "object"
+      required:
+        - "coverage"
+        - "origin"
+        - "value"
+      properties:
+        value:
+          type: "integer"
+          minimum: 0
+          description: "출처 회차가 기록되지 않은 과거 이관 데이터에서 확인된 고유 콘텐츠 수. 본 값에 더하지 마세요."
+        coverage:
+          type: "string"
+          enum:
+            - "UNKNOWN"
+          description: "항상 UNKNOWN"
+        origin:
+          type: "string"
+          enum:
+            - "legacy_unknown"
+          description: "항상 legacy_unknown"
+      description: "출처 불명 과거 데이터. 관측 범위를 알 수 없어 별도로만 표시합니다. 없으면 null."
+      nullable: true
+    Health:
+      type: "object"
+      required:
+        - "api_version"
+        - "data_mode"
+        - "observation_origin"
+        - "schema_ready"
+        - "status"
+      properties:
+        status:
+          type: "string"
+          enum:
+            - "ok"
+            - "unavailable"
+          description: "ok=조회 가능, unavailable=저장소 준비 안 됨"
+        api_version:
+          type: "string"
+          description: "계약 버전"
+        data_mode:
+          type: "string"
+          enum:
+            - "database"
+            - "mock"
+        observation_origin:
+          type: "string"
+          enum:
+            - "live_api"
+            - "mock"
+        schema_ready:
+          type: "boolean"
+          description: "저장소 스키마 준비 여부"
+      description: "연결 확인용 상태."
+    HealthResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          $ref: "#/components/schemas/Health"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    FoodMatch:
+      type: "object"
+      required:
+        - "field"
+        - "kind"
+        - "text"
+      properties:
+        field:
+          type: "string"
+          enum:
+            - "canonical_name"
+            - "alias"
+          description: "일치한 필드"
+        text:
+          type: "string"
+          description: "일치한 이름"
+        kind:
+          type: "string"
+          enum:
+            - "exact"
+            - "prefix"
+            - "contains"
+          description: "일치 방식 (공백·대소문자 무시)"
+      description: "검색어(q)가 있을 때 일치 정보. q가 없으면 null."
+      nullable: true
+    FoodSummary:
+      type: "object"
+      required:
+        - "aliases"
+        - "canonical_name"
+        - "entity_kind"
+        - "food_id"
+        - "last_observed_at"
+        - "match"
+      properties:
+        food_id:
+          type: "string"
+          description: "안정적인 음식 ID. 병합되어도 이전 ID는 상세 조회에서 대상 음식으로 안내됩니다."
+        canonical_name:
+          type: "string"
+          description: "대표 음식명"
+        entity_kind:
+          type: "string"
+          enum:
+            - "DISH"
+            - "PRODUCT"
+            - "INGREDIENT"
+            - "FOOD_CONCEPT"
+          description: "음식 유형"
+        aliases:
+          type: "array"
+          items:
+            type: "string"
+          description: "승인된 별칭 표기(활성만). 대표 음식명도 포함될 수 있습니다."
+        last_observed_at:
+          type: "string"
+          format: "date-time"
+          description: "포함 출처에서 이 음식의 확인된 콘텐츠를 마지막으로 관측한 시각. 없으면 null. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        match:
+          $ref: "#/components/schemas/FoodMatch"
+      description: "음식 목록 항목."
+    FoodList:
+      type: "object"
+      required:
+        - "items"
+        - "query"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/FoodSummary"
+        query:
+          type: "object"
+          required:
+            - "kind"
+            - "q"
+            - "sort"
+          properties:
+            q:
+              type: "string"
+              description: "정규화된 검색어"
+              nullable: true
+            kind:
+              type: "string"
+              enum:
+                - "DISH"
+                - "PRODUCT"
+                - "INGREDIENT"
+                - "FOOD_CONCEPT"
+                - null
+              nullable: true
+            sort:
+              type: "string"
+              enum:
+                - "relevance"
+                - "name"
+                - "-last_observed_at"
+          description: "적용된 조건."
+    FoodListResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+        - "page"
+      properties:
+        data:
+          $ref: "#/components/schemas/FoodList"
+        page:
+          $ref: "#/components/schemas/Page"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    Alias:
+      type: "object"
+      required:
+        - "scope"
+        - "text"
+      properties:
+        text:
+          type: "string"
+          description: "별칭 표기"
+        scope:
+          type: "string"
+          description: "별칭 범위 (예: food:ko)"
+      description: "승인된 별칭."
+    Relation:
+      type: "object"
+      required:
+        - "food"
+        - "relation_type"
+      properties:
+        relation_type:
+          type: "string"
+          enum:
+            - "VARIANT_OF"
+            - "HAS_VARIANT"
+            - "RELATED_TO"
+          description: "VARIANT_OF=이 음식이 food의 파생, HAS_VARIANT=food가 이 음식의 파생, RELATED_TO=연관(대칭)"
+        food:
+          $ref: "#/components/schemas/FoodRef"
+      description: "사람이 승인한 음식 관계. 관계 음식의 수치는 합산하지 않습니다."
+    Redirect:
+      type: "object"
+      required:
+        - "reason"
+        - "requested_food_id"
+      properties:
+        requested_food_id:
+          type: "string"
+          description: "요청한 이전 음식 ID"
+        reason:
+          type: "string"
+          enum:
+            - "MERGED"
+          description: "병합으로 대상 음식에 통합됨"
+      description: "요청 ID가 병합되어 대상 음식을 반환했을 때만 제공. 아니면 null."
+      nullable: true
+    SourceAvailability:
+      type: "object"
+      required:
+        - "availability"
+        - "availability_reason"
+        - "last_observed_at"
+        - "source_code"
+        - "source_name"
+      properties:
+        source_code:
+          type: "string"
+          enum:
+            - "google_trends_rss"
+            - "instagram_graph"
+            - "youtube"
+            - "naver_datalab"
+          description: "출처 코드. google_trends_rss·instagram_graph만 B8 집계에 포함됩니다."
+        source_name:
+          type: "string"
+          description: "출처 표시명"
+        availability:
+          type: "string"
+          enum:
+            - "INCLUDED"
+            - "POLICY_BLOCKED"
+            - "NOT_STORED"
+          description: "INCLUDED=B8 집계 제공, POLICY_BLOCKED=정책상 음식 분석 비활성(YouTube), NOT_STORED=저장하지 않는 요청 범위 지수라 집계 제외(NAVER)."
+        availability_reason:
+          type: "string"
+          description: "availability가 INCLUDED가 아닐 때의 사유. INCLUDED이면 null."
+          nullable: true
+        last_observed_at:
+          type: "string"
+          format: "date-time"
+          description: "이 출처에서 이 음식의 확인된 콘텐츠를 마지막으로 관측한 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+      description: "출처별 제공 여부."
+    Freshness:
+      type: "object"
+      required:
+        - "last_observed_at"
+        - "reprocessing_pending"
+      properties:
+        last_observed_at:
+          type: "string"
+          format: "date-time"
+          description: "포함 출처 전체에서 마지막 관측 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        reprocessing_pending:
+          type: "boolean"
+          description: "승인된 별칭·병합 변경이 아직 관측 재처리에 반영되지 않았으면 true. 반영 후 수치가 바뀔 수 있습니다."
+      description: "데이터 갱신 상태."
+    FoodDetail:
+      type: "object"
+      required:
+        - "aliases"
+        - "canonical_name"
+        - "created_at"
+        - "entity_kind"
+        - "food_id"
+        - "freshness"
+        - "merged_food_ids"
+        - "redirect"
+        - "relations"
+        - "sources"
+        - "status"
+        - "updated_at"
+      properties:
+        food_id:
+          type: "string"
+          description: "안정적인 음식 ID. 병합되어도 이전 ID는 상세 조회에서 대상 음식으로 안내됩니다."
+        canonical_name:
+          type: "string"
+          description: "대표 음식명"
+        entity_kind:
+          type: "string"
+          enum:
+            - "DISH"
+            - "PRODUCT"
+            - "INGREDIENT"
+            - "FOOD_CONCEPT"
+          description: "음식 유형"
+        status:
+          type: "string"
+          enum:
+            - "ACTIVE"
+            - "RETIRED"
+          description: "음식 상태"
+        aliases:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Alias"
+          description: "승인된 활성 별칭"
+        relations:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Relation"
+        merged_food_ids:
+          type: "array"
+          items:
+            type: "string"
+          description: "이 음식으로 병합된 이전 음식 ID"
+        redirect:
+          $ref: "#/components/schemas/Redirect"
+        created_at:
+          type: "string"
+          format: "date-time"
+          description: "음식 등록 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+        updated_at:
+          type: "string"
+          format: "date-time"
+          description: "음식 정보 변경 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+        sources:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceAvailability"
+        freshness:
+          $ref: "#/components/schemas/Freshness"
+      description: "음식 상세."
+    FoodDetailResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          $ref: "#/components/schemas/FoodDetail"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    RunCounts:
+      type: "object"
+      required:
+        - "failed"
+        - "successful"
+      properties:
+        successful:
+          type: "integer"
+          minimum: 0
+          description: "성공(관측) 회차 수"
+        failed:
+          type: "integer"
+          minimum: 0
+          description: "실패(미관측) 회차 수"
+      description: "해당 구간의 관측 범위 회차."
+    TimelinePoint:
+      type: "object"
+      required:
+        - "complete"
+        - "coverage"
+        - "days"
+        - "end_date"
+        - "legacy_unknown_value"
+        - "observed_days"
+        - "runs"
+        - "start_date"
+        - "value"
+        - "value_state"
+      properties:
+        start_date:
+          type: "string"
+          format: "date"
+          description: "구간 시작일(KST)"
+        end_date:
+          type: "string"
+          format: "date"
+          description: "구간 종료일(KST). 일 단위면 start_date와 같습니다."
+        days:
+          type: "integer"
+          minimum: 0
+          description: "구간 일수 (일=1, 주=1~7)"
+        value:
+          type: "integer"
+          minimum: 0
+          description: "구간 고유 콘텐츠 수. value_state가 OBSERVED일 때만 숫자."
+          nullable: true
+        value_state:
+          type: "string"
+          enum:
+            - "OBSERVED"
+            - "NOT_OBSERVED"
+            - "INSUFFICIENT_COVERAGE"
+            - "EVIDENCE_EXPIRED"
+          description: "일: OBSERVED·NOT_OBSERVED·EVIDENCE_EXPIRED, 주: OBSERVED·NOT_OBSERVED·INSUFFICIENT_COVERAGE."
+        coverage:
+          type: "string"
+          enum:
+            - "COMPLETE"
+            - "LIMITED"
+            - "PARTIAL"
+            - "NONE"
+          description: "수집 범위. COMPLETE=요청 전체 수신, LIMITED=페이지 상한 도달, PARTIAL=일부 회차·페이지만 성공, NONE=성공 관측 없음. LIMITED·PARTIAL 값은 하한값입니다."
+        observed_days:
+          type: "integer"
+          minimum: 0
+          description: "구간 안에서 관측된 일수"
+        complete:
+          type: "boolean"
+          description: "false=오늘(수집 진행 중) 포함 또는 기간 경계로 잘린 주."
+        runs:
+          $ref: "#/components/schemas/RunCounts"
+        legacy_unknown_value:
+          type: "integer"
+          minimum: 0
+          description: "출처 불명 과거 데이터의 고유 콘텐츠 수(본 값에 더하지 않음). 없으면 null."
+          nullable: true
+      description: "추이 그래프의 한 점."
+    TimelineSeries:
+      type: "object"
+      required:
+        - "availability"
+        - "availability_reason"
+        - "metric"
+        - "points"
+        - "source_code"
+        - "source_name"
+      properties:
+        source_code:
+          type: "string"
+          enum:
+            - "google_trends_rss"
+            - "instagram_graph"
+            - "youtube"
+            - "naver_datalab"
+          description: "출처 코드. google_trends_rss·instagram_graph만 B8 집계에 포함됩니다."
+        source_name:
+          type: "string"
+          description: "출처 표시명"
+        availability:
+          type: "string"
+          enum:
+            - "INCLUDED"
+            - "POLICY_BLOCKED"
+            - "NOT_STORED"
+          description: "INCLUDED=B8 집계 제공, POLICY_BLOCKED=정책상 음식 분석 비활성(YouTube), NOT_STORED=저장하지 않는 요청 범위 지수라 집계 제외(NAVER)."
+        availability_reason:
+          type: "string"
+          description: "availability가 INCLUDED가 아닐 때의 사유. INCLUDED이면 null."
+          nullable: true
+        metric:
+          $ref: "#/components/schemas/SeriesMetric"
+        points:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/TimelinePoint"
+          description: "availability가 INCLUDED일 때만 채워집니다."
+      description: "출처별 추이."
+    Timeline:
+      type: "object"
+      required:
+        - "food"
+        - "granularity"
+        - "period"
+        - "series"
+      properties:
+        food:
+          $ref: "#/components/schemas/FoodRef"
+        period:
+          $ref: "#/components/schemas/Period"
+        granularity:
+          type: "string"
+          enum:
+            - "day"
+            - "week"
+          description: "집계 단위"
+        series:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/TimelineSeries"
+    TimelineResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          $ref: "#/components/schemas/Timeline"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    PeriodMetric:
+      type: "object"
+      required:
+        - "change"
+        - "current"
+        - "item_label"
+        - "metric_code"
+        - "origin"
+        - "previous"
+        - "rankable"
+        - "unit"
+      properties:
+        metric_code:
+          type: "string"
+          enum:
+            - "confirmed_items"
+          description: "confirmed_items=승인된 정확 별칭이 확인된 고유 콘텐츠 수(FOOD_MENTION 기준). 검색 결과 일치(ITEM_QUERY_MATCH)는 포함하지 않습니다."
+        unit:
+          type: "string"
+          enum:
+            - "distinct_items"
+          description: "고유 콘텐츠 개수. 같은 콘텐츠는 별칭이 여러 개여도 한 번만 셉니다."
+        item_label:
+          type: "string"
+          description: "콘텐츠 단위 표시명"
+        origin:
+          type: "string"
+          enum:
+            - "live_api"
+            - "mock"
+          description: "관측 회차 origin"
+        current:
+          $ref: "#/components/schemas/PeriodValue"
+        previous:
+          $ref: "#/components/schemas/PeriodValue"
+        change:
+          $ref: "#/components/schemas/Change"
+        rankable:
+          type: "boolean"
+          description: "순위 API에서 사용할 수 있는 지표인지"
+      description: "기간 지표."
+    ProviderValue:
+      type: "object"
+      required:
+        - "aggregatable"
+        - "keyword"
+        - "metric_code"
+        - "observed_at"
+        - "raw_value"
+        - "unit"
+      properties:
+        metric_code:
+          type: "string"
+          enum:
+            - "rss.approx_traffic"
+          description: "Google 트렌드 RSS가 표시한 대략적 검색량 문구"
+        unit:
+          type: "string"
+          enum:
+            - "approximate_search_traffic_text"
+        raw_value:
+          type: "string"
+          description: "제공자 표시 문자열 (예: 1,000+). 숫자로 바꾸거나 합산하지 마세요."
+        keyword:
+          type: "string"
+          description: "트렌드 검색어. 음식 별칭과 정확히 같은 항목만 제공합니다."
+        observed_at:
+          type: "string"
+          format: "date-time"
+          description: "마지막 관측 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+        aggregatable:
+          type: "boolean"
+          description: "항상 false"
+      description: "제공자 표시값. 기간 안에 관측된 항목별 최신 값 (최대 5개, 최근순)."
+    MetricQuality:
+      type: "object"
+      required:
+        - "checked_items"
+        - "failed_runs"
+        - "warn_items"
+      properties:
+        checked_items:
+          type: "integer"
+          minimum: 0
+          description: "기간 안 확인된 고유 콘텐츠 수"
+        warn_items:
+          type: "integer"
+          minimum: 0
+          description: "품질 경고(WARN)가 있는 콘텐츠 수"
+        failed_runs:
+          type: "integer"
+          minimum: 0
+          description: "기간 안 실패(미관측) 회차 수"
+      description: "기간 품질 요약. availability가 INCLUDED가 아니면 null."
+      nullable: true
+    SourceMetrics:
+      type: "object"
+      required:
+        - "availability"
+        - "availability_reason"
+        - "last_observed_at"
+        - "legacy_unknown"
+        - "metrics"
+        - "provider_values"
+        - "quality"
+        - "source_code"
+        - "source_name"
+      properties:
+        source_code:
+          type: "string"
+          enum:
+            - "google_trends_rss"
+            - "instagram_graph"
+            - "youtube"
+            - "naver_datalab"
+          description: "출처 코드. google_trends_rss·instagram_graph만 B8 집계에 포함됩니다."
+        source_name:
+          type: "string"
+          description: "출처 표시명"
+        availability:
+          type: "string"
+          enum:
+            - "INCLUDED"
+            - "POLICY_BLOCKED"
+            - "NOT_STORED"
+          description: "INCLUDED=B8 집계 제공, POLICY_BLOCKED=정책상 음식 분석 비활성(YouTube), NOT_STORED=저장하지 않는 요청 범위 지수라 집계 제외(NAVER)."
+        availability_reason:
+          type: "string"
+          description: "availability가 INCLUDED가 아닐 때의 사유. INCLUDED이면 null."
+          nullable: true
+        metrics:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PeriodMetric"
+          description: "INCLUDED일 때만 채워집니다."
+        provider_values:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ProviderValue"
+          description: "Google 트렌드 RSS만 제공합니다."
+        quality:
+          $ref: "#/components/schemas/MetricQuality"
+        last_observed_at:
+          type: "string"
+          format: "date-time"
+          description: "이 출처의 마지막 관측 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        legacy_unknown:
+          $ref: "#/components/schemas/LegacyUnknown"
+      description: "출처별 기간 통계. 출처끼리 합산하지 않습니다."
+    FoodMetrics:
+      type: "object"
+      required:
+        - "food"
+        - "period"
+        - "previous_period"
+        - "sources"
+      properties:
+        food:
+          $ref: "#/components/schemas/FoodRef"
+        period:
+          $ref: "#/components/schemas/Period"
+        previous_period:
+          $ref: "#/components/schemas/Period"
+        sources:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceMetrics"
+    FoodMetricsResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          $ref: "#/components/schemas/FoodMetrics"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    RankingBasis:
+      type: "object"
+      required:
+        - "metric"
+        - "notes"
+        - "observation_scope"
+        - "period"
+        - "previous_period"
+        - "scope"
+        - "source_code"
+        - "source_name"
+      properties:
+        source_code:
+          type: "string"
+          enum:
+            - "google_trends_rss"
+            - "instagram_graph"
+            - "youtube"
+            - "naver_datalab"
+          description: "출처 코드. google_trends_rss·instagram_graph만 B8 집계에 포함됩니다."
+        source_name:
+          type: "string"
+          description: "출처 표시명"
+        metric:
+          $ref: "#/components/schemas/MetricDefinition"
+        period:
+          $ref: "#/components/schemas/Period"
+        previous_period:
+          $ref: "#/components/schemas/Period"
+        scope:
+          type: "string"
+          enum:
+            - "SINGLE_SOURCE"
+          description: "한 출처·한 단위·한 기간만 비교합니다. 종합 점수는 제공하지 않습니다."
+        observation_scope:
+          type: "string"
+          enum:
+            - "SHARED_FEED"
+            - "PER_FOOD_QUERY"
+          description: "SHARED_FEED=모든 음식이 같은 피드로 관측(RSS), PER_FOOD_QUERY=음식별 검색 회차가 있는 날만 관측(Instagram)"
+        notes:
+          type: "array"
+          items:
+            type: "string"
+          description: "해석 주의 문구"
+      description: "순위 기준."
+    RankingEntry:
+      type: "object"
+      required:
+        - "change"
+        - "current"
+        - "food"
+        - "previous"
+        - "rank"
+      properties:
+        rank:
+          type: "integer"
+          minimum: 1
+          description: "순위 (동점은 같은 순위, 다음 순위는 건너뜀: 1,2,2,4)"
+        food:
+          $ref: "#/components/schemas/FoodRef"
+        current:
+          $ref: "#/components/schemas/PeriodValue"
+        previous:
+          $ref: "#/components/schemas/PeriodValue"
+        change:
+          $ref: "#/components/schemas/Change"
+      description: "순위 항목. current.value_state는 항상 OBSERVED."
+    RankingExclusions:
+      type: "object"
+      required:
+        - "insufficient_coverage"
+        - "not_observed"
+        - "zero_value"
+      properties:
+        insufficient_coverage:
+          type: "integer"
+          minimum: 0
+          description: "기간 일부만 관측되어 제외된 음식 수"
+        not_observed:
+          type: "integer"
+          minimum: 0
+          description: "기간 관측이 없어 제외된 음식 수"
+        zero_value:
+          type: "integer"
+          minimum: 0
+          description: "include_zero=false로 제외된 정상 관측 0 음식 수"
+      description: "순위에서 제외된 음식 수."
+    Rankings:
+      type: "object"
+      required:
+        - "basis"
+        - "excluded"
+        - "items"
+      properties:
+        basis:
+          $ref: "#/components/schemas/RankingBasis"
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RankingEntry"
+        excluded:
+          $ref: "#/components/schemas/RankingExclusions"
+    RankingsResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+        - "page"
+      properties:
+        data:
+          $ref: "#/components/schemas/Rankings"
+        page:
+          $ref: "#/components/schemas/Page"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    SourcePolicy:
+      type: "object"
+      required:
+        - "mention_extraction"
+        - "metric_storage"
+        - "policy_version"
+        - "retention_days"
+      properties:
+        policy_version:
+          type: "string"
+          description: "출처 정책 버전"
+        retention_days:
+          type: "integer"
+          minimum: 0
+          description: "근거 보존 일수. 제한 없으면 null."
+          nullable: true
+        mention_extraction:
+          type: "string"
+          enum:
+            - "ALLOWED"
+            - "POLICY_BLOCKED"
+            - "NOT_APPLICABLE"
+          description: "음식 언급 추출 허용 여부"
+        metric_storage:
+          type: "string"
+          enum:
+            - "STORED"
+            - "TRANSIENT_ONLY"
+            - "NONE"
+          description: "지표 저장 정책"
+      description: "출처 정책."
+    WindowStats:
+      type: "object"
+      required:
+        - "coverage_counts"
+        - "observed_days"
+        - "runs_failed"
+        - "runs_successful"
+        - "runs_total"
+      properties:
+        runs_total:
+          type: "integer"
+          minimum: 0
+          description: "조회 기간 회차 수"
+        runs_successful:
+          type: "integer"
+          minimum: 0
+          description: "성공(관측) 회차 수"
+        runs_failed:
+          type: "integer"
+          minimum: 0
+          description: "실패 회차 수"
+        observed_days:
+          type: "integer"
+          minimum: 0
+          description: "성공 회차가 있는 일수"
+        coverage_counts:
+          type: "object"
+          required:
+            - "COMPLETE"
+            - "LIMITED"
+            - "NONE"
+            - "PARTIAL"
+          properties:
+            COMPLETE:
+              type: "integer"
+              minimum: 0
+            LIMITED:
+              type: "integer"
+              minimum: 0
+            PARTIAL:
+              type: "integer"
+              minimum: 0
+            NONE:
+              type: "integer"
+              minimum: 0
+          description: "coverage별 회차 수"
+      description: "조회 기간 수집 통계. INCLUDED가 아니면 null."
+      nullable: true
+    SourceQuality:
+      type: "object"
+      required:
+        - "fail_results"
+        - "rejected_items"
+        - "warn_results"
+      properties:
+        fail_results:
+          type: "integer"
+          minimum: 0
+          description: "품질 FAIL 결과 수"
+        warn_results:
+          type: "integer"
+          minimum: 0
+          description: "품질 WARN 결과 수"
+        rejected_items:
+          type: "integer"
+          minimum: 0
+          description: "품질 FAIL로 적재하지 않은 레코드 수"
+      description: "조회 기간 품질 요약. INCLUDED가 아니면 null."
+      nullable: true
+    LegacyStatus:
+      type: "object"
+      required:
+        - "coverage"
+        - "items"
+        - "runs"
+      properties:
+        runs:
+          type: "integer"
+          minimum: 0
+          description: "출처 불명 논리 회차 수"
+        items:
+          type: "integer"
+          minimum: 0
+          description: "출처 불명 콘텐츠 수"
+        coverage:
+          type: "string"
+          enum:
+            - "UNKNOWN"
+      description: "출처 불명 과거 데이터 존재 여부. 없으면 null."
+      nullable: true
+    SourceStatus:
+      type: "object"
+      required:
+        - "availability"
+        - "availability_reason"
+        - "last_run_at"
+        - "last_successful_run_at"
+        - "latest_coverage"
+        - "legacy_unknown"
+        - "observation_scope"
+        - "policy"
+        - "quality"
+        - "source_code"
+        - "source_name"
+        - "window_stats"
+      properties:
+        source_code:
+          type: "string"
+          enum:
+            - "google_trends_rss"
+            - "instagram_graph"
+            - "youtube"
+            - "naver_datalab"
+          description: "출처 코드. google_trends_rss·instagram_graph만 B8 집계에 포함됩니다."
+        source_name:
+          type: "string"
+          description: "출처 표시명"
+        availability:
+          type: "string"
+          enum:
+            - "INCLUDED"
+            - "POLICY_BLOCKED"
+            - "NOT_STORED"
+          description: "INCLUDED=B8 집계 제공, POLICY_BLOCKED=정책상 음식 분석 비활성(YouTube), NOT_STORED=저장하지 않는 요청 범위 지수라 집계 제외(NAVER)."
+        availability_reason:
+          type: "string"
+          description: "availability가 INCLUDED가 아닐 때의 사유. INCLUDED이면 null."
+          nullable: true
+        policy:
+          $ref: "#/components/schemas/SourcePolicy"
+        observation_scope:
+          type: "string"
+          enum:
+            - "SHARED_FEED"
+            - "PER_FOOD_QUERY"
+            - null
+          nullable: true
+        last_run_at:
+          type: "string"
+          format: "date-time"
+          description: "마지막 회차 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        last_successful_run_at:
+          type: "string"
+          format: "date-time"
+          description: "마지막 성공 회차 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        latest_coverage:
+          type: "string"
+          enum:
+            - "COMPLETE"
+            - "LIMITED"
+            - "PARTIAL"
+            - "NONE"
+            - null
+          description: "마지막 회차 coverage"
+          nullable: true
+        window_stats:
+          $ref: "#/components/schemas/WindowStats"
+        quality:
+          $ref: "#/components/schemas/SourceQuality"
+        legacy_unknown:
+          $ref: "#/components/schemas/LegacyStatus"
+      description: "출처 수집 상태. YouTube·NAVER는 정책 정보만 제공합니다."
+    Aggregation:
+      type: "object"
+      required:
+        - "materialized"
+        - "mode"
+        - "pending_entity_changes"
+      properties:
+        mode:
+          type: "string"
+          enum:
+            - "read_time"
+          description: "요청 시 계산 (저장 집계 없음)"
+        materialized:
+          type: "boolean"
+          description: "저장 집계 사용 여부 (현재 false)"
+        pending_entity_changes:
+          type: "integer"
+          minimum: 0
+          description: "관측 재처리 대기 중인 별칭·병합 변경 수"
+      description: "집계 방식."
+    SourcesStatus:
+      type: "object"
+      required:
+        - "aggregation"
+        - "data_through"
+        - "sources"
+        - "window"
+      properties:
+        data_through:
+          type: "string"
+          format: "date-time"
+          description: "포함 출처의 마지막 성공 관측 시각. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        window:
+          $ref: "#/components/schemas/Period"
+        sources:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/SourceStatus"
+        aggregation:
+          $ref: "#/components/schemas/Aggregation"
+    SourcesStatusResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          $ref: "#/components/schemas/SourcesStatus"
+        meta:
+          $ref: "#/components/schemas/Meta"
+  parameters:
+    FoodId:
+      name: "food_id"
+      in: "path"
+      required: true
+      description: "음식 ID"
+      schema:
+        type: "string"
+        pattern: "^[A-Za-z0-9_-]{1,128}$"
+    Period:
+      name: "period"
+      in: "query"
+      required: false
+      description: "기간. end_date를 포함해 거슬러 올라간 일수."
+      schema:
+        type: "string"
+        enum:
+          - "7d"
+          - "30d"
+          - "90d"
+        default: "7d"
+    TimelinePeriod:
+      name: "period"
+      in: "query"
+      required: false
+      description: "기간. end_date를 포함해 거슬러 올라간 일수."
+      schema:
+        type: "string"
+        enum:
+          - "7d"
+          - "30d"
+          - "90d"
+        default: "30d"
+    EndDate:
+      name: "end_date"
+      in: "query"
+      required: false
+      description: "기간 종료일(포함, KST). 기본값은 어제(마지막 완결 일자). 오늘까지 지정할 수 있습니다."
+      schema:
+        type: "string"
+        format: "date"
+    Granularity:
+      name: "granularity"
+      in: "query"
+      required: false
+      description: "day=일별, week=월요일 시작 주별(KST). 주별 값은 주 안의 콘텐츠 집합을 다시 계산합니다."
+      schema:
+        type: "string"
+        enum:
+          - "day"
+          - "week"
+        default: "day"
+    SourceFilter:
+      name: "source"
+      in: "query"
+      required: false
+      description: "한 출처만 조회. 없으면 모든 출처."
+      schema:
+        type: "string"
+        enum:
+          - "google_trends_rss"
+          - "instagram_graph"
+          - "youtube"
+          - "naver_datalab"
+    RankingSource:
+      name: "source"
+      in: "query"
+      required: true
+      description: "순위를 만들 출처. google_trends_rss·instagram_graph만 가능하며 나머지는 422."
+      schema:
+        type: "string"
+        enum:
+          - "google_trends_rss"
+          - "instagram_graph"
+          - "youtube"
+          - "naver_datalab"
+    Metric:
+      name: "metric"
+      in: "query"
+      required: false
+      description: "순위 지표"
+      schema:
+        type: "string"
+        enum:
+          - "confirmed_items"
+        default: "confirmed_items"
+    Kind:
+      name: "kind"
+      in: "query"
+      required: false
+      description: "음식 유형 필터"
+      schema:
+        type: "string"
+        enum:
+          - "DISH"
+          - "PRODUCT"
+          - "INGREDIENT"
+          - "FOOD_CONCEPT"
+    Query:
+      name: "q"
+      in: "query"
+      required: false
+      description: "대표 음식명·승인 별칭 검색어. 공백과 대소문자를 무시한 부분 일치."
+      schema:
+        type: "string"
+        minLength: 1
+        maxLength: 100
+    Sort:
+      name: "sort"
+      in: "query"
+      required: false
+      description: "정렬. 기본값은 q가 있으면 relevance, 없으면 name. -last_observed_at=최근 관측순."
+      schema:
+        type: "string"
+        enum:
+          - "relevance"
+          - "name"
+          - "-last_observed_at"
+    Limit:
+      name: "limit"
+      in: "query"
+      required: false
+      description: "페이지 크기"
+      schema:
+        type: "integer"
+        minimum: 1
+        maximum: 100
+        default: 20
+    Cursor:
+      name: "cursor"
+      in: "query"
+      required: false
+      description: "이전 응답의 page.next_cursor"
+      schema:
+        type: "string"
+        maxLength: 512
+    IncludeZero:
+      name: "include_zero"
+      in: "query"
+      required: false
+      description: "true면 정상 관측 0인 음식도 순위에 포함"
+      schema:
+        type: "string"
+        enum:
+          - "true"
+          - "false"
+        default: "false"
+  responses:
+    BadRequest:
+      description: "잘못된 파라미터·커서 또는 관리 토큰 포함 (INVALID_PARAMETER, INVALID_CURSOR, ADMIN_TOKEN_NOT_ACCEPTED)"
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: "허용되지 않은 Host (FORBIDDEN_HOST)"
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    FoodNotFound:
+      description: "음식 없음 (FOOD_NOT_FOUND)"
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    SourceNotRankable:
+      description: "정책상 순위 미제공 출처 (SOURCE_NOT_RANKABLE)"
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: "서버 내부 오류 (INTERNAL_ERROR)"
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unavailable:
+      description: "저장소 사용 불가 (DATA_UNAVAILABLE)"
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
