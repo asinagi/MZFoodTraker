@@ -1,0 +1,74 @@
+{
+  "summary": "최근 관측순 두 번째 페이지 (next_cursor 사용)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods",
+    "query": {
+      "sort": "-last_observed_at",
+      "limit": "3",
+      "cursor": "eyJ2IjoxLCJvIjozLCJmIjoiZmQ2ZTE4YWY0ZGFiMDgyMiIsImUiOm51bGx9"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "food_id": "FOOD_MOCK_YAKGWA",
+          "canonical_name": "[MOCK] 약과",
+          "entity_kind": "PRODUCT",
+          "aliases": [
+            "[MOCK] 약과",
+            "약과"
+          ],
+          "last_observed_at": "2026-11-02T12:30:00Z",
+          "match": null
+        },
+        {
+          "food_id": "FOOD_MOCK_TANGHULU",
+          "canonical_name": "[MOCK] 탕후루",
+          "entity_kind": "DISH",
+          "aliases": [
+            "[MOCK] 탕후루",
+            "탕후루"
+          ],
+          "last_observed_at": "2026-11-02T12:30:00Z",
+          "match": null
+        },
+        {
+          "food_id": "FOOD_MOCK_PISTACHIO",
+          "canonical_name": "[MOCK] 피스타치오 크림",
+          "entity_kind": "INGREDIENT",
+          "aliases": [
+            "[MOCK] 피스타치오 크림",
+            "피스타치오 크림",
+            "피스타치오크림"
+          ],
+          "last_observed_at": "2026-10-30T12:00:00Z",
+          "match": null
+        }
+      ],
+      "query": {
+        "q": null,
+        "kind": null,
+        "sort": "-last_observed_at"
+      }
+    },
+    "page": {
+      "limit": 3,
+      "total_items": 8,
+      "has_more": true,
+      "next_cursor": "eyJ2IjoxLCJvIjo2LCJmIjoiZmQ2ZTE4YWY0ZGFiMDgyMiIsImUiOm51bGx9"
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

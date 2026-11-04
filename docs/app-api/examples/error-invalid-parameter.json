@@ -5,9 +5,11 @@
     "path": "/api/v1/foods/FOOD_MOCK_DUJJONKU/timeline",
     "query": {
       "period": "14d"
-    }
+    },
+    "headers": {}
   },
   "status": 400,
+  "in_spec": true,
   "response": {
     "error": {
       "code": "INVALID_PARAMETER",

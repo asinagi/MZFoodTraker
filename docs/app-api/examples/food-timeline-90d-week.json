@@ -1,0 +1,502 @@
+{
+  "summary": "주별 추이 90일 (근거 만료·미관측 주 포함)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods/FOOD_MOCK_DUJJONKU/timeline",
+    "query": {
+      "period": "90d",
+      "granularity": "week"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": false,
+  "response": {
+    "data": {
+      "food": {
+        "food_id": "FOOD_MOCK_DUJJONKU",
+        "canonical_name": "[MOCK] 두쫀쿠",
+        "entity_kind": "PRODUCT"
+      },
+      "period": {
+        "start_date": "2026-08-05",
+        "end_date": "2026-11-02",
+        "days": 90,
+        "timezone": "Asia/Seoul"
+      },
+      "granularity": "week",
+      "series": [
+        {
+          "source_code": "google_trends_rss",
+          "source_name": "Google 트렌드 RSS",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "metric": {
+            "metric_code": "confirmed_items",
+            "unit": "distinct_items",
+            "item_label": "트렌드 항목"
+          },
+          "points": [
+            {
+              "start_date": "2026-08-05",
+              "end_date": "2026-08-09",
+              "days": 5,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 5,
+              "complete": false,
+              "runs": {
+                "successful": 5,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-10",
+              "end_date": "2026-08-16",
+              "days": 7,
+              "value": 3,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-17",
+              "end_date": "2026-08-23",
+              "days": 7,
+              "value": 5,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-24",
+              "end_date": "2026-08-30",
+              "days": 7,
+              "value": 5,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-31",
+              "end_date": "2026-09-06",
+              "days": 7,
+              "value": 6,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-07",
+              "end_date": "2026-09-13",
+              "days": 7,
+              "value": 7,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-14",
+              "end_date": "2026-09-20",
+              "days": 7,
+              "value": 8,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-21",
+              "end_date": "2026-09-27",
+              "days": 7,
+              "value": 6,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-28",
+              "end_date": "2026-10-04",
+              "days": 7,
+              "value": 7,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-05",
+              "end_date": "2026-10-11",
+              "days": 7,
+              "value": 5,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-12",
+              "end_date": "2026-10-18",
+              "days": 7,
+              "value": 6,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 7,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-19",
+              "end_date": "2026-10-25",
+              "days": 7,
+              "value": 6,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 13,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-26",
+              "end_date": "2026-11-01",
+              "days": 7,
+              "value": 6,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 13,
+                "failed": 1
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-02",
+              "end_date": "2026-11-02",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": false,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            }
+          ]
+        },
+        {
+          "source_code": "instagram_graph",
+          "source_name": "Instagram",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "metric": {
+            "metric_code": "confirmed_items",
+            "unit": "distinct_items",
+            "item_label": "게시물"
+          },
+          "points": [
+            {
+              "start_date": "2026-08-05",
+              "end_date": "2026-08-09",
+              "days": 5,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": false,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-10",
+              "end_date": "2026-08-16",
+              "days": 7,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-17",
+              "end_date": "2026-08-23",
+              "days": 7,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-24",
+              "end_date": "2026-08-30",
+              "days": 7,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-08-31",
+              "end_date": "2026-09-06",
+              "days": 7,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-07",
+              "end_date": "2026-09-13",
+              "days": 7,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-14",
+              "end_date": "2026-09-20",
+              "days": 7,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-21",
+              "end_date": "2026-09-27",
+              "days": 7,
+              "value": null,
+              "value_state": "INSUFFICIENT_COVERAGE",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 8,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-09-28",
+              "end_date": "2026-10-04",
+              "days": 7,
+              "value": null,
+              "value_state": "INSUFFICIENT_COVERAGE",
+              "coverage": "COMPLETE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 14,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-05",
+              "end_date": "2026-10-11",
+              "days": 7,
+              "value": 89,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 14,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-12",
+              "end_date": "2026-10-18",
+              "days": 7,
+              "value": 112,
+              "value_state": "OBSERVED",
+              "coverage": "PARTIAL",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 13,
+                "failed": 1
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-19",
+              "end_date": "2026-10-25",
+              "days": 7,
+              "value": 139,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 14,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-26",
+              "end_date": "2026-11-01",
+              "days": 7,
+              "value": 175,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 7,
+              "complete": true,
+              "runs": {
+                "successful": 26,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-02",
+              "end_date": "2026-11-02",
+              "days": 1,
+              "value": 31,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": false,
+              "runs": {
+                "successful": 4,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            }
+          ]
+        },
+        {
+          "source_code": "youtube",
+          "source_name": "YouTube",
+          "availability": "POLICY_BLOCKED",
+          "availability_reason": "YouTube 영상의 음식 언급 추출·파생 지표는 현재 정책상 비활성입니다.",
+          "metric": null,
+          "points": []
+        },
+        {
+          "source_code": "naver_datalab",
+          "source_name": "NAVER 데이터랩",
+          "availability": "NOT_STORED",
+          "availability_reason": "NAVER 상대 검색 지수는 요청 범위 안에서만 의미가 있고 저장하지 않으므로 B8 집계에 포함하지 않습니다.",
+          "metric": null,
+          "points": []
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

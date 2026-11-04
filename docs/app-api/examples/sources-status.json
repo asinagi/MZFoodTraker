@@ -1,0 +1,147 @@
+{
+  "summary": "데이터 갱신·수집 범위",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/sources/status",
+    "query": {},
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "data_through": "2026-11-03T00:00:00Z",
+      "window": {
+        "start_date": "2026-10-28",
+        "end_date": "2026-11-03",
+        "days": 7,
+        "timezone": "Asia/Seoul"
+      },
+      "sources": [
+        {
+          "source_code": "google_trends_rss",
+          "source_name": "Google 트렌드 RSS",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "policy": {
+            "policy_version": "rss-existing-v1",
+            "retention_days": null,
+            "mention_extraction": "ALLOWED",
+            "metric_storage": "STORED"
+          },
+          "observation_scope": "SHARED_FEED",
+          "last_run_at": "2026-11-03T00:00:00Z",
+          "last_successful_run_at": "2026-11-03T00:00:00Z",
+          "latest_coverage": "COMPLETE",
+          "window_stats": {
+            "runs_total": 13,
+            "runs_successful": 12,
+            "runs_failed": 1,
+            "observed_days": 7,
+            "coverage_counts": {
+              "COMPLETE": 12,
+              "LIMITED": 0,
+              "PARTIAL": 0,
+              "NONE": 1
+            }
+          },
+          "quality": {
+            "fail_results": 0,
+            "warn_results": 52,
+            "rejected_items": 0
+          },
+          "legacy_unknown": null
+        },
+        {
+          "source_code": "instagram_graph",
+          "source_name": "Instagram",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "policy": {
+            "policy_version": "instagram-existing-v1",
+            "retention_days": 30,
+            "mention_extraction": "ALLOWED",
+            "metric_storage": "STORED"
+          },
+          "observation_scope": "PER_FOOD_QUERY",
+          "last_run_at": "2026-11-02T12:30:00Z",
+          "last_successful_run_at": "2026-11-02T12:30:00Z",
+          "latest_coverage": "COMPLETE",
+          "window_stats": {
+            "runs_total": 66,
+            "runs_successful": 64,
+            "runs_failed": 2,
+            "observed_days": 6,
+            "coverage_counts": {
+              "COMPLETE": 62,
+              "LIMITED": 2,
+              "PARTIAL": 0,
+              "NONE": 2
+            }
+          },
+          "quality": {
+            "fail_results": 0,
+            "warn_results": 4,
+            "rejected_items": 0
+          },
+          "legacy_unknown": {
+            "runs": 1,
+            "items": 10,
+            "coverage": "UNKNOWN"
+          }
+        },
+        {
+          "source_code": "youtube",
+          "source_name": "YouTube",
+          "availability": "POLICY_BLOCKED",
+          "availability_reason": "YouTube 영상의 음식 언급 추출·파생 지표는 현재 정책상 비활성입니다.",
+          "policy": {
+            "policy_version": "youtube-existing-v1",
+            "retention_days": 29,
+            "mention_extraction": "POLICY_BLOCKED",
+            "metric_storage": "NONE"
+          },
+          "observation_scope": null,
+          "last_run_at": null,
+          "last_successful_run_at": null,
+          "latest_coverage": null,
+          "window_stats": null,
+          "quality": null,
+          "legacy_unknown": null
+        },
+        {
+          "source_code": "naver_datalab",
+          "source_name": "NAVER 데이터랩",
+          "availability": "NOT_STORED",
+          "availability_reason": "NAVER 상대 검색 지수는 요청 범위 안에서만 의미가 있고 저장하지 않으므로 B8 집계에 포함하지 않습니다.",
+          "policy": {
+            "policy_version": "naver-no-response-storage-v1",
+            "retention_days": 0,
+            "mention_extraction": "NOT_APPLICABLE",
+            "metric_storage": "TRANSIENT_ONLY"
+          },
+          "observation_scope": null,
+          "last_run_at": null,
+          "last_successful_run_at": null,
+          "latest_coverage": null,
+          "window_stats": null,
+          "quality": null,
+          "legacy_unknown": null
+        }
+      ],
+      "aggregation": {
+        "mode": "read_time",
+        "materialized": false,
+        "pending_entity_changes": 0
+      }
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "summary": "검색 결과 없음 (200, 빈 목록)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods",
+    "query": {
+      "q": "없는음식"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "items": [],
+      "query": {
+        "q": "없는음식",
+        "kind": null,
+        "sort": "relevance"
+      }
+    },
+    "page": {
+      "limit": 20,
+      "total_items": 0,
+      "has_more": false,
+      "next_cursor": null
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

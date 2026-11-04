@@ -1,0 +1,34 @@
+{
+  "summary": "도메인 이름 Host (DNS 재바인딩 방어)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "query": {},
+    "headers": {
+      "Host": "attacker.example:8030"
+    }
+  },
+  "status": 403,
+  "in_spec": false,
+  "response": {
+    "error": {
+      "code": "FORBIDDEN_HOST",
+      "message": "허용되지 않은 Host로 요청했습니다. IP 주소 또는 localhost로 접속하세요.",
+      "details": [
+        {
+          "parameter": "Host",
+          "reason": "not_ip_or_localhost",
+          "allowed": null
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

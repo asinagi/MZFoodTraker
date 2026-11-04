@@ -19,7 +19,28 @@ from .food_service import NORMALIZATION_VERSION, dump
 from .ingestion import IngestionService, digest
 from .instagram_analysis import normalize_tag
 from .paths import DEFAULT_DATABASE, database_path
+from .storage import Storage
 from .tracking_service import instant, stamp
+
+
+class ScratchStorage(Storage):
+    """A disposable, rebuildable database (mock datasets, fixtures): commits skip fsync. Never a real store."""
+
+    def __init__(self, path):
+        refuse_configured_database(path)
+        super().__init__(path)
+
+    @classmethod
+    def create(cls, path):
+        refuse_configured_database(path)  # before Storage.create runs any DDL
+        return super().create(path)
+
+    @contextmanager
+    def connect(self, readonly=False):
+        with super().connect(readonly) as db:
+            if not readonly:
+                db.execute('PRAGMA synchronous=OFF')
+            yield db
 
 
 def refuse_configured_database(path):

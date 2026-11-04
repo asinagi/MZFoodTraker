@@ -88,7 +88,9 @@
 | `EVIDENCE_EXPIRED` | `null` | 그날 관측한 콘텐츠의 근거가 보존 기한(Instagram 캡션 30일) 경과·출처 삭제로 사라져 값을 다시 만들 수 없음 | 일 |
 | `INSUFFICIENT_COVERAGE` | `null` | 구간 안에 미관측·근거 만료·진행 중인 날이 섞여 있어 구간 전체 값을 제공하지 않음 | 주·기간 |
 
-기간 값은 **기간의 모든 일자가 `OBSERVED`이고 오늘(수집 진행 중)이 포함되지 않을 때만** 숫자를 제공합니다. 일부만 관측된 기간의 부분 합계는 제공하지 않습니다. 상태별 일수는 `day_counts`(`observed`, `not_observed`, `evidence_expired`)에 있습니다.
+기간 값은 **기간의 모든 일자가 `OBSERVED`이고 오늘(수집 진행 중)이 포함되지 않을 때만** 숫자를 제공합니다. 일부만 관측된 기간의 부분 합계는 제공하지 않습니다. 상태별 일수는 `day_counts`(`observed`, `not_observed`, `evidence_expired`)에 있습니다. 추이 그래프의 점은 오늘도 지금까지의 값을 보여 주며 `complete: false`로 표시합니다.
+
+**Instagram 보존 기한 주의**: 캡션 근거는 처음 수집한 뒤 30일이 지나면 정책상 만료됩니다. 그날 관측한 게시물 중 하나라도 근거가 만료되면 그날은 `EVIDENCE_EXPIRED`이므로, 기간의 가장 오래된 날이 경계에 걸리는 **30일·90일 Instagram 기간 값은 대부분 `INSUFFICIENT_COVERAGE`**입니다. 7일 값과 추이 그래프의 최근 구간을 주로 사용하세요. Google 트렌드 RSS는 보존 기한이 없어 이 제약이 없습니다.
 
 ## 7. 관측 범위 `coverage`
 

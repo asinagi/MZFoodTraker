@@ -1,0 +1,37 @@
+{
+  "summary": "정책상 순위 미제공 출처",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/trends/rankings",
+    "query": {
+      "source": "youtube"
+    },
+    "headers": {}
+  },
+  "status": 422,
+  "in_spec": true,
+  "response": {
+    "error": {
+      "code": "SOURCE_NOT_RANKABLE",
+      "message": "이 출처는 정책상 순위를 제공하지 않습니다.",
+      "details": [
+        {
+          "parameter": "source",
+          "reason": "policy_blocked",
+          "allowed": [
+            "google_trends_rss",
+            "instagram_graph"
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

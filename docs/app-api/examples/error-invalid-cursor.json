@@ -1,0 +1,34 @@
+{
+  "summary": "손상된 커서",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods",
+    "query": {
+      "cursor": "not-a-cursor"
+    },
+    "headers": {}
+  },
+  "status": 400,
+  "in_spec": false,
+  "response": {
+    "error": {
+      "code": "INVALID_CURSOR",
+      "message": "페이지 커서가 올바르지 않거나 다른 조건의 커서입니다. 첫 페이지부터 다시 요청하세요.",
+      "details": [
+        {
+          "parameter": "cursor",
+          "reason": "malformed",
+          "allowed": null
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

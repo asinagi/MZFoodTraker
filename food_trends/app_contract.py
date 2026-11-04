@@ -622,8 +622,9 @@ def load_examples(directory):
     for file in sorted(Path(directory).glob('*.json')):
         example = json.loads(file.read_text(encoding='utf-8'))
         template, operation = operation_for(document, example['request']['path'])
-        if template is None or example['request']['method'] != 'GET' or str(example['status']) not in operation['responses']:
-            continue  # method/route error examples are documented in ERRORS.md, not on an operation
+        if (not example.get('in_spec', True) or template is None or example['request']['method'] != 'GET'
+                or str(example['status']) not in operation['responses']):
+            continue  # large series and transport-level errors stay in the example files and ERRORS.md
         examples.setdefault((template, str(example['status'])), []).append((file.stem, example['summary'], example['response']))
     return examples
 

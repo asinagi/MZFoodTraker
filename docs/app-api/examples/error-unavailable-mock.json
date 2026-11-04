@@ -1,0 +1,34 @@
+{
+  "summary": "저장소 사용 불가 (Mock 서버 X-Mock-Error: 503)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/sources/status",
+    "query": {},
+    "headers": {
+      "X-Mock-Error": "503"
+    }
+  },
+  "status": 503,
+  "in_spec": true,
+  "response": {
+    "error": {
+      "code": "DATA_UNAVAILABLE",
+      "message": "데이터 저장소를 사용할 수 없습니다. 잠시 후 다시 시도하세요.",
+      "details": [
+        {
+          "parameter": "X-Mock-Error",
+          "reason": "mock_simulated",
+          "allowed": null
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

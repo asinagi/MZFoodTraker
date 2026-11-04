@@ -1,0 +1,174 @@
+{
+  "summary": "Instagram 7일 순위",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/trends/rankings",
+    "query": {
+      "source": "instagram_graph",
+      "period": "7d"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "basis": {
+        "source_code": "instagram_graph",
+        "source_name": "Instagram",
+        "metric": {
+          "metric_code": "confirmed_items",
+          "unit": "distinct_items",
+          "item_label": "게시물"
+        },
+        "period": {
+          "start_date": "2026-10-27",
+          "end_date": "2026-11-02",
+          "days": 7,
+          "timezone": "Asia/Seoul"
+        },
+        "previous_period": {
+          "start_date": "2026-10-20",
+          "end_date": "2026-10-26",
+          "days": 7,
+          "timezone": "Asia/Seoul"
+        },
+        "scope": "SINGLE_SOURCE",
+        "observation_scope": "PER_FOOD_QUERY",
+        "notes": [
+          "같은 출처·단위·기간의 고유 콘텐츠 수만 비교합니다. 출처를 합친 종합 점수는 제공하지 않습니다.",
+          "Instagram은 음식별 해시태그 검색 회차가 성공한 날만 관측합니다. 추적 해시태그 수와 페이지 상한에 따라 값의 범위가 다를 수 있습니다."
+        ]
+      },
+      "items": [
+        {
+          "rank": 1,
+          "food": {
+            "food_id": "FOOD_MOCK_DUJJONKU",
+            "canonical_name": "[MOCK] 두쫀쿠",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 181,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 142,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": 39,
+            "ratio": 0.2746
+          }
+        },
+        {
+          "rank": 2,
+          "food": {
+            "food_id": "FOOD_MOCK_MALATANG",
+            "canonical_name": "[MOCK] 마라탕",
+            "entity_kind": "DISH"
+          },
+          "current": {
+            "value": 85,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 80,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": 5,
+            "ratio": 0.0625
+          }
+        },
+        {
+          "rank": 3,
+          "food": {
+            "food_id": "FOOD_MOCK_TANGHULU",
+            "canonical_name": "[MOCK] 탕후루",
+            "entity_kind": "DISH"
+          },
+          "current": {
+            "value": 39,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 49,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": -10,
+            "ratio": -0.2041
+          }
+        }
+      ],
+      "excluded": {
+        "insufficient_coverage": 2,
+        "not_observed": 3,
+        "zero_value": 0
+      }
+    },
+    "page": {
+      "limit": 20,
+      "total_items": 3,
+      "has_more": false,
+      "next_cursor": null
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

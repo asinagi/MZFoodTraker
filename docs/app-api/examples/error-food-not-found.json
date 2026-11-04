@@ -3,9 +3,11 @@
   "request": {
     "method": "GET",
     "path": "/api/v1/foods/FOOD_UNKNOWN",
-    "query": {}
+    "query": {},
+    "headers": {}
   },
   "status": 404,
+  "in_spec": true,
   "response": {
     "error": {
       "code": "FOOD_NOT_FOUND",

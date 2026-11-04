@@ -1,0 +1,159 @@
+{
+  "summary": "오늘 포함 (complete=false)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods/FOOD_MOCK_BUTTERTTEOK/timeline",
+    "query": {
+      "period": "7d",
+      "end_date": "2026-11-03",
+      "source": "google_trends_rss"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "food": {
+        "food_id": "FOOD_MOCK_BUTTERTTEOK",
+        "canonical_name": "[MOCK] 버터떡",
+        "entity_kind": "PRODUCT"
+      },
+      "period": {
+        "start_date": "2026-10-28",
+        "end_date": "2026-11-03",
+        "days": 7,
+        "timezone": "Asia/Seoul"
+      },
+      "granularity": "day",
+      "series": [
+        {
+          "source_code": "google_trends_rss",
+          "source_name": "Google 트렌드 RSS",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "metric": {
+            "metric_code": "confirmed_items",
+            "unit": "distinct_items",
+            "item_label": "트렌드 항목"
+          },
+          "points": [
+            {
+              "start_date": "2026-10-28",
+              "end_date": "2026-10-28",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-29",
+              "end_date": "2026-10-29",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 1,
+                "failed": 1
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-30",
+              "end_date": "2026-10-30",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-31",
+              "end_date": "2026-10-31",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-01",
+              "end_date": "2026-11-01",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-02",
+              "end_date": "2026-11-02",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-03",
+              "end_date": "2026-11-03",
+              "days": 1,
+              "value": 1,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": false,
+              "runs": {
+                "successful": 1,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            }
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

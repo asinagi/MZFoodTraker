@@ -6,9 +6,11 @@
     "query": {
       "source": "google_trends_rss",
       "period": "7d"
-    }
+    },
+    "headers": {}
   },
   "status": 200,
+  "in_spec": true,
   "response": {
     "data": {
       "basis": {
@@ -41,12 +43,48 @@
         {
           "rank": 1,
           "food": {
+            "food_id": "FOOD_MOCK_BUTTERTTEOK",
+            "canonical_name": "[MOCK] 버터떡",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 7,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 1,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": 6,
+            "ratio": 6.0
+          }
+        },
+        {
+          "rank": 2,
+          "food": {
             "food_id": "FOOD_MOCK_DUJJONKU",
             "canonical_name": "[MOCK] 두쫀쿠",
             "entity_kind": "PRODUCT"
           },
           "current": {
-            "value": 9,
+            "value": 5,
             "value_state": "OBSERVED",
             "coverage": "COMPLETE",
             "day_counts": {
@@ -70,19 +108,19 @@
           "change": {
             "state": "COMPARABLE",
             "reason": null,
-            "absolute": 3,
-            "ratio": 0.5
+            "absolute": -1,
+            "ratio": -0.1667
           }
         },
         {
-          "rank": 2,
+          "rank": 3,
           "food": {
             "food_id": "FOOD_MOCK_MALATANG",
             "canonical_name": "[MOCK] 마라탕",
             "entity_kind": "DISH"
           },
           "current": {
-            "value": 4,
+            "value": 3,
             "value_state": "OBSERVED",
             "coverage": "COMPLETE",
             "day_counts": {
@@ -93,7 +131,7 @@
             "includes_incomplete_day": false
           },
           "previous": {
-            "value": 5,
+            "value": 2,
             "value_state": "OBSERVED",
             "coverage": "COMPLETE",
             "day_counts": {
@@ -106,8 +144,80 @@
           "change": {
             "state": "COMPARABLE",
             "reason": null,
-            "absolute": -1,
-            "ratio": -0.2
+            "absolute": 1,
+            "ratio": 0.5
+          }
+        },
+        {
+          "rank": 4,
+          "food": {
+            "food_id": "FOOD_MOCK_JJAPJJONKU",
+            "canonical_name": "[MOCK] 짭쫀쿠",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 1,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 0,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": "PREVIOUS_ZERO",
+            "absolute": 1,
+            "ratio": null
+          }
+        },
+        {
+          "rank": 4,
+          "food": {
+            "food_id": "FOOD_MOCK_PISTACHIO",
+            "canonical_name": "[MOCK] 피스타치오 크림",
+            "entity_kind": "INGREDIENT"
+          },
+          "current": {
+            "value": 1,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 1,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 7,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": 0,
+            "ratio": 0.0
           }
         }
       ],
@@ -119,7 +229,7 @@
     },
     "page": {
       "limit": 20,
-      "total_items": 2,
+      "total_items": 5,
       "has_more": false,
       "next_cursor": null
     },

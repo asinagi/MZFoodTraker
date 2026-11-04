@@ -1,0 +1,32 @@
+{
+  "summary": "없는 경로",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/trends",
+    "query": {},
+    "headers": {}
+  },
+  "status": 404,
+  "in_spec": false,
+  "response": {
+    "error": {
+      "code": "ROUTE_NOT_FOUND",
+      "message": "지원하지 않는 경로입니다.",
+      "details": [
+        {
+          "parameter": null,
+          "reason": "unknown_route",
+          "allowed": null
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

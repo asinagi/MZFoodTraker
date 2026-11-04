@@ -1,0 +1,247 @@
+{
+  "summary": "Google 트렌드 RSS 30일 순위 (정상 관측 0 포함)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/trends/rankings",
+    "query": {
+      "source": "google_trends_rss",
+      "period": "30d",
+      "include_zero": "true",
+      "limit": "5"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": false,
+  "response": {
+    "data": {
+      "basis": {
+        "source_code": "google_trends_rss",
+        "source_name": "Google 트렌드 RSS",
+        "metric": {
+          "metric_code": "confirmed_items",
+          "unit": "distinct_items",
+          "item_label": "트렌드 항목"
+        },
+        "period": {
+          "start_date": "2026-10-04",
+          "end_date": "2026-11-02",
+          "days": 30,
+          "timezone": "Asia/Seoul"
+        },
+        "previous_period": {
+          "start_date": "2026-09-04",
+          "end_date": "2026-10-03",
+          "days": 30,
+          "timezone": "Asia/Seoul"
+        },
+        "scope": "SINGLE_SOURCE",
+        "observation_scope": "SHARED_FEED",
+        "notes": [
+          "같은 출처·단위·기간의 고유 콘텐츠 수만 비교합니다. 출처를 합친 종합 점수는 제공하지 않습니다."
+        ]
+      },
+      "items": [
+        {
+          "rank": 1,
+          "food": {
+            "food_id": "FOOD_MOCK_DUJJONKU",
+            "canonical_name": "[MOCK] 두쫀쿠",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 25,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 30,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": -5,
+            "ratio": -0.1667
+          }
+        },
+        {
+          "rank": 2,
+          "food": {
+            "food_id": "FOOD_MOCK_MALATANG",
+            "canonical_name": "[MOCK] 마라탕",
+            "entity_kind": "DISH"
+          },
+          "current": {
+            "value": 11,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 12,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": -1,
+            "ratio": -0.0833
+          }
+        },
+        {
+          "rank": 3,
+          "food": {
+            "food_id": "FOOD_MOCK_BUTTERTTEOK",
+            "canonical_name": "[MOCK] 버터떡",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 8,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 0,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": "PREVIOUS_ZERO",
+            "absolute": 8,
+            "ratio": null
+          }
+        },
+        {
+          "rank": 4,
+          "food": {
+            "food_id": "FOOD_MOCK_PISTACHIO",
+            "canonical_name": "[MOCK] 피스타치오 크림",
+            "entity_kind": "INGREDIENT"
+          },
+          "current": {
+            "value": 5,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 2,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": null,
+            "absolute": 3,
+            "ratio": 1.5
+          }
+        },
+        {
+          "rank": 5,
+          "food": {
+            "food_id": "FOOD_MOCK_JJAPJJONKU",
+            "canonical_name": "[MOCK] 짭쫀쿠",
+            "entity_kind": "PRODUCT"
+          },
+          "current": {
+            "value": 3,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "previous": {
+            "value": 0,
+            "value_state": "OBSERVED",
+            "coverage": "COMPLETE",
+            "day_counts": {
+              "observed": 30,
+              "not_observed": 0,
+              "evidence_expired": 0
+            },
+            "includes_incomplete_day": false
+          },
+          "change": {
+            "state": "COMPARABLE",
+            "reason": "PREVIOUS_ZERO",
+            "absolute": 3,
+            "ratio": null
+          }
+        }
+      ],
+      "excluded": {
+        "insufficient_coverage": 0,
+        "not_observed": 0,
+        "zero_value": 0
+      }
+    },
+    "page": {
+      "limit": 5,
+      "total_items": 8,
+      "has_more": true,
+      "next_cursor": "eyJ2IjoxLCJvIjo1LCJmIjoiOWM1MmJkMzMxMmQxODUzMyIsImUiOiIyMDI2LTExLTAyIn0"
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

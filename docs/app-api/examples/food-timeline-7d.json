@@ -1,13 +1,15 @@
 {
-  "summary": "일별 추이 (미관측일 포함)",
+  "summary": "일별 추이 7일 (Instagram 상승, RSS 관측)",
   "request": {
     "method": "GET",
     "path": "/api/v1/foods/FOOD_MOCK_DUJJONKU/timeline",
     "query": {
       "period": "7d"
-    }
+    },
+    "headers": {}
   },
   "status": 200,
+  "in_spec": true,
   "response": {
     "data": {
       "food": {
@@ -38,7 +40,7 @@
               "start_date": "2026-10-27",
               "end_date": "2026-10-27",
               "days": 1,
-              "value": 1,
+              "value": 0,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
@@ -53,7 +55,7 @@
               "start_date": "2026-10-28",
               "end_date": "2026-10-28",
               "days": 1,
-              "value": 0,
+              "value": 2,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
@@ -68,14 +70,14 @@
               "start_date": "2026-10-29",
               "end_date": "2026-10-29",
               "days": 1,
-              "value": 2,
+              "value": 0,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 2,
-                "failed": 0
+                "successful": 1,
+                "failed": 1
               },
               "legacy_unknown_value": null
             },
@@ -98,7 +100,7 @@
               "start_date": "2026-10-31",
               "end_date": "2026-10-31",
               "days": 1,
-              "value": 2,
+              "value": 1,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
@@ -113,7 +115,7 @@
               "start_date": "2026-11-01",
               "end_date": "2026-11-01",
               "days": 1,
-              "value": 3,
+              "value": 1,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
@@ -128,7 +130,7 @@
               "start_date": "2026-11-02",
               "end_date": "2026-11-02",
               "days": 1,
-              "value": 2,
+              "value": 0,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
@@ -156,13 +158,13 @@
               "start_date": "2026-10-27",
               "end_date": "2026-10-27",
               "days": 1,
-              "value": 8,
+              "value": 28,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 2,
+                "successful": 4,
                 "failed": 0
               },
               "legacy_unknown_value": null
@@ -171,13 +173,13 @@
               "start_date": "2026-10-28",
               "end_date": "2026-10-28",
               "days": 1,
-              "value": 9,
+              "value": 28,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 2,
+                "successful": 4,
                 "failed": 0
               },
               "legacy_unknown_value": null
@@ -186,14 +188,14 @@
               "start_date": "2026-10-29",
               "end_date": "2026-10-29",
               "days": 1,
-              "value": null,
-              "value_state": "NOT_OBSERVED",
-              "coverage": "NONE",
-              "observed_days": 0,
+              "value": 28,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 0,
-                "failed": 2
+                "successful": 4,
+                "failed": 0
               },
               "legacy_unknown_value": null
             },
@@ -201,14 +203,14 @@
               "start_date": "2026-10-30",
               "end_date": "2026-10-30",
               "days": 1,
-              "value": 11,
+              "value": 30,
               "value_state": "OBSERVED",
-              "coverage": "PARTIAL",
+              "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 1,
-                "failed": 1
+                "successful": 4,
+                "failed": 0
               },
               "legacy_unknown_value": null
             },
@@ -216,13 +218,13 @@
               "start_date": "2026-10-31",
               "end_date": "2026-10-31",
               "days": 1,
-              "value": 14,
+              "value": 30,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 2,
+                "successful": 4,
                 "failed": 0
               },
               "legacy_unknown_value": null
@@ -231,13 +233,13 @@
               "start_date": "2026-11-01",
               "end_date": "2026-11-01",
               "days": 1,
-              "value": 0,
+              "value": 30,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 2,
+                "successful": 4,
                 "failed": 0
               },
               "legacy_unknown_value": null
@@ -246,13 +248,13 @@
               "start_date": "2026-11-02",
               "end_date": "2026-11-02",
               "days": 1,
-              "value": 17,
+              "value": 31,
               "value_state": "OBSERVED",
               "coverage": "COMPLETE",
               "observed_days": 1,
               "complete": true,
               "runs": {
-                "successful": 2,
+                "successful": 4,
                 "failed": 0
               },
               "legacy_unknown_value": null
