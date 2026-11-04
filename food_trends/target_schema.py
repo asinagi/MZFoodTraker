@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 2
+TARGET_SCHEMA_VERSION = 3
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -267,21 +267,28 @@ TABLES = (
     Table('execution_mappings', (NN('job_id', 'id'), NN('plan_id', 'id'), NN('target_id', 'id'), NN('generation', 'int'),
           NN('food_revision', 'int'), NN('mapping_json', 'json'), NN('started', 'int')), ('job_id', 'target_id'),
           fks=((('job_id',), 'execution_jobs', ('job_id',)), (('plan_id',), 'planner_plans', ('plan_id',)),
-               (('target_id',), 'tracking_targets', ('target_id',))), checks=('started IN (0,1)',), mutable=('started',)),
+               (('target_id',), 'tracking_targets', ('target_id',))), checks=('started IN (0,1)',), mutable=('started',), meta={'since': 2}),
     Table('execution_leases', (NN('resource_key', 'id'), NN('owner_id', 'text'), NN('fencing_generation', 'int'), NN('acquired_at', 'ts'),
           NN('renewed_at', 'ts'), NN('expires_at', 'ts')), ('resource_key',), fks=((('resource_key',), 'execution_jobs', ('job_id',)),),
-          checks=('fencing_generation>0',), mutable=('owner_id', 'fencing_generation', 'acquired_at', 'renewed_at', 'expires_at')),
+          checks=('fencing_generation>0',), mutable=('owner_id', 'fencing_generation', 'acquired_at', 'renewed_at', 'expires_at'), meta={'since': 2}),
     Table('execution_checkpoints', (NN('job_id', 'id'), NN('state_json', 'json'), NN('updated_at', 'ts'), NN('expires_at', 'ts')),
-          ('job_id',), fks=((('job_id',), 'execution_jobs', ('job_id',)),), mutable=('state_json', 'updated_at', 'expires_at')),
+          ('job_id',), fks=((('job_id',), 'execution_jobs', ('job_id',)),), mutable=('state_json', 'updated_at', 'expires_at'), meta={'since': 2}),
     Table('execution_item_receipts', (NN('job_id', 'id'), NN('item_id', 'key'), NN('observed_at', 'ts'), NN('expires_at', 'ts')),
-          ('job_id', 'item_id'), fks=((('job_id',), 'execution_jobs', ('job_id',)),), indexes=(('expires_at',),)),
+          ('job_id', 'item_id'), fks=((('job_id',), 'execution_jobs', ('job_id',)),), indexes=(('expires_at',),), meta={'since': 2}),
     Table('execution_blocks', (NN('source_id', 'code'), NN('account_scope', 'code'), NN('error_kind', 'code'), NN('blocked_at', 'ts'),
-          C('until_at', 'ts')), ('source_id', 'account_scope'), mutable=('error_kind', 'blocked_at', 'until_at')),
+          C('until_at', 'ts')), ('source_id', 'account_scope'), mutable=('error_kind', 'blocked_at', 'until_at'), meta={'since': 2}),
     Table('quota_charges', (NN('reservation_id', 'id'), NN('resource_code', 'code', source='resource'), NN('cost', 'int'), C('distinct_key', 'text'),
           NN('window_start', 'ts'), NN('window_end', 'ts'), NN('reset_timezone', 'code'), C('local_limit', 'int'), C('provider_limit', 'int')),
           ('reservation_id', 'resource_code'), fks=((('reservation_id',), 'quota_reservations', ('reservation_id',)),),
           checks=('cost>=0',), indexes=(('resource_code', 'window_start', 'window_end'),),
-          mutable=('cost', 'distinct_key', 'window_start', 'window_end', 'reset_timezone', 'local_limit', 'provider_limit')),
+          mutable=('cost', 'distinct_key', 'window_start', 'window_end', 'reset_timezone', 'local_limit', 'provider_limit'), meta={'since': 2}),
+    # v3 Oracle planner history (runtime-owned like v2: the SQLite planner keeps its own copies).
+    Table('planner_plan_targets', (NN('plan_id', 'id'), NN('target_id', 'id'), NN('generation', 'int'), NN('food_revision', 'int'),
+          NN('due_at', 'ts'), NN('mapping_json', 'json')), ('plan_id', 'target_id'),
+          fks=((('plan_id',), 'planner_plans', ('plan_id',)), (('target_id',), 'tracking_targets', ('target_id',))),
+          indexes=(('target_id',),), meta={'since': 3}),
+    Table('planner_commands', (NN('request_key', 'key'), NN('payload_hash', 'hash'), NN('result_json', 'json'), NN('created_at', 'ts')),
+          ('request_key',), meta={'since': 3}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),

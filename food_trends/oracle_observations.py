@@ -86,7 +86,7 @@ class OracleObservationService(FoodObservationService):
         return [dict(self._item(t, r['item_key']), run_observed_at=stamp(utc_value(r['observed_at']))) for r in rows]
 
     def _recent_runs(self, limit):
-        with self.execution.transaction() as t:
+        with self.execution.reader() as t:
             fetch = ' FETCH FIRST %d ROWS ONLY' % limit if t.oracle else ' LIMIT %d' % limit
             return [r['ingest_run_id'] for r in t.rows('SELECT ingest_run_id FROM ingest_runs ORDER BY ingested_at DESC,ingest_run_id' + fetch)]
 
@@ -98,7 +98,7 @@ class OracleObservationService(FoodObservationService):
             WHERE m.job_id=:b_j ORDER BY g.food_id''', b_j=job_id)]
 
     def _pending_events(self):
-        with self.execution.transaction() as t:
+        with self.execution.reader() as t:
             return t.rows('''SELECT * FROM food_events e WHERE subject_type IN ('alias','food')
                 AND action IN ('APPROVED','CHANGED','REVERTED','MERGED')
                 AND NOT EXISTS (SELECT 1 FROM entity_change_effects x WHERE x.food_event_id=e.event_id)
@@ -143,7 +143,7 @@ class OracleObservationService(FoodObservationService):
 
     def food_view(self, food_id):
         """FoodObservationService.food_view over the target: same shape and per-source semantics."""
-        with self.execution.transaction() as t:
+        with self.execution.reader() as t:
             food = t.one('SELECT * FROM food_entities WHERE food_id=:b_f', 'food_entities', b_f=food_id)
             if food is None:
                 return None

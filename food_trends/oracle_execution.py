@@ -29,7 +29,7 @@ from .ingestion import item_key
 from .instagram_analysis import extract_hashtags
 from .query_planner import PLANNER_VERSION, digest
 from .quota import COST_VERSION, QuotaManager, daily_window
-from .target_db import OracleUnavailable, TargetError, canonical_json, convert, iso, logical, utc
+from .target_db import OracleTarget, OracleUnavailable, SQLiteTarget, TargetError, UniqueViolation, canonical_json, convert, iso, logical, utc
 from .target_repository import policy
 from .target_schema import BY_NAME, TARGET_SCHEMA_VERSION
 from .tracking_service import instant, stamp
@@ -88,6 +88,24 @@ class _Tx:
 
     def insert(self, table, row):
         self.run('INSERT INTO %s (%s) VALUES (%s)' % (table, ','.join(row), ','.join(':b_' + k for k in row)), **self._binds(table, row))
+
+    def insert_absent(self, table, row, key=None):
+        """INSERT OR IGNORE: 1 when inserted, 0 when the key exists. A concurrent insert of the same key counts as
+        present (the failed statement alone is rolled back; the transaction continues)."""
+        spec, dialect = BY_NAME[table], 'oracle' if self.oracle else 'sqlite'
+        key = key or spec.key
+        where = ' AND '.join('%s=:k_%s' % (k, k) for k in key)
+        if self.scalar('SELECT count(*) AS c FROM %s WHERE %s' % (table, where),
+                       **{'k_' + k: convert(spec.column(k), row[k], dialect) for k in key}):
+            return 0
+        try:
+            self.insert(table, row)
+        except Exception as exc:
+            mapped = exc if isinstance(exc, TargetError) else (OracleTarget if self.oracle else SQLiteTarget).map_error(exc)
+            if isinstance(mapped, UniqueViolation):
+                return 0
+            raise mapped from None
+        return 1
 
     def update(self, table, where, **changes):
         binds = self._binds(table, changes)
@@ -207,6 +225,7 @@ class OracleExecution:
             # Never migrates here: the operator runs --target-migrate explicitly.
             raise TargetError('target_schema_version_mismatch')
         self.quota = OracleQuota(self)
+        self.planner = None  # an OracleQueryPlanner attaches itself (schedule() needs one)
         self.claim_locked = lambda job_id: None  # test hook: runs while the claim holds the job lock
 
     def now(self):
@@ -220,8 +239,23 @@ class OracleExecution:
 
     @contextmanager
     def transaction(self):
+        """A runtime write transaction."""
         with self.db.transaction() as cursor:
             yield _Tx(cursor)
+
+    @contextmanager
+    def reader(self):
+        """A transaction that only reads (status, preview, history)."""
+        with self.db.transaction() as cursor:
+            yield _Tx(cursor)
+
+    def schedule(self, options=None, mode='mock'):
+        """ExecutionService.schedule on the target: commit due plans with the Oracle planner, then enqueue them."""
+        if self.planner is None:
+            raise FoodError('Oracle 계획기가 연결되지 않았습니다.', 409)
+        plans = self.planner.commit(identity('SCHEDULE'), options=options)
+        ids = [p['plan_id'] for p in plans['plans'] if p['source_id'] != 'google_trends_rss' and p['decision'] != 'NOT_DUE']
+        return self.enqueue(ids, mode) if ids else []
 
     # Reads
 
@@ -555,7 +589,7 @@ class OracleExecution:
             t.update('execution_leases', {'resource_key': job['job_id']}, expires_at=now)
 
     def status(self, job_id=None):
-        with self.transaction() as t:
+        with self.reader() as t:
             if job_id:
                 rows = [self._job(t, job_id)]
             else:
@@ -621,7 +655,7 @@ class OracleRequestSession(RequestSession):
         self.reservation_id = None
         self.counts = {}
         self.state = {}
-        with execution.transaction() as t:
+        with execution.reader() as t:
             checkpoint = t.one('SELECT * FROM execution_checkpoints WHERE job_id=:b_j', 'execution_checkpoints', b_j=claim['job']['job_id'])
         if checkpoint:
             if instant(checkpoint['expires_at']) <= execution.now():
@@ -859,7 +893,9 @@ def oracle_mock_controller(repo, accounts, clock=None, transport=None, settings=
     """
     from .execution_mock import MockTransport, mock_clients
     from .execution_runtime import ExecutionController
+    from .oracle_planner import OracleQueryPlanner
     execution = OracleExecution(repo, accounts, clock, settings)
+    OracleQueryPlanner(execution)
     clients = mock_clients(execution.accounts.values(), transport or MockTransport())
     ingestion = observations = None
     if pipeline:

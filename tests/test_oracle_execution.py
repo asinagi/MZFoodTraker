@@ -419,20 +419,21 @@ class OracleExecutionStandInTests(unittest.TestCase):
         self.assertEqual(result['status'], 'BLOCKED')
         self.assertIn('LIVE_NOT_SUPPORTED_BY_ORACLE_RUNTIME', result['reasons'])
 
-    def test_schema_v1_upgrades_to_v2_explicitly(self):
+    def test_schema_v1_upgrades_explicitly(self):
+        from food_trends.target_schema import TABLES
+        oracle = self.repo.db.dialect == 'oracle'
         with self.repo.db.transaction() as tx:
-            for table in ('quota_charges', 'execution_blocks', 'execution_item_receipts', 'execution_checkpoints', 'execution_leases', 'execution_mappings'):
-                tx.execute('DROP TABLE %s' % table)
+            # Recreate a v1 schema: drop every later table (children first) and the v2 column.
+            for spec in reversed([t for t in TABLES if t.meta.get('since', 1) > 1]):
+                tx.execute('DROP TABLE %s%s' % (spec.name, ' CASCADE CONSTRAINTS PURGE' if oracle else ''))
             tx.execute('ALTER TABLE source_contents DROP COLUMN source_payload_hash')
-            tx.execute('DELETE FROM target_schema_migrations WHERE version=2')
-            if not tx.scalar('SELECT count(*) FROM target_schema_migrations'):
-                tx.execute("INSERT INTO target_schema_migrations VALUES (1,'v1',%s)" %
-                           ('SYSTIMESTAMP' if self.repo.db.dialect == 'oracle' else "'2026-11-03T00:00:00+00:00'"))
+            tx.execute('DELETE FROM target_schema_migrations')
+            tx.execute("INSERT INTO target_schema_migrations VALUES (1,'v1',%s)" % ('SYSTIMESTAMP' if oracle else "'2026-11-03T00:00:00+00:00'"))
         self.assertEqual(self.repo.schema_version(), 1)
         with self.assertRaises(TargetError):
             OracleExecution(self.repo, self.tracking.accounts)
         result = self.repo.migrate()
-        self.assertEqual((result['version'], result['applied']), (TARGET_SCHEMA_VERSION, [2]))
+        self.assertEqual((result['version'], result['applied']), (TARGET_SCHEMA_VERSION, list(range(2, TARGET_SCHEMA_VERSION + 1))))
         self.assertEqual(self.repo.migrate()['applied'], [])
         OracleExecution(self.repo, self.tracking.accounts)
 
