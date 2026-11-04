@@ -115,14 +115,72 @@ class _Tx:
 
 
 class OracleQuota(QuotaManager):
-    """B2 budget accounting over the target's quota_reservations/quota_charges (no legacy call tables)."""
+    """B2 budget accounting on the target: workflow reservations plus the imported legacy usage ledger (R4).
+
+    Legacy usage is counted exactly as QuotaManager._observed counts the SQLite call tables, from
+    quota_usage_ledger rows for the same account scope and window, so assess() equals the SQLite result.
+    usage() adds per line where the usage came from and how certain it is; nothing claims a provider-confirmed debit.
+    """
+    LEGACY_FRESH = timedelta(minutes=15)
 
     def __init__(self, execution):
         super().__init__(None, execution, execution._validate)
         self.execution = execution
 
+    def _ledger(self, db, scope, resource):
+        return db.rows('''SELECT * FROM quota_usage_ledger WHERE account_scope=:b_a AND quota_type=:b_r''', 'quota_usage_ledger',
+                       b_a=scope, b_r=resource)
+
     def _observed(self, db, plan, resource, now):
-        return 0, {}
+        scope, observed, known = plan['account_scope'], 0, {}
+        if resource.startswith('youtube.') or resource == 'naver.calls':
+            zone = 'America/Los_Angeles' if resource.startswith('youtube.') else 'Asia/Seoul'
+            start = instant(daily_window(now, zone)['start'])
+            observed = sum(r['usage'] for r in self._ledger(db, scope, resource) if instant(r['window_start']) == start)
+        elif resource == 'instagram.unique_tags':
+            for r in self._ledger(db, scope, resource):
+                if instant(r['window_end']) > instant(now):
+                    known.setdefault(r['distinct_key'], r['window_end'])
+            observed = len(known)
+        return observed, known
+
+    def coverage(self, db, source, scope, now):
+        """How well usage outside this runtime is known for one account scope."""
+        row = db.one('SELECT * FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a', 'quota_accounts', b_s=source, b_a=scope)
+        if row is None or row['usage_status'] == 'UNVERIFIED':
+            return 'UNVERIFIED'
+        if row['usage_status'] == 'EXCLUSIVE':
+            return 'RUNTIME_EXCLUSIVE'
+        if row['legacy_observed_through'] is None or instant(row['legacy_observed_through']) < instant(now) - self.LEGACY_FRESH:
+            return 'STALE'
+        return 'IMPORTED_LEGACY'
+
+    def usage(self, db, plan, now, exclude=None):
+        """assess() plus, per line, where the usage came from and how certain it is (assess() itself stays the SQLite contract)."""
+        budget = self.assess(db, plan, now, exclude)
+        coverage = self.coverage(db, plan['source_id'], plan['account_scope'], now)
+        for line in budget['lines']:
+            rows = [r for r in self._ledger(db, plan['account_scope'], line['resource'])
+                    if instant(r['window_end']) > instant(now) and instant(r['window_start']) <= instant(now)]
+            legacy, _ = self._observed(db, plan, line['resource'], now)
+            uncertain = any(r['confidence'] != 'COUNTED' for r in rows)
+            window = {'start': line['window_start'], 'end': line['window_end'], 'timezone': line['reset_timezone']}
+            line.update(legacy_usage=legacy, workflow_usage=line['observed_usage'] - legacy, provider_window=window, local_window=window,
+                        provider_timezone=line['reset_timezone'], legacy_evidence=sorted({r['evidence'] for r in rows}),
+                        usage_confidence=coverage + ('_WITH_UNCERTAIN' if uncertain and coverage == 'IMPORTED_LEGACY' else ''),
+                        source_of_truth='target:quota_usage_ledger+quota_reservations')
+        budget['usage_coverage'] = coverage
+        budget['usage_verified'] = coverage in ('IMPORTED_LEGACY', 'RUNTIME_EXCLUSIVE')
+        return budget
+
+    def _lock_account(self, db, plan):
+        """Serialize usage assessment and reservation per account scope (two plans cannot both take the last unit)."""
+        row = dict(source_id=plan['source_id'], account_scope=plan['account_scope'], usage_status='UNVERIFIED', legacy_observed_through=None,
+                   evidence_ref=None, updated_at=self.execution.now())
+        db.insert_absent('quota_accounts', row)
+        if db.oracle:
+            db.run('SELECT source_id FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a FOR UPDATE',
+                   b_s=plan['source_id'], b_a=plan['account_scope']).fetchall()
 
     def _recorded(self, db, source, scope, resource):
         rows = db.rows('''SELECT c.reservation_id,c.resource_code,c.cost,c.distinct_key,c.window_start,c.window_end,r.state,r.expires_at
@@ -155,6 +213,7 @@ class OracleQuota(QuotaManager):
                 raise FoodError('같은 예약 키의 요청이 다릅니다.', 409)
             return old
         plan = self.execution._plan(db, plan_id)
+        self._lock_account(db, plan)
         validation = self.validator(db, plan, now)
         if not validation['valid']:
             raise FoodError('현재 대상·세대·정책에 유효한 계획이 아닙니다.', 409)
@@ -186,6 +245,7 @@ class OracleQuota(QuotaManager):
         if row['state'] != 'RESERVED' or instant(row['expires_at']) <= now:
             raise FoodError('예약이 해제되었거나 만료됐습니다.', 409)
         plan = self.execution._plan(db, row['plan_id'])
+        self._lock_account(db, plan)
         validation = self.validator(db, plan, now)
         frozen = {t['target_id'] for t in json.loads(row['target_snapshot_json'])}
         eligible = [t for t in validation['eligible_targets'] if t['target_id'] in frozen]
@@ -210,7 +270,7 @@ class OracleExecution:
     """ExecutionService's method contract (enqueue/claim/renew/begin/finish/fail/status) on the target schema."""
     session_class = None  # set below to OracleRequestSession
 
-    def __init__(self, repo, accounts, clock=None, settings=None, ownership=None):
+    def __init__(self, repo, accounts, clock=None, settings=None, ownership=None, require_verified_usage=False):
         from .runtime_ownership import RuntimeOwnership
         self.repo, self.db = repo, repo.db
         self.accounts = accounts if isinstance(accounts, dict) else {(a.source_id, a.account_scope): a for a in accounts}
@@ -233,6 +293,8 @@ class OracleExecution:
         self.ownership = ownership or RuntimeOwnership(repo)
         self.participant_id = identity('RUNTIME')
         self.lease, self._renew_at = None, None
+        # R4: live execution always needs verified external usage; mock runs can opt in to test the rule.
+        self.require_verified_usage = require_verified_usage
 
     def now(self):
         return instant(self.clock())
@@ -243,7 +305,16 @@ class OracleExecution:
             self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
             self._renew_at = moment + self.ownership.ttl / 2
         elif moment >= self._renew_at:
-            self.ownership.renew(self.lease)
+            from .runtime_ownership import OwnershipRefused
+            try:
+                self.ownership.renew(self.lease)
+            except OwnershipRefused as exc:
+                if exc.code != 'ownership_expired':
+                    raise
+                # The lease lapsed while this process was idle. It is never revived: the process joins again with a new
+                # lease, which is refused while another mode owns the target; job leases and fencing still guard every job.
+                self.participant_id = identity('RUNTIME')
+                self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
             self._renew_at = moment + self.ownership.ttl / 2
         return self.lease
 
@@ -362,6 +433,9 @@ class OracleExecution:
             reasons.append('EXECUTION_MODE_MISMATCH')
         if mode == 'live':
             reasons.append('LIVE_NOT_SUPPORTED_BY_ORACLE_RUNTIME')
+        if (mode == 'live' or self.require_verified_usage) and \
+                self.quota.coverage(t, plan['source_id'], plan['account_scope'], self.now()) not in ('IMPORTED_LEGACY', 'RUNTIME_EXCLUSIVE'):
+            reasons.append('EXTERNAL_USAGE_UNVERIFIED')
         block = t.one('SELECT * FROM execution_blocks WHERE source_id=:b_s AND account_scope=:b_a', 'execution_blocks',
                       b_s=plan['source_id'], b_a=plan['account_scope'])
         if block and (block['until_at'] is None or instant(block['until_at']) > self.now()):
@@ -674,7 +748,7 @@ class OracleExecution:
                 plan = self._plan(t, row['plan_id'])
                 row['execution_blockers'] = self._gate(t, plan, row['mode'])
                 row['eligible_target_ids'] = [m['target_id'] for m in self._eligible(t, row)]
-                row['current_budget'] = self.quota.assess(t, plan, self.now())
+                row['current_budget'] = self.quota.usage(t, plan, self.now())
                 row['calls'] = t.rows('SELECT * FROM execution_calls WHERE job_id=:b_j ORDER BY call_id', 'execution_calls', b_j=row['job_id'])
                 run = t.one('SELECT * FROM execution_runs WHERE job_id=:b_j', 'execution_runs', b_j=row['job_id'])
                 run['result_contract'] = json.loads(run.pop('result_contract_json') or 'null')

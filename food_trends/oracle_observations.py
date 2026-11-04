@@ -164,7 +164,7 @@ class OracleObservationService(FoodObservationService):
                                      b_s=source, **binds)
                     metrics = t.rows(f'''SELECT * FROM metric_observations WHERE source_code=:b_s AND status='ACTIVE'
                         AND (food_id IN ({marks}) OR item_key IN (SELECT item_key FROM food_mentions WHERE status='ACTIVE' AND food_id IN ({marks})))
-                        ORDER BY observed_at,metric_code''', 'metric_observations', b_s=source, **binds)
+                        ORDER BY observed_at,metric_code,context_hash''', 'metric_observations', b_s=source, **binds)
                     sources[source] = {'mention_policy': mention_policy(source), 'confirmed_items': int(confirmed['c1']), 'mentions': int(confirmed['c2']),
                                        'search_matched_items': int(searched['c1']), 'search_matches': int(searched['c2']),
                                        'metrics': [{k: m[k] for k in METRIC_VIEW} for m in metrics],

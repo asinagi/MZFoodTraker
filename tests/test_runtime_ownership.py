@@ -92,6 +92,19 @@ class OwnershipStandInTests(unittest.TestCase):
                 write()
         self.assertIn('consistent', shadow.compare())  # a read-only comparison is allowed
 
+    def test_long_shadow_delivery_keeps_its_lease(self):
+        self.shadow_event()
+        for interval in (21600, 32400):
+            self.change('interval', self.tracking.target(self.target['target_id']), interval_seconds=interval)
+
+        def slow(stage, event):
+            self.wall += timedelta(seconds=40)  # three events outlive the 60 s lease; each guarded write extends it
+        shadow = ShadowService(self.storage, self.repo, clock=lambda: self.now, ownership=self.owner(), fault=slow)
+        result = shadow.deliver()
+        self.assertGreaterEqual(result['delivered'], 3)
+        self.assertEqual((result['failed'], result['pending']), (0, 0))
+        self.assertEqual(self.mode()['mode'], 'IDLE')
+
     # 14: a killed runtime process: its lease expires, unfinished jobs keep Shadow out, a new process resumes.
 
     def test_killed_runtime_recovers_without_handing_unfinished_jobs_to_shadow(self):
@@ -105,16 +118,31 @@ class OwnershipStandInTests(unittest.TestCase):
         for _ in jobs:
             resumed.run_once()
         self.assertEqual({j['status'] for j in self.repo.rows('execution_jobs')}, {'SUCCEEDED'})
-        with self.assertRaises(OwnershipRefused) as late:  # the dead process's lease expired
-            killed.execution.enqueue([jobs[0]['plan_id']])
-        self.assertEqual(late.exception.code, 'ownership_expired')
+        stale_lease = killed.execution.lease
+        with self.assertRaises(OwnershipRefused) as expired:  # an expired lease is never revived
+            killed.execution.ownership.renew(stale_lease)
+        self.assertEqual(expired.exception.code, 'ownership_expired')
         resumed.execution.release()
         self.assertEqual(self.mode()['mode'], 'IDLE')
         lease = self.owner().acquire('SHADOW')
         with self.assertRaises(OwnershipRefused) as stale:
-            killed.execution.ownership.renew(killed.execution.lease)  # never across a mode change
+            killed.execution.ownership.renew(stale_lease)  # never across a mode change
         self.assertEqual(stale.exception.code, 'ownership_mode_changed')
+        with self.assertRaises(OwnershipRefused) as late:  # the returning process cannot write across the mode change
+            killed.execution.enqueue([jobs[0]['plan_id']])
+        self.assertEqual(late.exception.code, 'ownership_mode_changed')
+        self.assertEqual(self.repo.count('execution_jobs'), len(jobs))
         self.owner().release(lease)
+
+    def test_idle_runtime_rejoins_with_a_new_lease_in_the_same_mode(self):
+        runtime = self.runtime()
+        jobs = runtime.execution.schedule()
+        first = runtime.execution.lease
+        self.wall += timedelta(seconds=61)  # idle past the lease, nobody else took over
+        runtime.run_once()
+        self.assertNotEqual(runtime.execution.lease.participant_id, first.participant_id)
+        self.assertEqual(runtime.execution.lease.epoch, first.epoch)
+        self.assertEqual(self.repo.count('execution_jobs'), len(jobs))
 
     def test_abandoned_runtime_without_jobs_can_be_taken_over(self):
         idle = self.runtime()

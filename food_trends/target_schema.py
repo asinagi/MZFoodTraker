@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 5
+TARGET_SCHEMA_VERSION = 6
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -308,6 +308,20 @@ TABLES = (
           NN('joined_at', 'ts'), NN('renewed_at', 'ts'), NN('expires_at', 'ts'), C('released_at', 'ts')), ('participant_id',),
           checks=(_status('owner_mode', ('SHADOW', 'RUNTIME_TEST', 'RUNTIME_PRODUCTION')),), indexes=(('owner_mode', 'mode_epoch'),),
           mutable=('owner_mode', 'mode_epoch', 'environment', 'renewed_at', 'expires_at', 'released_at'), meta={'since': 5}),
+    # v6 budget safety: legacy collector usage with its evidence, and per account scope what usage is known through when.
+    Table('quota_usage_ledger', (NN('ledger_key', 'hash'), NN('source_id', 'code'), NN('account_scope', 'code'), NN('quota_type', 'code'),
+          NN('window_start', 'ts'), NN('window_end', 'ts'), NN('provider_timezone', 'code'), NN('usage', 'int'), C('distinct_key', 'text'),
+          NN('evidence', 'code'), NN('confidence', 'code'), NN('origin', 'code'), NN('source_ref', 'key'), NN('observed_at', 'ts'),
+          NN('imported_at', 'ts')), ('ledger_key',),
+          checks=('usage>=0', 'origin IN ' + ORIGINS, 'window_start<window_end',
+                  _status('evidence', ('PROVIDER_CONFIRMED', 'LEGACY_LOCAL_COUNT', 'LEGACY_SENT_UNCERTAIN', 'LEGACY_UNKNOWN_ORIGIN')),
+                  _status('confidence', ('CONFIRMED', 'COUNTED', 'UNCERTAIN', 'UNKNOWN'))),
+          indexes=(('source_id', 'account_scope', 'quota_type', 'window_start'),),
+          mutable=('usage', 'evidence', 'confidence', 'imported_at'), meta={'since': 6}),
+    Table('quota_accounts', (NN('source_id', 'code'), NN('account_scope', 'code'), NN('usage_status', 'code'), C('legacy_observed_through', 'ts'),
+          C('evidence_ref', 'key'), NN('updated_at', 'ts')), ('source_id', 'account_scope'),
+          checks=(_status('usage_status', ('UNVERIFIED', 'IMPORTED', 'EXCLUSIVE')),),
+          mutable=('usage_status', 'legacy_observed_through', 'evidence_ref', 'updated_at'), meta={'since': 6}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),

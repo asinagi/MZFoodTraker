@@ -73,7 +73,7 @@ class OracleQueryPlanner(QueryPlanner):
         with self.execution.reader() as t:
             p = self.execution._plan(t, plan_id)
             now = instant(self.tracking.clock())
-            return {'plan': p, 'current_validation': self._validate(t, p, now), 'current_budget': self.quota.assess(t, p, now)}
+            return {'plan': p, 'current_validation': self._validate(t, p, now), 'current_budget': self.quota.usage(t, p, now)}
 
     def history(self, target_id=None):
         with self.execution.reader() as t:

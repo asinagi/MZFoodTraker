@@ -10,9 +10,11 @@ not by process memory:
 - A mode switch takes the table in EXCLUSIVE mode, so it waits for every in-flight guarded transaction,
   and later writers wait for the switch and then see the new mode and refuse. A switch is refused while
   another mode has a live lease, and away from a runtime mode while runtime jobs are unfinished.
-- A process killed mid-run simply stops renewing; its lease expires and is never renewed afterwards, so its
-  late writes are refused (a restarted process joins with a new lease). Job leases and fencing still decide
-  every job.
+- A process killed mid-run simply stops renewing; its lease expires and is never renewed afterwards. A
+  process that comes back must join again with a new lease, which is refused while another mode owns the
+  target, so a stale writer never writes across a mode change. Job leases and fencing still decide every job.
+- A guarded write by a live, unexpired lease extends it in the same transaction once less than half the
+  ttl remains, so a long Shadow delivery, B7 load or runtime batch keeps its lease while it keeps writing.
 
 Reads, status and comparisons need no ownership. Lease time is wall-clock process liveness, independent
 of the domain clocks the services use.
@@ -152,6 +154,8 @@ class RuntimeOwnership:
         from .tracking_service import instant
         if instant(part['expires_at']) <= self.now():
             raise OwnershipRefused('ownership_expired')
+        if instant(part['expires_at']) - self.now() < self.ttl / 2:  # a writer that keeps writing is alive: extend in place
+            self._join(t, lease)
 
     def renew(self, lease):
         """Extend an unexpired lease within the same mode epoch (never across a mode change or after expiry)."""
