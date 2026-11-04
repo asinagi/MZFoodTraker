@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-04T05:46:14+00:00",
+  "access": "read-only (mode=ro, query_only)",
+  "tables": 30,
+  "schema_migrations_present": false,
+  "schema_version": 0,
+  "integrity_check": "ok",
+  "main_file_modified_at": "2026-10-28T14:20:01",
+  "wal_bytes": 0,
+  "servers_listening": {
+    "8000": false,
+    "8002": false
+  },
+  "note": "Servers 8000/8002 were already stopped before B6-B7 (recorded 2026-11-02); not started or stopped in this task."
+}

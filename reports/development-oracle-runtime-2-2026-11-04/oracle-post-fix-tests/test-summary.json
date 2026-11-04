@@ -1,0 +1,302 @@
+{
+  "note": "Targeted reruns after the R3 guard lease-extension fix, run with unittest directly (the offline runner has no module selection). Mock transports only. test_target_compat.OracleContractTests (16) was not rerun: it never calls guard().",
+  "runs": [
+    {
+      "run": "post-fix stand-in, 9 modules",
+      "environment": "Oracle not configured",
+      "unittest_ran": 79,
+      "seconds": 146.689,
+      "outcome": "OK",
+      "totals": {
+        "passed": 79,
+        "skipped": 77,
+        "failed": 0,
+        "errors": 0
+      },
+      "classes": {
+        "test_oracle_execution.OracleExecutionStandInTests": {
+          "passed": 22,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_execution.OracleExecutionTests": {
+          "passed": 0,
+          "skipped": 22,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_observations.OracleObservationStandInTests": {
+          "passed": 9,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_observations.OracleObservationTests": {
+          "passed": 0,
+          "skipped": 9,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_observations.RuntimeStorageSelectionTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_pipeline.OraclePipelineStandInTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_pipeline.OraclePipelineTests": {
+          "passed": 0,
+          "skipped": 1,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_planner.OraclePlannerStandInTests": {
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_planner.OraclePlannerTests": {
+          "passed": 0,
+          "skipped": 7,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_quota.OracleQuotaStandInTests": {
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_quota.OracleQuotaTests": {
+          "passed": 0,
+          "skipped": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_scheduling.OracleSchedulingStandInTests": {
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_scheduling.OracleSchedulingTests": {
+          "passed": 0,
+          "skipped": 6,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_runtime_ownership.OwnershipOracleTests": {
+          "passed": 0,
+          "skipped": 10,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_runtime_ownership.OwnershipStandInTests": {
+          "passed": 10,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_shadow.OracleShadowTests": {
+          "passed": 0,
+          "skipped": 8,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_shadow.ShadowTests": {
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_target_migration.MigrationTests": {
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_target_migration.OracleMigrationTests": {
+          "passed": 0,
+          "skipped": 8,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_target_migration.OrphanDetectionTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        }
+      }
+    },
+    {
+      "run": "post-fix, 9 modules",
+      "environment": "real Oracle MZ_TEST",
+      "unittest_ran": 156,
+      "seconds": 558.127,
+      "outcome": "OK",
+      "totals": {
+        "passed": 156,
+        "skipped": 0,
+        "failed": 0,
+        "errors": 0
+      },
+      "classes": {
+        "test_oracle_execution.OracleExecutionStandInTests": {
+          "passed": 22,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_execution.OracleExecutionTests": {
+          "passed": 22,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_observations.OracleObservationStandInTests": {
+          "passed": 9,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_observations.OracleObservationTests": {
+          "passed": 9,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_observations.RuntimeStorageSelectionTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_pipeline.OraclePipelineStandInTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_pipeline.OraclePipelineTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_planner.OraclePlannerStandInTests": {
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_planner.OraclePlannerTests": {
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_quota.OracleQuotaStandInTests": {
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_quota.OracleQuotaTests": {
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_scheduling.OracleSchedulingStandInTests": {
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_scheduling.OracleSchedulingTests": {
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_runtime_ownership.OwnershipOracleTests": {
+          "passed": 10,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_runtime_ownership.OwnershipStandInTests": {
+          "passed": 10,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_shadow.OracleShadowTests": {
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_shadow.ShadowTests": {
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_target_migration.MigrationTests": {
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_target_migration.OracleMigrationTests": {
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_target_migration.OrphanDetectionTests": {
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        }
+      }
+    },
+    {
+      "run": "post-fix, test_oracle_ingestion",
+      "environment": "real Oracle MZ_TEST",
+      "unittest_ran": 22,
+      "seconds": 76.313,
+      "outcome": "OK",
+      "totals": {
+        "passed": 22,
+        "skipped": 0,
+        "failed": 0,
+        "errors": 0
+      },
+      "classes": {
+        "test_oracle_ingestion.OracleIngestionStandInTests": {
+          "passed": 11,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        },
+        "test_oracle_ingestion.OracleIngestionTests": {
+          "passed": 11,
+          "skipped": 0,
+          "failed": 0,
+          "errors": 0
+        }
+      }
+    }
+  ]
+}
