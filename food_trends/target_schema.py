@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 3
+TARGET_SCHEMA_VERSION = 4
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -289,6 +289,16 @@ TABLES = (
           indexes=(('target_id',),), meta={'since': 3}),
     Table('planner_commands', (NN('request_key', 'key'), NN('payload_hash', 'hash'), NN('result_json', 'json'), NN('created_at', 'ts')),
           ('request_key',), meta={'since': 3}),
+    # v4 tracking slots: the SQLite slot contract (one row per target, generation and due slot) plus its lifecycle.
+    # due_slot is the normalized UTC stamp text (as execution_jobs.due_slot): Oracle cannot key a TSTZ column (ORA-02329).
+    Table('tracking_slots', (NN('slot_id', 'id'), NN('target_id', 'id'), C('plan_id', 'id'), C('job_id', 'id'), NN('generation', 'int'),
+          NN('food_revision', 'int'), NN('due_slot', 'code'), NN('status', 'code'), NN('created_at', 'ts'), C('claimed_at', 'ts'),
+          C('completed_at', 'ts'), C('cancellation_reason', 'code')), ('slot_id',), unique=(('target_id', 'generation', 'due_slot'),),
+          fks=((('target_id',), 'tracking_targets', ('target_id',)), (('plan_id',), 'planner_plans', ('plan_id',)),
+               (('job_id',), 'execution_jobs', ('job_id',))),
+          checks=(_status('status', ('SCHEDULED', 'CLAIMED', 'COMPLETED', 'FAILED', 'CANCELLED')),),
+          indexes=(('plan_id',), ('job_id',), ('status', 'due_slot')),
+          mutable=('status', 'claimed_at', 'completed_at', 'cancellation_reason'), meta={'since': 4}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),

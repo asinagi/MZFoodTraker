@@ -2,8 +2,8 @@
 
 Same states, Outbox, lease/fencing, call ledger, budget and result contract as ExecutionService, in
 portable SQL over target transactions. Plans, foods and targets reach the target through B7 migration
-or Shadow; planning and due-slot advancement stay with the SQLite system of record, so execution-time
-revalidation here uses the target's next_due_at (there is no tracking_slots table on the target).
+or Shadow. Planning (oracle_planner) and due-slot scheduling run here too: tracking_slots follows the
+SQLite slot contract (one row per target, generation and due slot) and adds its lifecycle.
 
 Locking: a claim locks the job row with SELECT ... FOR UPDATE SKIP LOCKED on Oracle (BEGIN IMMEDIATE
 serializes the stand-in) and re-reads the lease under that lock. Every fenced write locks the job row,
@@ -227,6 +227,7 @@ class OracleExecution:
         self.quota = OracleQuota(self)
         self.planner = None  # an OracleQueryPlanner attaches itself (schedule() needs one)
         self.claim_locked = lambda job_id: None  # test hook: runs while the claim holds the job lock
+        self.fault = lambda stage: None  # test hook: failure injection inside write transactions
 
     def now(self):
         return instant(self.clock())
@@ -296,7 +297,7 @@ class OracleExecution:
         return row
 
     def _validate(self, t, plan, now):
-        """QueryPlanner._validate on target data (same reasons; next_due_at stands in for tracking_slots)."""
+        """QueryPlanner._validate on target data: same reasons and the same due-slot rule."""
         source, eligible, reasons = plan['source_id'], [], []
         if (plan['planner_version'] != PLANNER_VERSION or plan['contract']['policy_version'] != policy_for(source)['version'] or
                 plan['adapter_version'] != SOURCES[source]['adapter_version'] or plan['contract_version'] != CONTRACT_VERSION or
@@ -317,7 +318,10 @@ class OracleExecution:
             if (not target or not target['planning_eligible'] or target['generation'] != m['generation'] or
                     target['food_revision'] != m['food_revision'] or instant(m['due_at']) > instant(now)):
                 continue
-            if target['next_due_at'] is None or instant(target['next_due_at']) != instant(m['due_at']):
+            due = instant(m['due_at'])
+            current = target['next_due_at'] is not None and instant(target['next_due_at']) == due
+            if not current and not t.scalar('SELECT count(*) AS c FROM tracking_slots WHERE target_id=:b_t AND generation=:b_g AND due_slot=:b_d',
+                                            b_t=m['target_id'], b_g=m['generation'], b_d=stamp(due)):
                 continue
             eligible.append(m)
         if plan['targets'] and not eligible:
@@ -360,8 +364,10 @@ class OracleExecution:
         with self.transaction() as t:
             for plan_id in dict.fromkeys(plan_ids):
                 p = self._plan(t, plan_id)
-                if t.oracle:  # one enqueuer per query at a time; the stand-in is already serialized
+                if t.oracle:  # one enqueuer per query, then per target (sorted); the stand-in is already serialized
                     t.run('SELECT query_id FROM planner_queries WHERE query_id=:b_q FOR UPDATE', b_q=p['query_id']).fetchall()
+                    for target_id in sorted({m['target_id'] for m in p['targets']}):
+                        t.run('SELECT target_id FROM tracking_targets WHERE target_id=:b_t FOR UPDATE', b_t=target_id).fetchall()
                 reasons = self._gate(t, p, mode)
                 validation = self._validate(t, p, self.now())
                 if reasons or not validation['valid']:
@@ -396,8 +402,50 @@ class OracleExecution:
                     if not t.scalar('SELECT count(*) AS c FROM execution_mappings WHERE job_id=:b_j AND target_id=:b_t', b_j=job_id, b_t=m['target_id']):
                         t.insert('execution_mappings', dict(job_id=job_id, plan_id=plan_id, target_id=m['target_id'], generation=m['generation'],
                                                             food_revision=m['food_revision'], mapping_json=dump(m), started=0))
+                    target = self._target(t, m['target_id'])
+                    if target['next_due_at'] is not None and instant(target['next_due_at']) == instant(m['due_at']):
+                        self._schedule_slot(t, target, plan_id, job_id)
+                self.fault('before_enqueue_commit')
                 result.append(self._job(t, job_id))
         return result
+
+    def _schedule_slot(self, t, target, plan_id, job_id):
+        """TrackingService 'schedule' in the enqueue transaction: the slot, its job and the next due time commit together."""
+        now = self.now()
+        due = instant(target['next_due_at'])
+        if not target['planning_eligible'] or due > now:
+            raise FoodError('현재 예정된 활성 대상이 아닙니다.', 409)
+        t.insert('tracking_slots', dict(slot_id=identity('SLOT'), target_id=target['target_id'], plan_id=plan_id, job_id=job_id,
+                                        generation=target['generation'], food_revision=target['food_revision'], due_slot=stamp(due),
+                                        status='SCHEDULED', created_at=now, claimed_at=None, completed_at=None, cancellation_reason=None))
+        steps = int((now - due).total_seconds() // target['interval_seconds']) + 1
+        t.run('UPDATE tracking_targets SET next_due_at=:b_next,revision=revision+1,updated_at=:b_now WHERE target_id=:b_t',
+              b_next=due + timedelta(seconds=steps * target['interval_seconds']), b_now=now, b_t=target['target_id'])
+        self.fault('after_schedule_slot')
+
+    def _finish_slots(self, t, job, status, error, eligible):
+        """Slots end with their job: completed for targets whose data the run kept, otherwise failed or cancelled with a reason."""
+        kept = {m['target_id'] for m in eligible}
+        for slot in t.rows("SELECT * FROM tracking_slots WHERE job_id=:b_j AND status IN ('SCHEDULED','CLAIMED')", 'tracking_slots', b_j=job['job_id']):
+            target = self._target(t, slot['target_id'])
+            if target is None:
+                reason = 'TARGET_MISSING'
+            elif target['status'] != 'ACTIVE':
+                reason = 'TARGET_' + target['status']
+            elif target['generation'] != slot['generation']:
+                reason = 'STALE_GENERATION'
+            elif target['blockers']:
+                reason = target['blockers'][0]
+            else:
+                reason = error
+            if status in ('SUCCEEDED', 'PARTIAL', 'LIMITED') and slot['target_id'] in kept:
+                state, reason = 'COMPLETED', None
+            elif status == 'FAILED' and reason == error:
+                state = 'FAILED'
+            else:
+                state = 'CANCELLED'
+            t.update('tracking_slots', {'slot_id': slot['slot_id']}, status=state, completed_at=self.now(),
+                     cancellation_reason=None if state == 'COMPLETED' else reason or status)
 
     def _fence(self, t, job_id, owner, token):
         if t.oracle:  # job row, then lease row: the same order as claim, so no deadlock
@@ -455,6 +503,8 @@ class OracleExecution:
                 t.run('''UPDATE execution_jobs SET status='CLAIMED',attempt_count=attempt_count+1,started_at=coalesce(started_at,:b_now),
                     next_retry_at=NULL WHERE job_id=:b_j''', b_now=now, b_j=candidate)
                 t.run('UPDATE execution_outbox SET delivery_count=delivery_count+1 WHERE job_id=:b_j', b_j=candidate)
+                t.run('''UPDATE tracking_slots SET status='CLAIMED',claimed_at=coalesce(claimed_at,:b_now)
+                    WHERE job_id=:b_j AND status IN ('SCHEDULED','CLAIMED')''', b_now=now, b_j=candidate)
                 return {'job': self._job(t, candidate), 'owner_id': owner, 'fencing_generation': token}
         return None
 
@@ -512,6 +562,7 @@ class OracleExecution:
                 t.run('UPDATE tracking_targets SET last_success_at=:b_now WHERE target_id=:b_t AND generation=:b_g AND food_revision=:b_r',
                       b_now=now, b_t=m['target_id'], b_g=m['generation'], b_r=m['food_revision'])
         t.update('execution_outbox', {'job_id': job['job_id']}, delivered_at=now)
+        self._finish_slots(t, job, status, error, eligible)
 
     def begin(self, claim):
         with self.transaction() as t:
