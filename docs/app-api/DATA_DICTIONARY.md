@@ -122,7 +122,7 @@
 
 | 필드 | 설명 |
 | --- | --- |
-| `start_date`, `end_date`, `days` | 점이 대표하는 구간. 일 단위는 하루, 주 단위는 월~일(KST)이며 기간 경계에서 잘리면 1~6일 |
+| `start_date`, `end_date`, `days` | 점이 대표하는 구간. 일 단위는 하루, 주 단위는 월~일(KST)이며 기간 경계에서 잘리면 1~6일. 하루만 남은 주의 `value_state`는 그날의 상태(`EVIDENCE_EXPIRED` 포함)를 그대로 씁니다 |
 | `value`, `value_state`, `coverage` | §5~§7 |
 | `observed_days` | 구간 안 관측 일수 |
 | `complete` | `false` = 오늘(수집 진행 중) 포함 또는 기간 경계로 잘린 주. 다른 점과 직접 비교하지 마세요 |

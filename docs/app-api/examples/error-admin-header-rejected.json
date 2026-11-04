@@ -1,0 +1,34 @@
+{
+  "summary": "관리 토큰을 보낸 요청",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "query": {},
+    "headers": {
+      "X-MZ-Admin-Token": "<관리 토큰 값>"
+    }
+  },
+  "status": 400,
+  "in_spec": false,
+  "response": {
+    "error": {
+      "code": "ADMIN_TOKEN_NOT_ACCEPTED",
+      "message": "앱 API는 관리 토큰을 받지 않습니다. 관리 토큰을 앱에 넣지 마세요.",
+      "details": [
+        {
+          "parameter": "X-MZ-Admin-Token",
+          "reason": "forbidden_header",
+          "allowed": null
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

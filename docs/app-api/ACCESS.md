@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | 경로 | `/api/v1/*` | `/api/foods`, `/api/tracking/*`, `/api/planner/*`, `/api/execution/*`, `/api/collect` 등 |
 | 서버 프로세스 | 별도 읽기 전용 서버 (`food_trends.app_api`, Mock은 `food_trends.app_mock`) | 기존 로컬 서버 (`python -m food_trends`) |
-| 메서드 | GET·HEAD·OPTIONS만. 그 외 `405` | 상태 변경 POST 포함 |
+| 메서드 | GET·HEAD·OPTIONS만. POST·PUT·PATCH·DELETE는 `405` | 상태 변경 POST 포함 |
 | 인증 | 없음 (공개 가능한 읽기 전용 데이터만 제공) | 서버 프로세스별 관리 토큰 `X-MZ-Admin-Token` |
 | DB 접근 | 읽기 전용 연결(`mode=ro`, `query_only`). 요청 처리 중 쓰기·마이그레이션·외부 API 호출 없음 | 쓰기·수집 실행 |
 | 사용자 | 모바일·웹 앱 | 로컬 운영자 |

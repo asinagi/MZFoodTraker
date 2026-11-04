@@ -24,7 +24,7 @@
 | 403 | `FORBIDDEN_HOST` | `Host`가 IP 주소·`localhost`가 아님 (DNS 재바인딩 방어) | Base URL을 IP 주소(`127.0.0.1`, `10.0.2.2`, LAN IP) 또는 `localhost`로 설정 |
 | 404 | `FOOD_NOT_FOUND` | 등록되지 않은 `food_id` | "음식을 찾을 수 없음" 화면. 저장된 ID라면 목록을 새로 받으세요 |
 | 404 | `ROUTE_NOT_FOUND` | 지원하지 않는 경로 | Base URL·경로(`/api/v1/...`) 확인 |
-| 405 | `METHOD_NOT_ALLOWED` | GET·HEAD·OPTIONS 외 메서드 | 읽기 전용 API입니다. 응답 `Allow` 헤더 참고 |
+| 405 | `METHOD_NOT_ALLOWED` | POST·PUT·PATCH·DELETE (GET·HEAD·OPTIONS만 지원. TRACE 같은 기타 메서드는 HTTP 서버 기본 501) | 읽기 전용 API입니다. 응답 `Allow` 헤더 참고 |
 | 422 | `SOURCE_NOT_RANKABLE` | 순위에 `youtube`(정책상 비활성) 또는 `naver_datalab`(저장하지 않는 지수) 지정 | 순위 출처는 `google_trends_rss`, `instagram_graph`만 사용 |
 | 500 | `INTERNAL_ERROR` | 처리 중 예기치 않은 오류 | 잠시 후 재시도, 반복되면 백엔드 담당자에게 시각과 함께 전달 |
 | 503 | `DATA_UNAVAILABLE` | 저장소 스키마가 준비되지 않았거나 DB를 열 수 없음 | 점검 안내 후 지수 백오프로 재시도 |

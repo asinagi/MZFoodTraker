@@ -240,7 +240,7 @@ EXAMPLES = (
     ('error-invalid-cursor', '손상된 커서', 'GET', D + '/foods', {'cursor': 'not-a-cursor'}, {}, False),
     ('error-food-not-found', '없는 음식', 'GET', F + 'FOOD_UNKNOWN', {}, {}, True),
     ('error-source-not-rankable', '정책상 순위 미제공 출처', 'GET', D + '/trends/rankings', {'source': 'youtube'}, {}, True),
-    ('error-admin-token', '관리 토큰을 보낸 요청', 'GET', D + '/health', {}, {'X-MZ-Admin-Token': '<관리 토큰 값>'}, False),
+    ('error-admin-header-rejected', '관리 토큰을 보낸 요청', 'GET', D + '/health', {}, {'X-MZ-Admin-Token': '<관리 토큰 값>'}, False),
     ('error-forbidden-host', '도메인 이름 Host (DNS 재바인딩 방어)', 'GET', D + '/health', {}, {'Host': 'attacker.example:8030'}, False),
     ('error-method-not-allowed', 'GET 외 메서드', 'POST', D + '/foods', {}, {}, False),
     ('error-route-not-found', '없는 경로', 'GET', '/api/v1/trends', {}, {}, False),
