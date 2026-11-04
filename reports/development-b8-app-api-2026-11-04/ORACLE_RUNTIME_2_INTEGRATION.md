@@ -7,7 +7,7 @@ PARALLEL-B8-API는 ORACLE-RUNTIME-2와 병렬로 별도 워크트리(`D:\MZFoodT
 | 항목 | 값 |
 | --- | --- |
 | 분기점 | `origin/main` 3ac56d9 (docs: record Oracle runtime parity validation) |
-| B8 커밋 | 9b2156c (P1 계약), 6e9d274 (P2 분석), 7d3da22 (P3 API·Mock), P4 커밋(테스트·인수 문서) |
+| B8 커밋 | 9b2156c (P1 계약), 6e9d274 (P2 분석), 7d3da22 (P3 API·Mock), d869c75 (P4 테스트·인수 문서), 이후 앱 개발자 안내 문서 보강 커밋(코드·계약 변경 없음) |
 | 점검 시점 `origin/main` | f3a77d1 — ORACLE-RUNTIME-2 진행 커밋 91ab0dd, 203e67b, f3a77d1 (병합하지 않음) |
 
 ## 2. 변경 파일 겹침
@@ -36,7 +36,7 @@ PARALLEL-B8-API는 ORACLE-RUNTIME-2와 병렬로 별도 워크트리(`D:\MZFoodT
 
 1. ORACLE-RUNTIME-2 완료와 main Push를 사용자에게 확인한다. 공유 Oracle 테스트 스키마(MZ_TEST) 사용 일정을 조율한다.
 2. B8 워크트리에서 `git fetch origin` 후 **`git merge origin/main`**(브랜치에 병합 커밋). 이미 Push한 커밋을 다시 쓰는 rebase·`--force` Push는 하지 않는다.
-3. 충돌을 검토한다(예상 없음). `README.md`는 이 브랜치에서 수정하지 않았으므로, 병합 후 최신 README에 다음을 추가한다: 구현 현황 표의 "앱 데이터 API (B8)" 행, 테스트 수, `docs/app-api/README.md` 링크.
+3. 충돌을 검토한다(예상 없음). `README.md`는 이 브랜치에서 수정하지 않았으므로, 병합 후 최신 README에 다음을 추가한다: 구현 현황 표의 "앱 데이터 API (B8)" 행, 테스트 수, `docs/app-api/README.md` 링크. 또한 `docs/app-api/README.md`의 "빠른 시작"이 `feat/b8-app-api` 브랜치를 받도록 안내하므로, main 기준(`git clone https://github.com/asinagi/MZFoodTraker.git`)으로 바꾸고 앱 개발자에게 알린다.
 4. 검증
    - 기본 SQLite 전체: `py -3.12 -B tests/run_offline.py --output data/<폴더>` (B8 38개 포함, 실패 0)
    - 계약 산출물: `py -3.12 -B -m food_trends.app_contract --docs docs/app-api --check`, `py -3.12 -B -m food_trends.app_mock --write-examples docs/app-api/examples` 후 `git diff --exit-code docs/app-api`(코드가 바뀌면 Mock 데이터셋을 다시 만들지만 응답은 같아야 함)
