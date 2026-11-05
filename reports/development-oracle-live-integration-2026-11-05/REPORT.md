@@ -183,7 +183,7 @@
 | `3968f57` | Phase 1 RSS 역방향 복구(대상 v9) |
 | `f88c94c` | Phase 2·3 Live 경로·안전장치 |
 | `35156f7` | Phase 4 Live E2E |
-| 보고 커밋 | 게이트 테스트, 보고서·요청서·README·테스트 증거 |
+| `d97c316` | 보고: 게이트 테스트, 보고서·요청서·README·테스트 증거 |
 
 `main` 통합은 아래 통합 기록에 남긴다(fast-forward만, Force Push·Reset Hard 없음).
 
@@ -225,3 +225,7 @@ Writer 이전(`--writer-transfer`)은 수집원 계정의 단독 Writer를 SQLit
 | R9 | 테스트: 진행 중 작업이 있을 때의 거부·대기, 철회 직후 요청 0, 사용량 인계 후 레거시 예산 계산, 이중 철회, 운영 대상 거부, 실제 Oracle에서의 동일 결과 | 인수 기준 |
 
 이 요구사항이 구현·검증되기 전까지 실제 Live 활성화(소량 검증 포함)는 시작하지 않는다.
+
+## 통합 기록
+
+`main`을 `2ff5b7a`에서 `d97c316`(보고 커밋, 위 작업 커밋 4개 포함)으로 fast-forward하고 `origin/main`에 push했다. 이 기록 커밋도 같은 방식으로 `main`에 fast-forward했다. 강제 push·reset hard·기존 작업 삭제는 없었다. 병합 직전에 다시 가져온 `origin/main`은 기준 `2ff5b7a` 그대로였다.
