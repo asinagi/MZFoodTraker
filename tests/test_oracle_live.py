@@ -207,6 +207,33 @@ class OracleLiveStandInTests(unittest.TestCase):
         self.assertIn('ORACLE_PRODUCTION_LOCKED', oracle_live_readiness(production, self.registry)['blockers'])
         self.assertEqual(self.wire.calls, [])
 
+    def test_unmet_gates_create_no_job_and_send_nothing(self):
+        """Where a live request could start (the assembly, the enqueue, a queued job's start), an unmet gate creates no job and sends
+        nothing. A writer transfer withdrawn after a job was queued stops that job before its first request."""
+        with self.assertRaises(FoodError):
+            oracle_live_backend(self.repo, self.registry, clock=lambda: self.now)  # nothing transferred yet: no live assembly
+        self.assertEqual((self.repo.count('execution_jobs'), self.wire.calls), (0, []))
+        self.transfer_all()
+        backend = self.live()
+        food = self.food(backend, '두쫀쿠')
+        self.activate(backend, food['food_id'], 'youtube')
+        queued = backend.execution.schedule(mode='live')
+        self.assertEqual({j['status'] for j in queued}, {'READY'})
+        row = self.rows('quota_accounts', source_id='youtube')[0]
+        with self.repo.db.transaction() as tx:  # the YouTube transfer withdrawn (the legacy collector may run again)
+            self.repo.upsert(tx, 'quota_accounts', dict(row, usage_status='IMPORTED'))
+        stopped = [backend.controller.run_once(j['job_id']) for j in queued]
+        self.assertEqual({(r['status'], r['error_kind']) for r in stopped}, {('BLOCKED', 'LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED')})
+        self.assertEqual([c for j in queued for c in self.rows('execution_calls', job_id=j['job_id'])], [])
+        jobs = self.repo.count('execution_jobs')
+        self.now += timedelta(hours=7)  # the target is due again: the enqueue itself is refused
+        again = backend.execution.schedule(mode='live')
+        self.assertTrue(again)
+        self.assertEqual({(r['status'], 'LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED' in r['reasons']) for r in again}, {('BLOCKED', True)})
+        self.assertEqual(self.repo.count('execution_jobs'), jobs)
+        self.assertEqual(self.wire.calls, [])  # not one request left the runtime
+        self.assertIn('LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED', oracle_live_readiness(self.repo, self.registry, now=self.now)['sources']['youtube']['blockers'])
+
     # Phases 2.2-2.5: the existing clients collect onto the target alone
 
     def test_live_collection_runs_the_existing_clients_on_the_target_alone(self):
