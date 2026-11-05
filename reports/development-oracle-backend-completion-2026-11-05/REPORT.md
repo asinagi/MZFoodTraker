@@ -145,3 +145,7 @@
 | 6 | 운영 승인 게이트 | G-OPS-1~6 모두 대기 | 백업·Writer 정지·SQLite 마이그레이션·Live 승인·운영 Oracle 승인 |
 
 직전 보고서의 BLOCKED 4개 중 3(RSS 발굴·후보 가져오기 SQLite 전용)과 4(관리 웹 서버 SQLite 전용)는 이번 작업으로 해소했다. 1(운영 Oracle 쓰기·실행 잠금)과 2(Oracle Live 수집)는 남아 있으며, 운영 전환과 Oracle 주 데이터베이스의 운영 충족은 완료로 보고하지 않는다.
+
+## 통합 기록
+
+`main`을 `9f3bdb6`에서 `98afd73`(보고 커밋, 위 작업 커밋 5개 포함)으로 fast-forward하고 `origin/main`에 push했다. 이 기록 커밋도 같은 방식으로 `main`에 fast-forward했다. 강제 push·reset hard·기존 작업 삭제는 없었다. 병합 전 `origin/main`은 기준 `9f3bdb6` 그대로였다.
