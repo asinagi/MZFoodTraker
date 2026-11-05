@@ -1,0 +1,1453 @@
+{
+  "task": "ORACLE-CUTOVER-PREP-1 phase 2",
+  "rehearsed_at": "2026-11-05T08:12:07+00:00",
+  "source": "trends.sqlite3",
+  "operational_source": true,
+  "target": "oracle",
+  "http_requests": 0,
+  "foods_approved": 0,
+  "source_before": {
+    "sha256": "38b880f535dded56e84a11570a1f7793bed1668580950172a417687b689548c0",
+    "bytes": 9273344,
+    "modified_at": "2026-10-28T05:20:01.988661+00:00",
+    "wal_bytes": 0,
+    "schema_version": 0,
+    "journal_mode": "wal",
+    "integrity": "ok",
+    "foreign_key_errors": 0,
+    "tables": {
+      "candidates": 370,
+      "classification_history": 251,
+      "instagram_analysis_observations": 700,
+      "instagram_candidate_hashtags": 0,
+      "instagram_caption_analysis": 185,
+      "instagram_caption_tags": 635,
+      "instagram_hashtag_media": 185,
+      "instagram_hashtags": 1,
+      "instagram_leases": 1,
+      "instagram_media": 185,
+      "instagram_metrics": 14,
+      "instagram_observation_tags": 2386,
+      "instagram_runs": 16,
+      "instagram_searches": 1,
+      "instagram_state": 5,
+      "items": 370,
+      "naver_calls": 10,
+      "naver_guards": 5,
+      "naver_targets": 0,
+      "observations": 900,
+      "runs": 95,
+      "youtube_calls": 38,
+      "youtube_candidate_foods": 0,
+      "youtube_foods": 0,
+      "youtube_matches": 473,
+      "youtube_queries": 6,
+      "youtube_runs": 3,
+      "youtube_state": 4,
+      "youtube_video_provenance": 431,
+      "youtube_videos": 431
+    }
+  },
+  "copy": {
+    "method": "sqlite3 backup API from a mode=ro, query_only connection",
+    "integrity": "ok",
+    "schema_version": 0,
+    "tables_and_rows_equal_source": true
+  },
+  "prepare": {
+    "migration": {
+      "version": 11,
+      "applied": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
+    },
+    "original_tables": 30,
+    "original_rows_and_columns_preserved": true,
+    "changed_original_tables": [],
+    "staged_runs": 95,
+    "legacy_backfill": {
+      "youtube": {
+        "staged_items": 0,
+        "rejected_items": 0,
+        "expired_items": 0,
+        "source_absent_items": 0
+      },
+      "instagram_graph": {
+        "staged_items": 185,
+        "rejected_items": 0,
+        "expired_items": 0,
+        "source_absent_items": 0
+      }
+    },
+    "linked_runs": 97,
+    "retention": {
+      "purged_captions": 0,
+      "purged_videos": 0,
+      "purged_youtube_matches": 0,
+      "execution": {
+        "expired_item_receipts": 0,
+        "expired_checkpoints": 0,
+        "http_requests": 0
+      },
+      "staging": {
+        "expired_items": 0,
+        "deleted_items": 0,
+        "purged_snapshots": 0,
+        "http_requests": 0
+      },
+      "links": {
+        "expired_matches": 0,
+        "expired_mentions": 0,
+        "expired_metrics": 0,
+        "http_requests": 0
+      }
+    },
+    "entity_changes_reprocessed": 0,
+    "foods_approved": 0,
+    "http_requests": 0
+  },
+  "copy_after_prepare": {
+    "schema_version": 11,
+    "integrity": "ok",
+    "foreign_key_errors": 0
+  },
+  "table_dispositions": {
+    "aggregate_invalidations": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "aggregate_invalidations"
+    },
+    "candidates": {
+      "rows": 370,
+      "disposition": "MIGRATED",
+      "target": "rss_classifications"
+    },
+    "classification_history": {
+      "rows": 251,
+      "disposition": "MIGRATED",
+      "target": "rss_classification_history"
+    },
+    "entity_change_effects": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "entity_change_effects"
+    },
+    "execution_blocks": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "in-flight runtime state, rebuilt by the Oracle runtime"
+    },
+    "execution_calls": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "execution_calls"
+    },
+    "execution_checkpoints": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "in-flight runtime state, rebuilt by the Oracle runtime"
+    },
+    "execution_item_receipts": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "in-flight runtime state, rebuilt by the Oracle runtime"
+    },
+    "execution_jobs": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "execution_jobs"
+    },
+    "execution_leases": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "in-flight runtime state, rebuilt by the Oracle runtime"
+    },
+    "execution_mappings": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "in-flight runtime state, rebuilt by the Oracle runtime"
+    },
+    "execution_outbox": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "execution_outbox"
+    },
+    "execution_results": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "execution_results"
+    },
+    "execution_runs": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "execution_runs"
+    },
+    "execution_source_ownership": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "SQLite collector writer ownership; the target has runtime_ownership"
+    },
+    "food_aliases": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_aliases"
+    },
+    "food_candidates": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_candidates"
+    },
+    "food_commands": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_commands"
+    },
+    "food_entities": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_entities"
+    },
+    "food_events": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_events"
+    },
+    "food_mentions": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_mentions"
+    },
+    "food_relations": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "food_relations"
+    },
+    "ingest_runs": {
+      "rows": 97,
+      "disposition": "MIGRATED",
+      "target": "ingest_runs"
+    },
+    "instagram_analysis_observations": {
+      "rows": 700,
+      "disposition": "EXCLUDED",
+      "target": "tag-level derived aggregate; B8 recomputes from B5 links"
+    },
+    "instagram_candidate_hashtags": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "legacy candidate mapping without an approved FOOD_ID"
+    },
+    "instagram_caption_analysis": {
+      "rows": 185,
+      "disposition": "EXCLUDED",
+      "target": "caption-derived analysis; B5 links replace it"
+    },
+    "instagram_caption_tags": {
+      "rows": 635,
+      "disposition": "EMBEDDED",
+      "target": "caption_tags inside source_contents while the caption window is open"
+    },
+    "instagram_hashtag_media": {
+      "rows": 185,
+      "disposition": "STAGED",
+      "target": "item_query_matches (query_ref instagram_hashtag:N, SEARCH_ONLY)"
+    },
+    "instagram_hashtags": {
+      "rows": 1,
+      "disposition": "EXCLUDED",
+      "target": "legacy hashtag registrations, not approved food aliases"
+    },
+    "instagram_leases": {
+      "rows": 1,
+      "disposition": "EXCLUDED",
+      "target": "collector-local lock"
+    },
+    "instagram_media": {
+      "rows": 185,
+      "disposition": "MIGRATED",
+      "target": "source_contents (instagram_media:ID, caption only inside its window)"
+    },
+    "instagram_metrics": {
+      "rows": 14,
+      "disposition": "EXCLUDED",
+      "target": "tag-level derived aggregate; B8 recomputes from B5 links"
+    },
+    "instagram_observation_tags": {
+      "rows": 2386,
+      "disposition": "EXCLUDED",
+      "target": "tag-level derived aggregate; B8 recomputes from B5 links"
+    },
+    "instagram_runs": {
+      "rows": 16,
+      "disposition": "EXCLUDED",
+      "target": "legacy collector run log: its media are staged as the origin-unknown logical run"
+    },
+    "instagram_searches": {
+      "rows": 1,
+      "disposition": "LEDGER",
+      "target": "7-day unique hashtag usage in quota_usage_ledger"
+    },
+    "instagram_state": {
+      "rows": 5,
+      "disposition": "EXCLUDED",
+      "target": "collector-local state"
+    },
+    "item_query_matches": {
+      "rows": 185,
+      "disposition": "MIGRATED",
+      "target": "item_query_matches"
+    },
+    "item_snapshots": {
+      "rows": 840,
+      "disposition": "MIGRATED",
+      "target": "item_snapshots"
+    },
+    "items": {
+      "rows": 370,
+      "disposition": "MIGRATED",
+      "target": "source_contents (items:N)"
+    },
+    "metric_observations": {
+      "rows": 900,
+      "disposition": "MIGRATED",
+      "target": "metric_observations"
+    },
+    "naver_calls": {
+      "rows": 10,
+      "disposition": "LEDGER",
+      "target": "open-window usage in quota_usage_ledger; no NAVER value is stored anywhere"
+    },
+    "naver_guards": {
+      "rows": 5,
+      "disposition": "EXCLUDED",
+      "target": "collector-local guard"
+    },
+    "naver_targets": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "legacy NAVER query targets; NAVER values are never stored"
+    },
+    "observations": {
+      "rows": 900,
+      "disposition": "STAGED",
+      "target": "run_items and quality_results through B4, rss.approx_traffic metric_observations through B5"
+    },
+    "planner_commands": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "SQLite planner command log; the target keeps the runtime copy"
+    },
+    "planner_plan_targets": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "SQLite planner copy; the target keeps the runtime copy"
+    },
+    "planner_plans": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "planner_plans"
+    },
+    "planner_queries": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "planner_queries"
+    },
+    "planner_query_targets": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "planner_query_targets"
+    },
+    "quality_results": {
+      "rows": 10402,
+      "disposition": "MIGRATED",
+      "target": "quality_results"
+    },
+    "quota_charges": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "in-flight runtime state, rebuilt by the Oracle runtime"
+    },
+    "quota_events": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "reservation transition history; the target keeps the reservation state"
+    },
+    "quota_reservations": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "quota_reservations"
+    },
+    "run_items": {
+      "rows": 1085,
+      "disposition": "MIGRATED",
+      "target": "run_items"
+    },
+    "runs": {
+      "rows": 95,
+      "disposition": "STAGED",
+      "target": "ingest_runs (run_ref runs:N) through B4; the raw RSS response is not carried"
+    },
+    "schema_migrations": {
+      "rows": 11,
+      "disposition": "EXCLUDED",
+      "target": "SQLite migration history"
+    },
+    "shadow_outbox": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "SQLite change capture for Shadow"
+    },
+    "shadow_settings": {
+      "rows": 1,
+      "disposition": "EXCLUDED",
+      "target": "SQLite change capture for Shadow"
+    },
+    "source_items": {
+      "rows": 555,
+      "disposition": "MIGRATED",
+      "target": "source_items"
+    },
+    "sqlite_sequence": {
+      "rows": 1,
+      "disposition": "EXCLUDED",
+      "target": "SQLite bookkeeping"
+    },
+    "tracking_commands": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "not in the target schema"
+    },
+    "tracking_events": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "not in the target schema"
+    },
+    "tracking_slots": {
+      "rows": 0,
+      "disposition": "RUNTIME",
+      "target": "SQLite slots; the target schedules its own tracking_slots"
+    },
+    "tracking_targets": {
+      "rows": 0,
+      "disposition": "MIGRATED",
+      "target": "tracking_targets"
+    },
+    "youtube_calls": {
+      "rows": 38,
+      "disposition": "LEDGER",
+      "target": "open-window usage in quota_usage_ledger; the call log itself is not carried"
+    },
+    "youtube_candidate_foods": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "legacy food mapping; YouTube food extraction is policy-blocked"
+    },
+    "youtube_foods": {
+      "rows": 0,
+      "disposition": "EXCLUDED",
+      "target": "legacy food mapping; YouTube food extraction is policy-blocked"
+    },
+    "youtube_matches": {
+      "rows": 473,
+      "disposition": "STAGED",
+      "target": "item_query_matches (query_ref youtube_query:N, SEARCH_ONLY) of staged videos only"
+    },
+    "youtube_queries": {
+      "rows": 6,
+      "disposition": "EXCLUDED",
+      "target": "legacy search definitions, not tracking targets of approved foods"
+    },
+    "youtube_runs": {
+      "rows": 3,
+      "disposition": "EXCLUDED",
+      "target": "legacy collector run log: no B4 adapter stages it (budget usage comes from youtube_calls)"
+    },
+    "youtube_state": {
+      "rows": 4,
+      "disposition": "EXCLUDED",
+      "target": "collector-local state"
+    },
+    "youtube_video_provenance": {
+      "rows": 431,
+      "disposition": "EMBEDDED",
+      "target": "origin of the YouTube source_contents and source_items"
+    },
+    "youtube_videos": {
+      "rows": 431,
+      "disposition": "MIGRATED",
+      "target": "source_contents (youtube_videos:ID, original expiry)"
+    }
+  },
+  "lineage": {
+    "rss_runs": {
+      "expected": 95,
+      "staged": 95,
+      "mismatches": {}
+    },
+    "rss_items": {
+      "expected": 370,
+      "staged": 370,
+      "mismatches": {}
+    },
+    "rss_observations": {
+      "expected": 900,
+      "run_items": 900,
+      "traffic_metrics": 900
+    },
+    "youtube_videos": {
+      "expected": 431,
+      "staged": 0,
+      "unstaged": {
+        "no_staging_path_for_origin_live_api": 431
+      },
+      "mismatches": {}
+    },
+    "instagram_media": {
+      "expected": 185,
+      "staged": 185,
+      "mismatches": {}
+    },
+    "search_evidence": {
+      "youtube_matches": 473,
+      "youtube_matches_of_staged_videos": 0,
+      "instagram_hashtag_media": 185,
+      "item_query_matches_by_ref": {
+        "instagram_hashtag": 185
+      }
+    }
+  },
+  "source_categories": {
+    "food_identity": {
+      "food_entities": 0,
+      "food_aliases": 0,
+      "food_relations": 0
+    },
+    "candidates_and_decisions": {
+      "food_candidates": 0,
+      "food_events": 0,
+      "food_commands": 0,
+      "rss_classifications": {
+        "NON_FOOD": 369,
+        "REVIEW": 1
+      }
+    },
+    "tracking_targets": 0,
+    "query_planner": {
+      "planner_queries": 0,
+      "planner_plans": 0,
+      "planner_query_targets": 0,
+      "quota_reservations": 0
+    },
+    "execution": {
+      "execution_jobs": 0,
+      "execution_runs": 0,
+      "execution_calls": 0,
+      "execution_results": 0
+    },
+    "runs_by_source_origin_coverage": {
+      "google_trends_rss|legacy_unknown|COMPLETE": 90,
+      "google_trends_rss|legacy_unknown|NONE": 5,
+      "instagram_graph|legacy_unknown|UNKNOWN": 1,
+      "youtube|legacy_unknown|UNKNOWN": 1
+    },
+    "items_by_source_origin_availability": {
+      "google_trends_rss|legacy_unknown|AVAILABLE": 370,
+      "instagram_graph|legacy_unknown|AVAILABLE": 185
+    },
+    "run_items_by_quality": {
+      "PASS": 1084,
+      "WARN": 1
+    },
+    "snapshots": 840,
+    "search_evidence_by_status": {
+      "ACTIVE|SEARCH_ONLY": 185
+    },
+    "food_mentions_by_status": {},
+    "metrics_by_code_state_coverage_origin": {
+      "rss.approx_traffic|OBSERVED|COMPLETE|legacy_unknown": 900
+    },
+    "quality_by_outcome": {
+      "NOT_APPLICABLE": 901,
+      "PASS": 9493,
+      "WARN": 8
+    },
+    "entity_change_effects": 0,
+    "aggregate_invalidations": 0
+  },
+  "oracle_server": {
+    "version": "23.26.3.0.0",
+    "container": "FREEPDB1",
+    "session_time_zone": "+09:00",
+    "charset": "AL32UTF8"
+  },
+  "load": {
+    "target_schema": {
+      "version": 6,
+      "applied": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "created_objects": 96
+    },
+    "tables": {
+      "food_commands": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "food_entities": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "food_aliases": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "food_relations": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "food_candidates": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "food_events": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "tracking_targets": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "planner_queries": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "planner_plans": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "planner_query_targets": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "quota_reservations": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "execution_jobs": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "execution_runs": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "execution_calls": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "execution_outbox": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "execution_results": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "source_contents": {
+        "candidates": 986,
+        "loaded_rows": 986,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "rss_classifications": {
+        "candidates": 370,
+        "loaded_rows": 370,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "rss_classification_history": {
+        "candidates": 251,
+        "loaded_rows": 251,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "ingest_runs": {
+        "candidates": 97,
+        "loaded_rows": 97,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "source_items": {
+        "candidates": 555,
+        "loaded_rows": 555,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "item_snapshots": {
+        "candidates": 840,
+        "loaded_rows": 840,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "run_items": {
+        "candidates": 1085,
+        "loaded_rows": 1085,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "quality_results": {
+        "candidates": 10402,
+        "loaded_rows": 10402,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "item_query_matches": {
+        "candidates": 185,
+        "loaded_rows": 185,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "food_mentions": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "metric_observations": {
+        "candidates": 900,
+        "loaded_rows": 900,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "entity_change_effects": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      },
+      "aggregate_invalidations": {
+        "candidates": 0,
+        "loaded_rows": 0,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "dispositions": {},
+        "tombstones": 0,
+        "settled_by_load": 0
+      }
+    },
+    "loaded_rows": 15671,
+    "legacy_usage": {
+      "rows": 0,
+      "writes": {},
+      "scopes": [
+        "naver_datalab/local-default",
+        "youtube/local-default"
+      ],
+      "by_evidence": {
+        "PROVIDER_CONFIRMED": 0,
+        "LEGACY_LOCAL_COUNT": 0,
+        "LEGACY_SENT_UNCERTAIN": 0,
+        "LEGACY_UNKNOWN_ORIGIN": 0
+      },
+      "http_requests": 0
+    },
+    "load_seconds": 12.728,
+    "reconcile_seconds": 5.775,
+    "reconciliation": {
+      "consistent": true,
+      "summary": {
+        "missing": 0,
+        "extra": 0,
+        "changed": 0,
+        "hash_mismatch_tables": [],
+        "null_mismatch_tables": []
+      },
+      "checks": {
+        "foreign_key_errors": 0,
+        "foreign_keys_not_enabled_validated": 0,
+        "unresolved_payload_refs": 0,
+        "blocked_policy_rows": 0,
+        "distinct_items_by_source": {
+          "google_trends_rss": 370,
+          "instagram_graph": 185
+        },
+        "legacy_unknown_items": 555,
+        "not_observed_metrics_with_null_value": 0,
+        "expired_rows_in_target": 0,
+        "expired_tombstones_in_target": 0,
+        "food_views_compared": 0,
+        "food_view_mismatches": []
+      },
+      "tables": {
+        "food_commands": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "food_entities": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "food_aliases": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "food_relations": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "food_candidates": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "food_events": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "tracking_targets": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "planner_queries": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "planner_plans": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "planner_query_targets": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "quota_reservations": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "execution_jobs": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "execution_runs": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "execution_calls": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "execution_outbox": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "execution_results": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "source_contents": {
+          "eligible": 986,
+          "target": 986,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "rss_classifications": {
+          "eligible": 370,
+          "target": 370,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "rss_classification_history": {
+          "eligible": 251,
+          "target": 251,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "ingest_runs": {
+          "eligible": 97,
+          "target": 97,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "source_items": {
+          "eligible": 555,
+          "target": 555,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "item_snapshots": {
+          "eligible": 840,
+          "target": 840,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "run_items": {
+          "eligible": 1085,
+          "target": 1085,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "quality_results": {
+          "eligible": 10402,
+          "target": 10402,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "item_query_matches": {
+          "eligible": 185,
+          "target": 185,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "food_mentions": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "metric_observations": {
+          "eligible": 900,
+          "target": 900,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "entity_change_effects": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        },
+        "aggregate_invalidations": {
+          "eligible": 0,
+          "target": 0,
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "excluded": 0,
+          "rejected": 0
+        }
+      },
+      "hash_equal_tables": 29,
+      "compared_tables": 29
+    },
+    "target_categories": {
+      "food_identity": {
+        "food_entities": 0,
+        "food_aliases": 0,
+        "food_relations": 0
+      },
+      "candidates_and_decisions": {
+        "food_candidates": 0,
+        "food_events": 0,
+        "food_commands": 0,
+        "rss_classifications": {
+          "NON_FOOD": 369,
+          "REVIEW": 1
+        }
+      },
+      "tracking_targets": 0,
+      "query_planner": {
+        "planner_queries": 0,
+        "planner_plans": 0,
+        "planner_query_targets": 0,
+        "quota_reservations": 0
+      },
+      "execution": {
+        "execution_jobs": 0,
+        "execution_runs": 0,
+        "execution_calls": 0,
+        "execution_results": 0
+      },
+      "runs_by_source_origin_coverage": {
+        "google_trends_rss|legacy_unknown|COMPLETE": 90,
+        "google_trends_rss|legacy_unknown|NONE": 5,
+        "instagram_graph|legacy_unknown|UNKNOWN": 1,
+        "youtube|legacy_unknown|UNKNOWN": 1
+      },
+      "items_by_source_origin_availability": {
+        "google_trends_rss|legacy_unknown|AVAILABLE": 370,
+        "instagram_graph|legacy_unknown|AVAILABLE": 185
+      },
+      "run_items_by_quality": {
+        "PASS": 1084,
+        "WARN": 1
+      },
+      "snapshots": 840,
+      "search_evidence_by_status": {
+        "ACTIVE|SEARCH_ONLY": 185
+      },
+      "food_mentions_by_status": {},
+      "metrics_by_code_state_coverage_origin": {
+        "rss.approx_traffic|OBSERVED|COMPLETE|legacy_unknown": 900
+      },
+      "quality_by_outcome": {
+        "NOT_APPLICABLE": 901,
+        "PASS": 9493,
+        "WARN": 8
+      },
+      "entity_change_effects": 0,
+      "aggregate_invalidations": 0,
+      "source_contents_by_source_origin": {
+        "instagram_graph|legacy_unknown": 185,
+        "google_trends_rss|legacy_unknown": 370,
+        "youtube|live_api": 431
+      },
+      "captions_held": 184,
+      "rejections_by_table_disposition_reason": {},
+      "quota_usage_ledger": 0,
+      "quota_accounts_by_status": {
+        "IMPORTED": 2
+      }
+    },
+    "keys": {
+      "bad_key_format": {
+        "ingest_runs": 0,
+        "source_items": 0,
+        "item_snapshots": 0,
+        "item_query_matches": 0,
+        "metric_observations": 0
+      },
+      "natural_key_duplicates": {
+        "food_commands": 0,
+        "food_entities": 0,
+        "food_aliases": 0,
+        "food_relations": 0,
+        "food_candidates": 0,
+        "food_events": 0,
+        "tracking_targets": 0,
+        "planner_queries": 0,
+        "planner_plans": 0,
+        "planner_query_targets": 0,
+        "quota_reservations": 0,
+        "execution_jobs": 0,
+        "execution_runs": 0,
+        "execution_calls": 0,
+        "execution_outbox": 0,
+        "execution_results": 0,
+        "source_contents": 0,
+        "rss_classifications": 0,
+        "rss_classification_history": 0,
+        "ingest_runs": 0,
+        "source_items": 0,
+        "item_snapshots": 0,
+        "run_items": 0,
+        "quality_results": 0,
+        "item_query_matches": 0,
+        "food_mentions": 0,
+        "metric_observations": 0,
+        "entity_change_effects": 0,
+        "aggregate_invalidations": 0,
+        "execution_mappings": 0,
+        "execution_leases": 0,
+        "execution_checkpoints": 0,
+        "execution_item_receipts": 0,
+        "execution_blocks": 0,
+        "quota_charges": 0,
+        "planner_plan_targets": 0,
+        "planner_commands": 0,
+        "tracking_slots": 0,
+        "runtime_ownership": 0,
+        "runtime_participants": 0,
+        "quota_usage_ledger": 0,
+        "quota_accounts": 0,
+        "legacy_key_map": 0,
+        "migration_batches": 0,
+        "migration_rejections": 0,
+        "shadow_applied": 0
+      },
+      "clean": true
+    }
+  },
+  "api_parity": {
+    "live_api": {
+      "requests": 17,
+      "mismatches": []
+    },
+    "mock": {
+      "requests": 17,
+      "mismatches": []
+    }
+  },
+  "api_parity_seconds": 0.685,
+  "rerun": {
+    "completed_batch_writes": 0,
+    "full_pass_writes": 0,
+    "full_pass_unchanged_rows": 15671,
+    "legacy_usage_writes": {},
+    "row_counts_unchanged": true,
+    "changed_tables": [],
+    "consistent_after": true
+  },
+  "as_of": {
+    "instant": "2026-12-01T00:00:00+00:00",
+    "tables": {
+      "source_contents": {
+        "candidates": 986,
+        "loaded_rows": 555,
+        "excluded_rows": 431,
+        "rejected_rows": 0,
+        "dispositions": {
+          "EXCLUDED_EXPIRED:source_retention_elapsed": 431
+        },
+        "tombstones": 0,
+        "settled_by_load": 0
+      }
+    },
+    "loaded_rows": 15240,
+    "reconciliation": {
+      "consistent": true,
+      "summary": {
+        "missing": 0,
+        "extra": 0,
+        "changed": 0,
+        "hash_mismatch_tables": [],
+        "null_mismatch_tables": []
+      }
+    },
+    "checks": {
+      "foreign_key_errors": 0,
+      "foreign_keys_not_enabled_validated": 0,
+      "unresolved_payload_refs": 0,
+      "blocked_policy_rows": 0,
+      "distinct_items_by_source": {
+        "google_trends_rss": 370,
+        "instagram_graph": 185
+      },
+      "legacy_unknown_items": 555,
+      "not_observed_metrics_with_null_value": 0,
+      "expired_rows_in_target": 0,
+      "expired_tombstones_in_target": 0,
+      "food_views_compared": 0,
+      "food_view_mismatches": []
+    },
+    "target_categories": {
+      "food_identity": {
+        "food_entities": 0,
+        "food_aliases": 0,
+        "food_relations": 0
+      },
+      "candidates_and_decisions": {
+        "food_candidates": 0,
+        "food_events": 0,
+        "food_commands": 0,
+        "rss_classifications": {
+          "NON_FOOD": 369,
+          "REVIEW": 1
+        }
+      },
+      "tracking_targets": 0,
+      "query_planner": {
+        "planner_queries": 0,
+        "planner_plans": 0,
+        "planner_query_targets": 0,
+        "quota_reservations": 0
+      },
+      "execution": {
+        "execution_jobs": 0,
+        "execution_runs": 0,
+        "execution_calls": 0,
+        "execution_results": 0
+      },
+      "runs_by_source_origin_coverage": {
+        "google_trends_rss|legacy_unknown|COMPLETE": 90,
+        "google_trends_rss|legacy_unknown|NONE": 5,
+        "instagram_graph|legacy_unknown|UNKNOWN": 1,
+        "youtube|legacy_unknown|UNKNOWN": 1
+      },
+      "items_by_source_origin_availability": {
+        "google_trends_rss|legacy_unknown|AVAILABLE": 370,
+        "instagram_graph|legacy_unknown|AVAILABLE": 185
+      },
+      "run_items_by_quality": {
+        "PASS": 1084,
+        "WARN": 1
+      },
+      "snapshots": 840,
+      "search_evidence_by_status": {
+        "ACTIVE|SEARCH_ONLY": 185
+      },
+      "food_mentions_by_status": {},
+      "metrics_by_code_state_coverage_origin": {
+        "rss.approx_traffic|OBSERVED|COMPLETE|legacy_unknown": 900
+      },
+      "quality_by_outcome": {
+        "NOT_APPLICABLE": 901,
+        "PASS": 9493,
+        "WARN": 8
+      },
+      "entity_change_effects": 0,
+      "aggregate_invalidations": 0,
+      "source_contents_by_source_origin": {
+        "instagram_graph|legacy_unknown": 185,
+        "google_trends_rss|legacy_unknown": 370
+      },
+      "captions_held": 0,
+      "rejections_by_table_disposition_reason": {
+        "source_contents|EXCLUDED_EXPIRED|source_retention_elapsed": 431
+      },
+      "quota_usage_ledger": 0,
+      "quota_accounts_by_status": {
+        "IMPORTED": 2
+      }
+    }
+  },
+  "copy_bytes": 17985536,
+  "temporary_copy_deleted": true,
+  "source_unchanged": {
+    "sha256": true,
+    "bytes": true,
+    "modified_at": true,
+    "wal_bytes": true,
+    "schema_version": true,
+    "integrity": true,
+    "tables": true
+  },
+  "guard_attempts": [],
+  "seconds": 80.952,
+  "passed": true
+}
