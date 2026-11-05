@@ -1,5 +1,7 @@
 # ORACLE-RUNTIME-2 통합 체크리스트 (feat/b8-app-api → main)
 
+> **완료 (2026-11-05, B8-INTEGRATION-1).** 아래 절차(병합, 검증, main Fast-forward)와 §5-7의 Oracle 연결·동등성 확인을 수행했다. 결과와 발견 사항은 [B8-INTEGRATION-1 보고서](../development-b8-integration-2026-11-05/REPORT.md). 워크트리 정리(§5-6)는 사용자 결정 전까지 보류.
+
 PARALLEL-B8-API는 ORACLE-RUNTIME-2와 병렬로 별도 워크트리(`D:\MZFoodTraker-B8-API`)·브랜치(`feat/b8-app-api`)에서 개발했다. **ORACLE-RUNTIME-2가 끝나기 전에는 main에 병합하지 않는다.** 이 문서는 그 이후의 통합 작업 목록이다.
 
 ## 1. 기준점

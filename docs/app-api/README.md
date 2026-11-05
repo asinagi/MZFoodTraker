@@ -14,12 +14,12 @@
 
 ## 빠른 시작
 
-현재 앱 API는 `feat/b8-app-api` 브랜치에만 있습니다(백엔드 통합 후 `main`에 합쳐집니다). Python 3.12만 있으면 되고 추가 패키지는 설치하지 않습니다. 설치 방법과 버전별 검증 상태는 [Python 버전](#python-버전)에 있습니다.
+앱 API는 저장소의 기본 브랜치 `main`에 있습니다. Python 3.12만 있으면 되고 추가 패키지는 설치하지 않습니다. 설치 방법과 버전별 검증 상태는 [Python 버전](#python-버전)에 있습니다.
 
 Windows (PowerShell)
 
 ```powershell
-git clone -b feat/b8-app-api https://github.com/asinagi/MZFoodTraker.git
+git clone https://github.com/asinagi/MZFoodTraker.git
 cd MZFoodTraker
 py -3.12 -m food_trends.app_mock
 ```
@@ -27,7 +27,7 @@ py -3.12 -m food_trends.app_mock
 macOS (터미널)
 
 ```bash
-git clone -b feat/b8-app-api https://github.com/asinagi/MZFoodTraker.git
+git clone https://github.com/asinagi/MZFoodTraker.git
 cd MZFoodTraker
 python3.12 -m food_trends.app_mock
 ```
@@ -37,7 +37,7 @@ python3.12 -m food_trends.app_mock
 3. 앱의 Base URL을 앱이 실행되는 환경에 맞게 설정합니다. Android 에뮬레이터, iOS 시뮬레이터, 실기기마다 주소가 다릅니다([Base URL 설정](#base-url-설정)).
 4. 서버는 `Ctrl+C`로 종료합니다.
 
-git이 없으면 GitHub 브랜치 화면의 **Code → Download ZIP**으로 받아, 압축을 푼 폴더(저장소 루트)에서 마지막 줄 명령만 실행합니다.
+이미 `feat/b8-app-api` 브랜치로 받았다면 `git switch main` 후 `git pull`로 바꾸세요. 계약(경로·필드·예시)은 같습니다. git이 없으면 GitHub 저장소 화면(`main`)의 **Code → Download ZIP**으로 받아, 압축을 푼 폴더(저장소 루트)에서 마지막 줄 명령만 실행합니다.
 
 ## 응답 형식 기본
 
@@ -250,7 +250,7 @@ HTTP 상태 코드로 **큰 분류**(요청 문제인지 서버 문제인지, �
 Linux는 macOS와 같은 명령입니다.
 
 - 실제 백엔드 코드(같은 계산 규칙)를 가상 데이터셋에 실행하므로 검색·필터·정렬·페이지·오류가 실제 서버와 같은 계약으로 동작합니다.
-- 첫 실행은 가상 데이터셋을 만드느라 15~30초(PC 성능에 따라 다름) 걸리고, 이후에는 1초 안에 시작합니다. 백엔드 코드가 바뀌면(브랜치를 새로 받으면) 다시 만듭니다. 데이터는 OS 임시 폴더에만 있습니다.
+- 첫 실행은 가상 데이터셋을 만드느라 15~30초(PC 성능에 따라 다름) 걸리고, 이후에는 1초 안에 시작합니다. 백엔드 코드가 바뀌면(최신 `main`을 받으면) 다시 만듭니다. 데이터는 OS 임시 폴더에만 있습니다.
 - 시계가 **2026-11-03 12:00 KST로 고정**되어 있어 응답이 항상 같습니다. 기본 기간은 2026-11-02까지이고 `end_date`는 2026-11-03까지만 받습니다(규칙 6번).
 - 가상 데이터 표시(`[MOCK]`, `meta.data_mode`, `meta.notice`)는 규칙 4번을 따르세요.
 - 브라우저 웹앱을 위해 모든 Origin에 CORS를 허용합니다.
@@ -323,6 +323,15 @@ python3.12 -m food_trends.app_api --database <경로> --observation-origin mock 
 - DB를 읽기 전용으로 열고 쓰기·마이그레이션·외부 호출을 하지 않습니다. 스키마가 최신(v11)이 아니면 시작하지 않습니다. **현재 운영 DB는 마이그레이션 전(v0)이라 이 서버로 열 수 없으며, 운영 DB 마이그레이션은 이번 작업 범위가 아닙니다.**
 - 루프백(`127.0.0.1`)에만 바인딩합니다. 실기기는 `adb reverse tcp:8020 tcp:8020`으로만 접속할 수 있고, 다른 기기 공개는 [ACCESS.md](ACCESS.md) §6의 별도 과제입니다.
 - 기본으로 `live_api` 회차만 집계합니다. Mock 수집 회차가 섞인 DB에서도 Mock 행은 값에 들어가지 않습니다.
+- 읽을 저장소는 `--store`로 명시합니다(기본 `sqlite`). 어느 저장소든 응답 계약은 같으므로 앱 코드는 바꿀 필요가 없습니다.
+
+| `--store` | 읽는 곳 | 용도 |
+| --- | --- | --- |
+| `sqlite` (기본) | `--database`로 지정한 최신 스키마(v11) SQLite DB | 개발·검증 |
+| `oracle-test` | 백엔드 개발 PC의 `ORACLE_TEST_*` 환경변수가 가리키는 개발용 Oracle 테스트 스키마. 요청마다 읽기 전용 트랜잭션 (`python-oracledb` 필요) | 백엔드의 Oracle 동등성 확인 |
+| `oracle-production` | — | 운영 Oracle 전환 승인 전이라 시작을 거부합니다 |
+
+Oracle 테스트 스키마의 접속 정보는 앱 개발자에게 제공하지 않습니다. 화면 개발은 Mock 서버 또는 SQLite 서버로 충분합니다.
 
 ### Mock에서 실제 서버로 바꿀 때
 
@@ -350,4 +359,4 @@ python3.12 -m food_trends.app_api --database <경로> --observation-origin mock 
 | 음식 대표 이미지·설명문 | 없음. 앱에서 기본 이미지·아이콘을 쓰세요 |
 | 사용자 지정 기간(start_date~end_date), 시간 단위 추이 | v1은 7·30·90일, 일·주 단위만 |
 | 저장 집계(빠른 대용량 조회) | 읽기 시 계산. 설계만 있음 |
-| 앱 API의 Oracle 저장소 연결 | 읽기 계층은 준비됨, 서버 실행 옵션은 Oracle 통합 이후 |
+| 운영 Oracle 저장소로 서비스 | 미승인 (`--store oracle-production`은 시작 거부). 개발용 Oracle 테스트 스키마(`--store oracle-test`)만 지원 |
