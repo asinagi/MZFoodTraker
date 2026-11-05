@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-11-05T18:53:11+00:00",
+  "access": "read-only (mode=ro, query_only)",
+  "tables": 30,
+  "rows": 7701,
+  "schema_migrations_present": false,
+  "schema_version": 0,
+  "integrity_check": "ok",
+  "sha256": "38b880f535dded56e84a11570a1f7793bed1668580950172a417687b689548c0",
+  "unchanged_since_previous_task": true,
+  "main_file_modified_at": "2026-10-28T14:20:01",
+  "mtime_unchanged_by_check": true,
+  "wal_bytes": 0,
+  "servers_listening": {
+    "8000": false,
+    "8002": false,
+    "8010": false,
+    "8020": false,
+    "8030": false,
+    "8031": false,
+    "1521": false
+  }
+}

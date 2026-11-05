@@ -1,0 +1,9 @@
+{
+  "tests": 711,
+  "failures": 0,
+  "errors": 1,
+  "skipped": 0,
+  "blocked_external_attempts": 0,
+  "production_database": "blocked",
+  "successful": false
+}
