@@ -823,6 +823,18 @@ class OracleExecution:
     def delete_content(self, t, payload_ref):
         return t.run('DELETE FROM source_contents WHERE payload_ref=:b_p', b_p=payload_ref).rowcount
 
+    def purge(self, at=None):
+        """execution_maintenance.purge on the target: expired item receipts go; an expired checkpoint keeps only a tombstone
+        (its expiry still refuses a replay)."""
+        now = instant(at) if at else self.now()
+        with self.transaction() as t:
+            receipts = t.run('DELETE FROM execution_item_receipts WHERE expires_at<=:b_now', b_now=now).rowcount
+            expired = [r['job_id'] for r in t.rows('SELECT * FROM execution_checkpoints WHERE expires_at<=:b_now', 'execution_checkpoints', b_now=now)
+                       if json.loads(r['state_json']) != {'expired': True}]
+            for job_id in expired:
+                t.update('execution_checkpoints', {'job_id': job_id}, state_json=dump({'expired': True}))
+        return {'expired_item_receipts': receipts, 'expired_checkpoints': len(expired), 'http_requests': 0}
+
 
 class OracleRequestSession(RequestSession):
     """RequestSession over the target: fence + quota + send intention commit before each HTTP."""

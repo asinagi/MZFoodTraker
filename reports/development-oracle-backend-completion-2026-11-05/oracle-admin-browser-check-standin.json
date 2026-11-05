@@ -1,0 +1,19 @@
+{
+  "successful": true,
+  "target": "standin",
+  "storage": "sqlite_target_standin",
+  "rss_collected_from_page": true,
+  "list_rows_food_filter": 2,
+  "candidates": 3,
+  "food_approved_from_page": true,
+  "request_without_token": 401,
+  "execution_sources_shown": true,
+  "legacy_panels": [
+    "Instagram 해시태그 분석Instagram 서비스가 연결되지 않았습니다",
+    "NAVER 검색 트렌드연결 상태 조회 실패: NAVER 서비스 미연결음식 키워드사용자 지정 음식조회 기간7일30일90일검색 추이 조회출처: NA",
+    "YouTube 공개 영상상태 조회 실패: YouTube 서비스 미연결"
+  ],
+  "javascript_errors": 0,
+  "external_page_requests": 0,
+  "sqlite_application_database_used": false
+}

@@ -64,12 +64,15 @@ def oracle_backend(repo, accounts, clock=None, transport=None, settings=None, rs
 
 
 def oracle_maintenance(backend, at=None):
-    """What --maintenance does on SQLite, for the target: B4 source retention and staging expiry, B5 link expiry, then the
-    reprocessing of approved alias and food decisions (so alias changes reach B8). No HTTP, no DDL."""
+    """What --maintenance does on SQLite, for the target: execution receipt and checkpoint expiry, B4 source retention and
+    staging expiry, B5 link expiry, then the reprocessing of approved alias and food decisions (so alias changes reach B8).
+    No HTTP, no DDL."""
+    execution = backend.execution.purge(at)
     staging = backend.ingestion.purge(at)
     links = backend.observations.purge(at)
     effects = backend.observations.apply_entity_changes()
-    return {'success': True, 'staging': staging, 'links': links, 'entity_changes_reprocessed': len(effects), 'api_requests': 0}
+    return {'success': True, 'execution': execution, 'staging': staging, 'links': links, 'entity_changes_reprocessed': len(effects),
+            'api_requests': 0}
 
 
 def status(mode, database_path, environ=None):

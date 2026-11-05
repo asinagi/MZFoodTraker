@@ -273,6 +273,10 @@ class OracleEndToEndStandInTests(unittest.TestCase):
             purged = oracle_maintenance(self.backend, self.now)
             self.assertGreater(purged['staging']['purged_captions'], 0)
             self.assertGreater(purged['links']['expired_mentions'], 0)
+            self.assertGreater(purged['execution']['expired_item_receipts'], 0)  # SQLite's execution maintenance, on the target
+            self.assertGreater(purged['execution']['expired_checkpoints'], 0)
+            self.assertEqual(oracle_maintenance(self.backend, self.now)['execution'], {'expired_item_receipts': 0, 'expired_checkpoints': 0,
+                                                                                       'http_requests': 0})
             expired = self.day(food['food_id'], observed_day, period='90d')
             self.assertEqual((expired['value'], expired['value_state']), (None, 'EVIDENCE_EXPIRED'))
         self.assertEqual(opened, [])
