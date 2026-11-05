@@ -43,17 +43,24 @@ class ExecutionController:
         """Local, explicit retry of the A4 bridge, never a feed fetch or auto-approval."""
         if type(limit) is not int or not 1<=limit<=100:
             raise FoodError('재처리 회차 수는 1~100입니다.')
+        results=[]
+        for run in self._unimported_rss_runs(limit):
+            try:results.append(dict(run_id=run,**self._rss_foods().import_rss_run(run)))
+            except Exception:results.append({'run_id':run,'state':'pending_retry'})
+        return {'results':results,'http_requests':0}
+
+    # RSS reads of recover_rss. The Oracle runtime (oracle_rss.OracleExecutionController) overrides only these.
+
+    def _unimported_rss_runs(self, limit):
         with self.execution.storage.reader() as db:
-            runs=[r[0] for r in db.execute('''SELECT DISTINCT o.run_id FROM observations o
+            return [r[0] for r in db.execute('''SELECT DISTINCT o.run_id FROM observations o
                 JOIN runs r ON r.id=o.run_id JOIN candidates c ON c.item_id=o.item_id
                 WHERE r.success=1 AND c.classification IN ('FOOD','REVIEW') AND NOT EXISTS
                 (SELECT 1 FROM food_candidates f WHERE f.source_code='google_trends_rss' AND f.source_item_id=o.item_id)
                 ORDER BY o.run_id LIMIT ?''',(limit,))]
-        results=[]
-        for run in runs:
-            try:results.append(dict(run_id=run,**self.execution.tracking.foods.import_rss_run(run)))
-            except Exception:results.append({'run_id':run,'state':'pending_retry'})
-        return {'results':results,'http_requests':0}
+
+    def _rss_foods(self):
+        return self.execution.tracking.foods
 
     def tick(self, options=None, mode='mock', max_jobs=10):
         if mode not in ('mock','live'):

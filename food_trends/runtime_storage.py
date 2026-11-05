@@ -1,5 +1,6 @@
 """ORACLE-RUNTIME-1: explicit storage selection for the backend services (B3 execution, B4 ingestion, B5 observations;
-since ORACLE-CUTOVER-PREP-1 also food identity and tracking commands through oracle_backend).
+since ORACLE-CUTOVER-PREP-1 also food identity and tracking commands, since ORACLE-BACKEND-COMPLETION-1 RSS discovery,
+through oracle_backend).
 
 Three modes, never inferred:
   sqlite             the existing SQLite services on DATABASE_PATH (development and operations compatibility)
@@ -44,17 +45,21 @@ def oracle_services(repo, accounts, clock=None, settings=None):
     return execution, OracleIngestionService(execution), OracleObservationService(execution)
 
 
-def oracle_backend(repo, accounts, clock=None, transport=None, settings=None):
-    """Every write path of the backend on one target and nothing else: food identity and alias review, tracking
-    commands, planning, due slots, mock execution, B4 staging/DQ and B5 observations. Opens no SQLite database
-    (B8 reads the same target through analytics_reader.TargetAnalyticsStore); checks the schema version, never migrates."""
+def oracle_backend(repo, accounts, clock=None, transport=None, settings=None, rss_fetcher=None, rss_interval=1800):
+    """Every write path of the backend on one target and nothing else: RSS discovery and candidate import, food identity
+    and alias review, tracking commands, planning, due slots, mock execution, B4 staging/DQ and B5 observations. Opens no
+    SQLite database (B8 reads the same target through analytics_reader.TargetAnalyticsStore); checks the schema version,
+    never migrates. RSS collects only through an injected mock fetcher (rss_fetcher); without one it refuses to fetch."""
     from types import SimpleNamespace
     from .oracle_execution import oracle_mock_controller
     from .oracle_foods import OracleFoodService
+    from .oracle_rss import OracleRssService
     from .oracle_tracking import OracleTrackingService
     controller = oracle_mock_controller(repo, accounts, clock, transport, settings)
     execution = controller.execution
-    return SimpleNamespace(foods=OracleFoodService(execution), tracking=OracleTrackingService(execution), planner=execution.planner,
+    foods = OracleFoodService(execution)
+    controller.rss = OracleRssService(execution, foods, controller.observations, interval=rss_interval, fetcher=rss_fetcher)
+    return SimpleNamespace(foods=foods, tracking=OracleTrackingService(execution), planner=execution.planner, rss=controller.rss,
                            execution=execution, ingestion=controller.ingestion, observations=controller.observations, controller=controller)
 
 

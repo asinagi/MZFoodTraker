@@ -1041,8 +1041,8 @@ def oracle_mock_controller(repo, accounts, clock=None, transport=None, settings=
     the same target.
     """
     from .execution_mock import MockTransport, mock_clients
-    from .execution_runtime import ExecutionController
     from .oracle_planner import OracleQueryPlanner
+    from .oracle_rss import OracleExecutionController
     execution = OracleExecution(repo, accounts, clock, settings)
     OracleQueryPlanner(execution)
     clients = mock_clients(execution.accounts.values(), transport or MockTransport())
@@ -1051,4 +1051,4 @@ def oracle_mock_controller(repo, accounts, clock=None, transport=None, settings=
         from .oracle_ingestion import OracleIngestionService
         from .oracle_observations import OracleObservationService
         ingestion, observations = OracleIngestionService(execution), OracleObservationService(execution)
-    return ExecutionController(execution, oracle_adapters(clients), ingestion, observations)
+    return OracleExecutionController(execution, oracle_adapters(clients), ingestion, observations)

@@ -5,15 +5,16 @@ the brand/store gate, scoped alias uniqueness, refused variant cycles, kept merg
 and a replayable result per request key. Only its storage primitives read and write target tables, inside
 the Oracle runtime's ownership-guarded transactions (refused while Shadow owns the target). Identity commands
 are serialized among themselves by an exclusive lock on food_commands, as BEGIN IMMEDIATE serializes them on
-SQLite, so a revision check and its write never interleave with another command. The RSS candidate import
-reads the SQLite discovery store (items, candidates, observations) and stays there.
+SQLite, so a revision check and its write never interleave with another command. The RSS candidate import reads
+the target's own discovery rows (oracle_rss): items are source_contents 'items:N' (N is the SQLite item id B7 loaded
+or the next one), classifications rss_classifications and observations rss_observations; a candidate refers to its
+item by source_item_key, so candidate keys and replay request keys stay the ones the SQLite bridge used.
 """
+import json
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from .food_service import NORMALIZATION_VERSION, FoodError, FoodService, dump, text
 from .target_db import IntegrityViolation, UniqueViolation
-
-RSS_IMPORT_ON_SQLITE = 'RSS 후보 가져오기는 SQLite RSS 발굴 저장소에서만 실행합니다(대상에는 B7 이관으로 도착).'
 
 
 def _now():
@@ -106,9 +107,9 @@ class OracleFoodService(FoodService):
     @staticmethod
     def _put_candidate(t, row):
         row = dict(row)
-        if row.pop('source_item_id') is not None:  # only the SQLite RSS bridge refers to an RSS item
-            raise FoodError(RSS_IMPORT_ON_SQLITE, 409)
-        t.insert('food_candidates', dict(row, source_item_key=None, status='NEW', revision=1, resolved_food_id=None,
+        item = row.pop('source_item_id')  # an RSS item id (checked by the import) -> its item key, as B7 loads it
+        key = t.scalar('SELECT item_key AS k FROM source_contents WHERE payload_ref=:b_p', b_p='items:%d' % item) if item is not None else None
+        t.insert('food_candidates', dict(row, source_item_key=key, status='NEW', revision=1, resolved_food_id=None,
                                          resolution_alias_id=None, resolution_method=None))
 
     @staticmethod
@@ -177,8 +178,39 @@ class OracleFoodService(FoodService):
         t.run("UPDATE food_entities SET status='MERGED',merged_into=:b_t,revision=revision+1,updated_at=:b_now WHERE food_id=:b_f",
               b_t=target_id, b_now=_now(), b_f=food_id)
 
-    def _do_import(self, t, ctx):
-        raise FoodError(RSS_IMPORT_ON_SQLITE, 409)
+    # RSS discovery reads over the target's own discovery rows (written by oracle_rss or loaded by B7).
 
-    def import_rss_run(self, run_id):
-        raise FoodError(RSS_IMPORT_ON_SQLITE, 409)
+    def _rss_item(self, t, item_id):
+        content = t.one("SELECT * FROM source_contents WHERE payload_ref=:b_p AND source_code='google_trends_rss'", 'source_contents',
+                        b_p='items:%d' % item_id)
+        if content is None:
+            raise FoodError('대상을 찾을 수 없습니다.', 404)
+        body = json.loads(content['content_json'])
+        return {'id': item_id, 'item_key': content['item_key'], 'keyword': body.get('keyword'), 'published_at': body.get('published_at')}
+
+    def _rss_classification(self, t, item):
+        return self._row(t, 'rss_classifications', 'item_key', item['item_key'])
+
+    @staticmethod
+    def _rss_prior(t, item):
+        limit = ' FETCH FIRST 1 ROWS ONLY' if t.oracle else ' LIMIT 1'
+        row = t.one('SELECT contract_json FROM rss_observations WHERE item_key=:b_k ORDER BY run_id DESC' + limit, 'rss_observations',
+                    b_k=item['item_key'])
+        return json.loads(row['contract_json']) if row else None
+
+    @staticmethod
+    def _rss_candidate(t, source, item):
+        return t.one('SELECT * FROM food_candidates WHERE source_code=:b_s AND source_item_key=:b_k', 'food_candidates',
+                     b_s=source, b_k=item['item_key'])
+
+    @staticmethod
+    def _retype(t, candidate_id, kind, gate):
+        t.run('UPDATE food_candidates SET proposed_kind=:b_k,type_gate=:b_g,revision=revision+1,updated_at=:b_now WHERE candidate_id=:b_c',
+              b_k=kind, b_g=gate, b_now=_now(), b_c=candidate_id)
+
+    def _rss_run_items(self, t, run_id):
+        if not self._row(t, 'rss_runs', 'run_id', run_id)['success']:
+            return None
+        refs = t.rows("""SELECT o.payload_ref FROM rss_observations o JOIN rss_classifications c ON c.item_key=o.item_key
+            WHERE o.run_id=:b_r AND c.classification IN ('FOOD','REVIEW')""", b_r=run_id)
+        return sorted(int(r['payload_ref'].partition(':')[2]) for r in refs)

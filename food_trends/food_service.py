@@ -175,6 +175,37 @@ class FoodService:
     def _mark_merged(db, food_id, target_id):
         db.execute("UPDATE food_entities SET status='MERGED',merged_into=?,revision=revision+1,updated_at=? WHERE food_id=?", (target_id, utcnow(), food_id))
 
+    # RSS discovery reads for the import bridge. The Oracle runtime reads its own RSS tables instead (oracle_foods).
+
+    def _rss_item(self, db, item_id):
+        return self._row(db, 'items', 'id', item_id)
+
+    def _rss_classification(self, db, item):
+        return self._row(db, 'candidates', 'item_id', item['id'])
+
+    @staticmethod
+    def _rss_prior(db, item):
+        """The item's latest observation contract, or None."""
+        row = db.execute('SELECT contract_json FROM observations WHERE item_id=? ORDER BY run_id DESC LIMIT 1', (item['id'],)).fetchone()
+        return json.loads(row[0]) if row and row[0] else None
+
+    @staticmethod
+    def _rss_candidate(db, source, item):
+        row = db.execute('SELECT * FROM food_candidates WHERE source_code=? AND source_item_id=?', (source, item['id'])).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def _retype(db, candidate_id, kind, gate):
+        db.execute('UPDATE food_candidates SET proposed_kind=?,type_gate=?,revision=revision+1,updated_at=? WHERE candidate_id=?',
+                   (kind, gate, utcnow(), candidate_id))
+
+    def _rss_run_items(self, db, run_id):
+        """FOOD/REVIEW item ids observed in a successful run; None for a failed run."""
+        if not self._row(db, 'runs', 'id', run_id)['success']:
+            return None
+        return [r[0] for r in db.execute('''SELECT o.item_id FROM observations o JOIN candidates c ON c.item_id=o.item_id
+            WHERE o.run_id=? AND c.classification IN ('FOOD','REVIEW') ORDER BY o.item_id''', (run_id,))]
+
     # Decisions
 
     def _row(self, db, table, column, value):
@@ -363,24 +394,22 @@ class FoodService:
         require_operation(source, 'existing_food_rules')
         if type(ctx.get('source_item_id')) is not int:
             raise FoodError('기존 RSS 항목 ID가 필요합니다.')
-        item = self._row(db, 'items', 'id', ctx['source_item_id'])
-        classification = self._row(db, 'candidates', 'item_id', item['id'])
-        observation = db.execute('SELECT contract_json FROM observations WHERE item_id=? ORDER BY run_id DESC LIMIT 1', (item['id'],)).fetchone()
-        prior = json.loads(observation[0]) if observation and observation[0] else None
+        item = self._rss_item(db, ctx['source_item_id'])
+        classification = self._rss_classification(db, item)
+        prior = self._rss_prior(db, item)
         origin = prior['origin'] if prior else 'legacy_unknown'
         contract = envelope(source, origin, utcnow(), published_at=item['published_at'],
                             fields={'keyword': item['keyword']}, request={'geo': 'KR', 'endpoint': 'trending/rss'},
                             observation={'source_item_id': item['id'], 'classification_version': classification['classifier_version'],
                                          'resolution_input': True, 'source_collected_at': prior['collected_at'] if prior else None})
         kind = candidate_kind(classification['entity_type'], classification['classification'])
-        existing = db.execute('SELECT * FROM food_candidates WHERE source_code=? AND source_item_id=?', (source, item['id'])).fetchone()
+        existing = self._rss_candidate(db, source, item)
         if existing and existing['proposed_kind'] != kind and existing['status'] != 'REJECTED':
             before = dict(existing)
             if existing['status'] == 'RESOLVED':
                 self._transition(db, existing['candidate_id'], 'NEEDS_REVIEW', ctx)
             gate = 'BLOCKED_NON_FOOD' if kind in ('BRAND','STORE','NON_FOOD') else 'REQUIRES_TYPE_APPROVAL' if kind == 'UNKNOWN' else 'FOOD'
-            db.execute('''UPDATE food_candidates SET proposed_kind=?,type_gate=?,revision=revision+1,updated_at=?
-                WHERE candidate_id=?''', (kind, gate, utcnow(), existing['candidate_id']))
+            self._retype(db, existing['candidate_id'], kind, gate)
             after = self._row(db, 'food_candidates', 'candidate_id', existing['candidate_id'])
             self._event(db, 'candidate', existing['candidate_id'], 'SOURCE_TYPE_CHANGED', before,
                         dict(after, source_classifier_version=classification['classifier_version']), ctx)
@@ -391,12 +420,10 @@ class FoodService:
     def import_rss_run(self, run_id):
         """Local post-collection bridge. Each item is replayable; never creates foods or tracking targets."""
         require_operation('google_trends_rss', 'existing_food_rules')
-        with self.storage.reader() as db:
-            run = self._row(db, 'runs', 'id', run_id)
-            if not run['success']:
-                return {'state': 'skipped_failed_run', 'candidates': 0}
-            ids = [r[0] for r in db.execute('''SELECT o.item_id FROM observations o JOIN candidates c ON c.item_id=o.item_id
-                WHERE o.run_id=? AND c.classification IN ('FOOD','REVIEW') ORDER BY o.item_id''', (run_id,))]
+        with self._reader() as db:
+            ids = self._rss_run_items(db, run_id)
+        if ids is None:
+            return {'state': 'skipped_failed_run', 'candidates': 0}
         for item_id in ids:
             self.command('import', {'request_key': f'rss-resolution:{run_id}:{item_id}',
                                    'source_code': 'google_trends_rss', 'source_item_id': item_id})

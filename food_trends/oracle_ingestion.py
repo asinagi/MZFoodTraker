@@ -4,9 +4,10 @@ IngestionService.ingest() (envelope, credential/NAVER refusal, batch dedupe, DQ 
 runs unchanged; only its staging primitives are re-pointed at target tables through the Oracle
 runtime's transactions. Records come from the runtime's source_contents and job receipts through the
 existing YouTube/Instagram record builders; payload_hash is the stored source_payload_hash, so
-snapshot keys equal the SQLite path's. NAVER values stay in memory. RSS and legacy backfill read
-SQLite-only stores and keep running on the SQLite system of record (their rows reach the target via B7
-or Shadow). Expiry and deletion are mirrored here; the target never revives an expired item.
+snapshot keys equal the SQLite path's. NAVER values stay in memory. An RSS run collected on the target
+is staged inside its own collection transaction (oracle_rss, through rss_observed); SQLite RSS runs and
+the legacy backfill read SQLite-only stores, so their rows reach the target via B7 or Shadow. Expiry and
+deletion are mirrored here; the target never revives an expired item.
 """
 import hashlib
 import json
@@ -127,7 +128,8 @@ class OracleIngestionService(IngestionService):
         return {'ingested': len([r for r in results if r]), 'http_requests': 0}
 
     def rss_run(self, run_id):
-        raise ValueError('RSS runs are staged on the SQLite system of record; their rows reach the target through B7 or Shadow')
+        raise ValueError('RSS runs collected on the target are staged in their own collection transaction (oracle_rss); '
+                         'SQLite runs reach the target through B7 or Shadow')
 
     def legacy_backfill(self, source):
         raise ValueError('Legacy backfill reads SQLite-only stores; use B7 migration for the target')

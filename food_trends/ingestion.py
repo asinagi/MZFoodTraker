@@ -192,6 +192,11 @@ class IngestionService:
                 return None
             rows = db.execute('''SELECT o.payload AS observed,o.contract_json,i.id,i.source_id,i.published_at
                 FROM observations o JOIN items i ON i.id=o.item_id WHERE o.run_id=? ORDER BY i.id''', (run_id,)).fetchall()
+        return self.rss_observed(run, rows)
+
+    def rss_observed(self, run, rows):
+        """One finished RSS run (id, origin, success, finished_at, counts, contract_json) and its observations (observed payload
+        text, observation contract_json, item id, source_id, published_at) -> staged run. Shared by the SQLite and Oracle stores."""
         request = (json.loads(run['contract_json']) if run['contract_json'] else {}).get('request_conditions') or {'geo': 'KR', 'endpoint': 'trending/rss'}
         contents, metrics = [], []
         for row in rows:
@@ -212,7 +217,7 @@ class IngestionService:
                 subject_key=row['source_id'], observed_at=run['finished_at'], period_start=None, period_end=None,
                 provider_period=None, comparison_context=request, value_state='OBSERVED' if traffic else 'NOT_PROVIDED',
                 count_value=None, decimal_value=None, raw_value=traffic or None))
-        return self.ingest(dict(source_code='google_trends_rss', run_ref='runs:%d' % run_id, origin=run['origin'],
+        return self.ingest(dict(source_code='google_trends_rss', run_ref='runs:%d' % run['id'], origin=run['origin'],
             execution_status='SUCCEEDED' if run['success'] else 'FAILED', coverage='COMPLETE' if run['success'] else 'NONE',
             error_kind=None if run['success'] else 'collection_failed', request_context=request, observed_at=run['finished_at'],
             returned_count=run['item_count'], accepted_count=run['new_count'],

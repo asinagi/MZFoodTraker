@@ -55,6 +55,9 @@ NOT_RECOVERED = {
     'legacy_key_map': LOAD_BOOKKEEPING, 'migration_batches': LOAD_BOOKKEEPING, 'migration_rejections': LOAD_BOOKKEEPING,
     'shadow_applied': 'target-only Shadow bookkeeping'}
 RSS_ONLY_ON_SQLITE = ('rss_classifications', 'rss_classification_history')
+# v8 RSS runs and observations collected on the target (oracle_rss); B7 loads no SQLite runs, so every row is target-only.
+RSS_RUNTIME = ('rss_runs', 'rss_observations')
+RSS_NOT_WRITTEN_BACK = 'RSS discovery rows collected on the target are not written back to the SQLite discovery store'
 LOSSES = {'tracking_slots': 'slot lifecycle (status, claim/completion times, cancellation reason, plan and job) has no SQLite column',
           'instagram_caption_tags': 'original hashtag spellings: the target keeps normalized names only',
           'instagram_caption_captured_at': 'derived from the caption window end, so the expiry instant is unchanged',
@@ -196,7 +199,14 @@ class Recovery:
                 out['losses'][name] = {'rows': len(rows), 'reason': LOSSES[name]}
         for table in RSS_ONLY_ON_SQLITE:
             if work[table]['only']:
-                out['losses'][table] = {'rows': len(work[table]['only']), 'reason': 'RSS discovery rows written on the target have no SQLite store'}
+                out['losses'][table] = {'rows': len(work[table]['only']), 'reason': RSS_NOT_WRITTEN_BACK}
+        for table in RSS_RUNTIME:
+            if self.repo.count(table):
+                out['losses'][table] = {'rows': self.repo.count(table), 'reason': RSS_NOT_WRITTEN_BACK}
+        unlinked = [r for r in work['food_candidates']['only'] if r['source_item_key'] and r['source_item_key'] not in self._items]
+        if unlinked:
+            out['losses']['candidate_rss_item'] = {'rows': len(unlinked), 'reason': 'the RSS item was collected on the target: the candidate '
+                                                   'returns without its SQLite item id (source_item_id NULL)'}
         for table, reason in NOT_RECOVERED.items():
             out['not_recovered'][table] = {'rows': self.repo.count(table), 'reason': reason}
         totals = out['tables'].values()

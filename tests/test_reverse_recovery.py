@@ -161,6 +161,18 @@ class RecoveryStandInTests(unittest.TestCase):
         self.assertEqual(set(result['losses']), {'tracking_slots', 'instagram_caption_tags', 'instagram_caption_captured_at'})
         self.assertEqual(result['not_recovered']['runtime_participants']['rows'], self.repo.count('runtime_participants'))
 
+    def test_rss_discovered_on_the_target_is_listed_as_not_written_back(self):
+        backend = oracle_backend(self.repo, mock_accounts(), lambda: self.now, Feed(),
+                                 rss_fetcher=lambda _: (rss_xml(('마라탕', ['마라탕 맛집 인기'])), 200))
+        try:
+            self.assertEqual(backend.rss.collect()['entity_resolution'], {'state': 'completed', 'candidates': 1})
+        finally:
+            backend.execution.release()
+        result = plan(self.path, self.repo, now=self.now)
+        self.assertEqual({t: result['losses'][t]['rows'] for t in ('rss_runs', 'rss_observations', 'rss_classifications', 'candidate_rss_item')},
+                         {'rss_runs': 1, 'rss_observations': 1, 'rss_classifications': 1, 'candidate_rss_item': 1})
+        self.assertEqual(result['contents_not_recovered'].get('rss_content_written_on_target'), 1)
+
     def test_recovery_brings_back_the_oracle_period_and_reruns_write_nothing(self):
         result = recover(self.path, self.repo, now=self.now, apply_updates=True)
         self.assertTrue(result['updates_applied'])

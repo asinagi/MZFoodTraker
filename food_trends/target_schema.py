@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 7
+TARGET_SCHEMA_VERSION = 8
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -334,6 +334,20 @@ TABLES = (
           C('event_sequence', 'int')), ('event_id',),
           fks=((('target_id',), 'tracking_targets', ('target_id',)), (('request_key',), 'tracking_commands', ('request_key',))),
           indexes=(('target_id', 'event_sequence'),), meta={'since': 7}),
+    # v8 Google Trends RSS runs collected on the target (oracle_rss): the SQLite runs contract without the raw response.
+    # run_id continues the loaded SQLite numbering (B4 run_ref runs:N); runtime-owned like v7, B7 copies no SQLite runs.
+    Table('rss_runs', (NN('run_id', 'int'), NN('started_at', 'ts'), C('finished_at', 'ts'), C('success', 'int'), C('error', 'text'),
+          C('http_status', 'int'), NN('item_count', 'int'), NN('new_count', 'int'), NN('warnings_json', 'json'), NN('origin', 'code'),
+          NN('contract_json', 'json'), C('food_count', 'int'), C('review_count', 'int'), C('new_food_count', 'int'), C('new_review_count', 'int'),
+          C('classifier_version', 'code')), ('run_id',),
+          checks=("origin IN ('live_api','mock')", 'success IS NULL OR success IN (0,1)'), indexes=(('finished_at',),),
+          mutable=('finished_at', 'success', 'error', 'http_status', 'item_count', 'new_count', 'warnings_json', 'food_count', 'review_count',
+                   'new_food_count', 'new_review_count', 'classifier_version'), meta={'since': 8}),
+    # v8 one row per (RSS run, item), the SQLite observations contract: the observation envelope and the classification applied in
+    # that run. The payload itself stays once in source_contents (items:N); B4 run_items stage the observed snapshot.
+    Table('rss_observations', (NN('run_id', 'int'), NN('item_key', 'id'), NN('payload_ref', 'key'), NN('classification_json', 'json'),
+          NN('contract_json', 'json'), NN('observed_at', 'ts')), ('run_id', 'item_key'),
+          fks=((('run_id',), 'rss_runs', ('run_id',)),), indexes=(('item_key', 'run_id'),), meta={'since': 8}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),

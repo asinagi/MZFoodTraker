@@ -3,7 +3,7 @@
 FoodObservationService's decisions run unchanged: exact approved aliases only, SEARCH_ONLY query
 matches, mentions only where the source policy grants caption/feed analysis (never YouTube), NAVER
 metrics never stored, failed runs NOT_OBSERVED rather than zero. Only its storage primitives are
-re-pointed at target tables. Evidence comes from source_contents (RSS rows arrive through B7/Shadow,
+re-pointed at target tables. Evidence comes from source_contents (RSS rows arrive through B7/Shadow or oracle_rss,
 YouTube/Instagram from the Oracle runtime); the caption window is the content's field_expires_at.
 The target's own policy checks (mention sources, storable metrics, origin labels) apply on every write.
 Food and alias decisions stay on the SQLite system of record and reach the target through B7 or Shadow.
