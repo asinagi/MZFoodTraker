@@ -415,9 +415,12 @@ class OracleExecutionStandInTests(unittest.TestCase):
         with self.assertRaises(OracleUnavailable):
             OracleExecution(TargetRepository(Production(Path(self.temp.name) / 'p.sqlite3')), self.tracking.accounts)
         plan = self.plan()
+        jobs = self.repo.count('execution_jobs')
         result = self.oracle().execution.enqueue([plan['plan_id']], mode='live')[0]
         self.assertEqual(result['status'], 'BLOCKED')
-        self.assertIn('LIVE_NOT_SUPPORTED_BY_ORACLE_RUNTIME', result['reasons'])
+        # A mock runtime never runs a live job: live is off here and the source was never transferred from its legacy writer.
+        self.assertTrue({'LIVE_DISABLED_OR_LEGACY_WRITER_NOT_TRANSFERRED', 'LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED'} <= set(result['reasons']))
+        self.assertEqual(self.repo.count('execution_jobs'), jobs)
 
     def test_schema_v1_upgrades_explicitly(self):
         from food_trends.target_schema import TABLES

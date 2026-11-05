@@ -10,7 +10,10 @@ serializes the stand-in) and re-reads the lease under that lock. Every fenced wr
 then the lease row, in that order, so a stale worker can neither write after a takeover commits nor
 deadlock with a claimer. No transaction is open while a provider request is in flight.
 
-Mock transports only: live mode is refused, as is an Oracle target labelled production. Construction
+Mock by default. Live settings are accepted only from the live assembly (oracle_live) with a passed readiness
+check, and a live job still needs, at enqueue and again before its first request, live enabled for its source,
+a live account, the source transferred to this runtime as its only writer (quota_accounts EXCLUSIVE, so its external
+usage is known) and no active block; an Oracle target labelled production is refused. Construction
 checks the target schema version and never runs DDL. The legacy call tables (youtube_calls, naver_calls,
 instagram_searches) and quota_events do not exist on the target: budget usage is the workflow charges
 recorded here, and reservation transitions are kept on quota_reservations only.
@@ -23,7 +26,8 @@ from .contracts import CONTRACT_VERSION, SOURCES, policy_for, require_operation,
 from .entity_types import FOOD_KINDS
 from .execution import CONTENT_ENDPOINTS, ExecutionError, ExecutionSettings, LostLease, RequestSession
 from .execution_sources import (SourceAdapter, NaverExecutor, lookup_checkpoint, media_checkpoint, media_request, parse_lookup,
-                                parse_media, parse_search, parse_videos, public_videos, search_checkpoint, videos_checkpoint)
+                                parse_media, parse_search, parse_videos, public_videos, remote_usage_check_needed, search_checkpoint,
+                                usage_fingerprint, videos_checkpoint)
 from .food_service import FoodError, dump, identity, text
 from .ingestion import item_key
 from .instagram_analysis import extract_hashtags
@@ -270,14 +274,14 @@ class OracleExecution:
     """ExecutionService's method contract (enqueue/claim/renew/begin/finish/fail/status) on the target schema."""
     session_class = None  # set below to OracleRequestSession
 
-    def __init__(self, repo, accounts, clock=None, settings=None, ownership=None, require_verified_usage=False):
+    def __init__(self, repo, accounts, clock=None, settings=None, ownership=None, require_verified_usage=False, live_readiness=None):
         from .runtime_ownership import RuntimeOwnership
         self.repo, self.db = repo, repo.db
         self.accounts = accounts if isinstance(accounts, dict) else {(a.source_id, a.account_scope): a for a in accounts}
         self.clock = clock or repo.clock
         self.settings = settings or ExecutionSettings()
-        if self.settings.live_enabled:
-            raise ValueError('The Oracle runtime executes mock transports only')
+        if self.settings.live_enabled and not (live_readiness or {}).get('ready'):
+            raise ValueError('Oracle live execution needs the live assembly and a passed readiness check (oracle_live)')
         target_settings = getattr(self.db, 'settings', None)
         if target_settings is not None and target_settings.environment == 'production':
             raise OracleUnavailable('oracle_production_runtime_disabled')
@@ -431,10 +435,12 @@ class OracleExecution:
         reasons = list(account.blockers())
         if account.mode != mode:
             reasons.append('EXECUTION_MODE_MISMATCH')
-        if mode == 'live':
-            reasons.append('LIVE_NOT_SUPPORTED_BY_ORACLE_RUNTIME')
-        if (mode == 'live' or self.require_verified_usage) and \
-                self.quota.coverage(t, plan['source_id'], plan['account_scope'], self.now()) not in ('IMPORTED_LEGACY', 'RUNTIME_EXCLUSIVE'):
+        coverage = self.quota.coverage(t, plan['source_id'], plan['account_scope'], self.now())
+        if mode == 'live' and (not self.settings.live_enabled or plan['source_id'] not in self.settings.exclusive_live_sources):
+            reasons.append('LIVE_DISABLED_OR_LEGACY_WRITER_NOT_TRANSFERRED')
+        if mode == 'live' and coverage != 'RUNTIME_EXCLUSIVE':
+            reasons.append('LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED')  # the legacy collector may still use this account
+        if (mode == 'live' or self.require_verified_usage) and coverage not in ('IMPORTED_LEGACY', 'RUNTIME_EXCLUSIVE'):
             reasons.append('EXTERNAL_USAGE_UNVERIFIED')
         block = t.one('SELECT * FROM execution_blocks WHERE source_id=:b_s AND account_scope=:b_a', 'execution_blocks',
                       b_s=plan['source_id'], b_a=plan['account_scope'])
@@ -1010,18 +1016,19 @@ class OracleYouTubeExecutor(SourceAdapter):
 
 
 class OracleInstagramExecutor(SourceAdapter):
-    """InstagramExecutor's mock sequence; media metadata and the caption window go to source_contents."""
+    """InstagramExecutor's sequence; media metadata and the caption window go to source_contents. In live mode the
+    provider's own recent unique-tag set is checked first, as the existing collector does."""
 
     def execute(self, execution, claim, plan, fault):
         s = self._session(execution, claim, plan, fault)
-        if claim['job']['mode'] != 'mock':
-            raise ExecutionError('policy')  # the provider unique-tag check of live mode is not ported
         cfg = self.client.config
         params = plan['canonical_query']['parameters']
         retention = min(cfg.caption_retention_days, plan['contract']['policy']['retention_days'])
-        origin = 'mock'
+        origin = 'mock' if claim['job']['mode'] == 'mock' else 'live_api'
         if not s.state:
             s.start({'phase': 'lookup', 'page': 0, 'hashtag_id': None})
+        if claim['job']['mode'] == 'live' and remote_usage_check_needed(s.state, usage_fingerprint(cfg, plan, params['q']), execution.now()):
+            self._remote_usage(s, cfg, plan, params['q'], execution)
         if s.state['phase'] == 'lookup':
             s.request('hashtag_lookup', 'lookup',
                       lambda: self.client.get('ig_hashtag_search', {'user_id': cfg.user_id, 'q': params['q']}, single_attempt=True),
@@ -1044,6 +1051,41 @@ class OracleInstagramExecutor(SourceAdapter):
                       lambda payload: parse_media(payload, state), save,
                       lambda parsed: media_checkpoint(state, parsed, plan['canonical_query']['max_pages']))
         return {'status': 'LIMITED' if s.state.get('limited') else 'SUCCEEDED'}
+
+    def _remote_usage(self, s, cfg, plan, tagname, execution):
+        """InstagramExecutor's check of the provider's 7-day unique hashtags (at most 3 pages): a full window that does not
+        already hold this tag defers the job for a week instead of spending a lookup. The result is kept in the checkpoint."""
+        remote, cursor = [], None
+        for page in range(3):
+            request = {'limit': 30}
+            if cursor:
+                request['after'] = cursor
+
+            def parse_recent(payload, cursor=cursor):
+                rows, paging = payload.get('data'), payload.get('paging') or {}
+                if not isinstance(rows, list) or not isinstance(paging, dict):
+                    raise ExecutionError('invalid_response')
+                ids = [r.get('id') for r in rows if isinstance(r, dict)]
+                if len(ids) != len(rows) or any(not isinstance(v, str) or not v.isdigit() for v in ids):
+                    raise ExecutionError('invalid_response')
+                after = (paging.get('cursors') or {}).get('after') if paging.get('next') else None
+                if paging.get('next') and (not isinstance(after, str) or after == cursor):
+                    raise ExecutionError('invalid_response')
+                return ids, after
+            parsed = s.request('recent_searches', 'remote-usage:' + str(page),
+                               lambda request=request: self.client.get(cfg.user_id + '/recently_searched_hashtags', request, single_attempt=True),
+                               parse_recent, lambda t, parsed, targets: (len(parsed[0]), 0), lambda parsed: dict(s.state))
+            remote.extend(parsed[0])
+            cursor = parsed[1]
+            if not cursor:
+                break
+        if cursor:
+            raise ExecutionError('invalid_response')
+        if len(set(remote)) >= min(30, cfg.search_soft_limit) and s.state.get('hashtag_id') not in remote:
+            raise ExecutionError('budget', retry_after=7 * 86400)
+        s.save_state(dict(s.state, remote_usage={'checked_at': stamp(execution.now()), 'verified': True,
+                                                 'fingerprint': usage_fingerprint(cfg, plan, tagname), 'provider_unique_tags': len(set(remote)),
+                                                 'tag_in_provider_window': s.state.get('hashtag_id') in remote}))
 
     @staticmethod
     def _store(execution, t, item, retention, origin):

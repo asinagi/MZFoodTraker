@@ -12,19 +12,26 @@ staged by B4 in the same transaction (the SQLite path stages right after its run
 left unstaged. FOOD/REVIEW items then become candidates through FoodService's import decisions (oracle_foods) and
 B5 links the staged run; both are idempotent and retried locally (recover_rss, link_pending). Candidates are
 proposals only: no food, alias or tracking target is created, BRAND/STORE/NON_FOOD stay behind the type gate and a
-run with no FOOD item is a normal result. Opens no SQLite database. The raw response body is not kept on the target,
-and live fetching is refused (only an injected mock fetcher runs) until Oracle live collection is separately approved.
+run with no FOOD item is a normal result. Opens no SQLite database. The raw response body is not kept on the target.
+
+The mock assembly (runtime_storage.oracle_backend) collects only an injected mock response and never fetches. The live
+assembly (oracle_live) passes the existing collector.fetch, labels runs live_api and a gate that re-checks, before every
+live collection, that live RSS is still enabled and transferred to this runtime. A run another process started less
+than STALE_AFTER ago makes a collection wait (no duplicate fetch); an older unfinished run is a crash and is finished
+as failed ('interrupted') before the next one, so a restart resumes without a hole. The scheduler (start) runs only
+for an approved live service, every interval seconds (30 minutes by default).
 """
 import hashlib
 import json
 import logging
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from . import collector
 from .classifier import classify
 from .contracts import encode, envelope
 from .execution_runtime import ExecutionController
+from .food_service import FoodError
 from .ingestion import digest, ingest_safely, item_key
 from .oracle_execution import utc_value
 from .oracle_ingestion import OracleIngestionService
@@ -37,6 +44,11 @@ REQUEST = {'geo': 'KR', 'endpoint': 'trending/rss'}
 # The SQLite observation contract's mapping from feed elements to envelope fields (Storage.finish).
 FIELD_MAP = {'title': 'keyword', 'pubDate': 'published_raw', 'approx_traffic': 'traffic', 'news_item': 'news'}
 LIVE_DISABLED = 'oracle_live_collection_disabled'
+STALE_AFTER = timedelta(minutes=10)  # far beyond a fetch timeout and one run's processing: an unfinished run this old was interrupted
+
+
+class Busy(RuntimeError):
+    """Another collector started a run moments ago."""
 
 
 def _number(payload_ref):
@@ -98,10 +110,15 @@ class OracleRssStore:
             raise ValueError('unknown RSS run')
         return run
 
+    def _unfinished(self, t):
+        return t.rows('SELECT * FROM rss_runs WHERE finished_at IS NULL ORDER BY run_id', 'rss_runs')
+
     def start(self, origin='mock'):
         contract = envelope(SOURCE_CODE, origin, self.now(), request=REQUEST)
         with self.execution.transaction() as t:
             self._lock(t)
+            if any(utc_value(r['started_at']) > self.execution.now() - STALE_AFTER for r in self._unfinished(t)):
+                raise Busy('rss_collection_in_progress')
             run_id = self._next_run(t)
             t.insert('rss_runs', dict(run_id=run_id, started_at=contract['collected_at'], finished_at=None, success=None, error=None,
                                       http_status=None, item_count=0, new_count=0, warnings_json='[]', origin=origin, contract_json=encode(contract),
@@ -195,6 +212,15 @@ class OracleRssStore:
                                                               observed if ok else [])
         return {'new_count': new_count, 'food_count': counts['FOOD'] if ok else None, 'review_count': counts['REVIEW'] if ok else None,
                 'ingestion': {k: v for k, v in staged.items() if k not in ('storable_metrics', 'transient_metrics')}}
+
+    def recover_interrupted(self):
+        """Finish every run left unfinished longer than STALE_AFTER (a crashed or killed collector) as failed: staged as not
+        observed, never as a measured zero. Returns the run ids."""
+        with self.execution.reader() as t:
+            stale = [r['run_id'] for r in self._unfinished(t) if utc_value(r['started_at']) <= self.execution.now() - STALE_AFTER]
+        for run_id in stale:
+            self.finish(run_id, error='interrupted: the collector stopped before the run finished')
+        return stale
 
     # Reads (one read transaction each, as Storage)
 
@@ -325,24 +351,35 @@ class OracleRssStore:
 
 
 class OracleRssService:
-    """CollectionService on the target: the same summary, lock and status; mock fetchers only."""
+    """CollectionService on the target: the same summary, lock and status. A mock fetcher by default; the live fetcher,
+    origin live_api and a gate only from the live assembly."""
 
-    def __init__(self, execution, foods, observations, interval=1800, timeout=20, fetcher=None):
+    def __init__(self, execution, foods, observations, interval=1800, timeout=20, fetcher=None, origin='mock', gate=None):
+        if origin not in ('mock', 'live_api') or (origin == 'live_api') != (gate is not None):
+            raise ValueError('a live RSS service needs its live gate, and only a live one has it')
         self.execution, self.storage = execution, OracleRssStore(execution)
         self.foods, self.observations = foods, observations
         self.interval, self.timeout, self.fetcher = interval, timeout, fetcher
-        self.origin = 'mock'  # a live fetch is refused below, so every run collected here is a mock run
+        self.origin, self.gate = origin, gate
         self.lock = threading.Lock()
+        self.stop_event, self.thread = threading.Event(), None
 
     def collect(self):
         if self.fetcher is None:
             return {'accepted': False, 'success': False, 'error': LIVE_DISABLED,
                     'message': 'Oracle 런타임의 실제 RSS 수집은 별도 승인 전까지 비활성입니다(Mock 응답만 수집).'}
+        blockers = self.gate() if self.gate else []
+        if blockers:  # re-checked before every live fetch: a revoked approval stops the next request
+            return {'accepted': False, 'success': False, 'error': 'oracle_live_rss_blocked', 'blockers': blockers}
         if not self.lock.acquire(blocking=False):
             return {'accepted': False, 'message': '이미 수집 중입니다'}
         run_id = raw = status = None
         try:
-            run_id = self.storage.start(origin=self.origin)
+            self.storage.recover_interrupted()
+            try:
+                run_id = self.storage.start(origin=self.origin)
+            except Busy:
+                return {'accepted': False, 'message': '다른 수집기가 수집 중입니다'}
             raw, status = self.fetcher(self.timeout)
             items, warnings = collector.parse(raw)
             summary = self.storage.finish(run_id, items, raw, status, warnings=warnings)
@@ -371,9 +408,24 @@ class OracleRssService:
             ingestion['linking'] = ingest_safely(self.observations.link_run, ingestion['ingest_run_id'])
         return ingestion
 
+    def start(self):
+        """The RSS schedule (CollectionService.start): an approved live service only, never a mock or a blocked one."""
+        if self.origin != 'live_api' or self.fetcher is None or self.gate():
+            raise FoodError('RSS 자동 수집은 승인된 Oracle Live 수집에서만 시작합니다.', 403)
+        if self.thread and self.thread.is_alive():
+            return
+
+        def loop():
+            while not self.stop_event.is_set():
+                self.collect()
+                if self.stop_event.wait(self.interval):
+                    break
+        self.thread = threading.Thread(target=loop, name='oracle-rss-scheduler', daemon=True)
+        self.thread.start()
+
     def status(self):
         return dict(self.storage.status(), collecting=self.lock.locked(), interval_seconds=self.interval, source_url=collector.SOURCE,
-                    live_enabled=False)
+                    live_enabled=self.origin == 'live_api')
 
 
 class OracleExecutionController(ExecutionController):
