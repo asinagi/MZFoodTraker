@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 8
+TARGET_SCHEMA_VERSION = 9
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -344,9 +344,11 @@ TABLES = (
           mutable=('finished_at', 'success', 'error', 'http_status', 'item_count', 'new_count', 'warnings_json', 'food_count', 'review_count',
                    'new_food_count', 'new_review_count', 'classifier_version'), meta={'since': 8}),
     # v8 one row per (RSS run, item), the SQLite observations contract: the observation envelope and the classification applied in
-    # that run. The payload itself stays once in source_contents (items:N); B4 run_items stage the observed snapshot.
+    # that run; source_contents (items:N) holds the item's latest payload and B4 run_items the observed snapshot.
+    # v9 payload_text: the payload exactly as observed in that run (the SQLite observations.payload text, so reverse recovery can
+    # write the observation back unchanged and its SHA-256 stays the B4 payload_hash); NULL on rows written before v9.
     Table('rss_observations', (NN('run_id', 'int'), NN('item_key', 'id'), NN('payload_ref', 'key'), NN('classification_json', 'json'),
-          NN('contract_json', 'json'), NN('observed_at', 'ts')), ('run_id', 'item_key'),
+          NN('contract_json', 'json'), NN('observed_at', 'ts'), C('payload_text', 'clob')), ('run_id', 'item_key'),
           fks=((('run_id',), 'rss_runs', ('run_id',)),), indexes=(('item_key', 'run_id'),), meta={'since': 8}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),

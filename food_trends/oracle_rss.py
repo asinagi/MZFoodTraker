@@ -5,7 +5,8 @@ The existing collector (fetch/parse) and classifier run unchanged, and the Stora
 ownership-guarded transactions (refused while Shadow owns the target):
   items              -> source_contents 'items:N' (N is the SQLite item id B7 loaded, or the next number)
   candidates/history -> rss_classifications / rss_classification_history (B7's keys)
-  runs/observations  -> rss_runs / rss_observations (v8; a run id continues past every loaded B4 run_ref runs:N)
+  runs/observations  -> rss_runs / rss_observations (v8; a run id continues past every loaded B4 run_ref runs:N; v9 keeps
+                        each observed payload text, so reverse_recovery writes the observation back unchanged)
 RSS writers are serialized by an exclusive lock on rss_runs (BEGIN IMMEDIATE on the stand-in). A finished run is
 staged by B4 in the same transaction (the SQLite path stages right after its run commits), so no finished run is
 left unstaged. FOOD/REVIEW items then become candidates through FoodService's import decisions (oracle_foods) and
@@ -124,7 +125,8 @@ class OracleRssStore:
                         classified_at=old['classified_at'])
         comparison = {k: v for k, v in previous.items() if k not in ('item_id', 'classified_at')}
         if comparison != {k: v for k, v in result.items() if k != 'classified_at'}:
-            text = json.dumps(previous, ensure_ascii=False)
+            # B7's key formula over the text as the target keeps it (canonical JSON), so the row recovered into SQLite keys the same.
+            text = canonical_json(previous)
             t.insert_absent('rss_classification_history', dict(history_key='CLSH_' + digest([key, seen, text])[:32], item_key=key,
                                                                 recorded_at=seen, result_json=text))
         t.update('rss_classifications', {'item_key': key}, **{k: v for k, v in row.items() if k != 'item_key'})
@@ -174,8 +176,8 @@ class OracleRssStore:
                 contract = encode(envelope(SOURCE_CODE, run['origin'], seen, published_at=item['published_at'],
                                            fields={k: item[k] for k in supplied}, request=REQUEST,
                                            observation={'run_id': run_id, 'item_key': item['source_id']}))
-                t.insert_absent('rss_observations', dict(run_id=run_id, item_key=key, payload_ref=ref,
-                                                         classification_json=json.dumps(c, ensure_ascii=False), contract_json=contract, observed_at=seen))
+                t.insert_absent('rss_observations', dict(run_id=run_id, item_key=key, payload_ref=ref, classification_json=json.dumps(c, ensure_ascii=False),
+                                                         contract_json=contract, observed_at=seen, payload_text=payload))
                 observed.append(dict(observed=payload, contract_json=contract, id=number, source_id=item['source_id'], published_at=item['published_at']))
                 if c['classification'] in counts:
                     counts[c['classification']] += 1

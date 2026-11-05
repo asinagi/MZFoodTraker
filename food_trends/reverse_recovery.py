@@ -14,6 +14,11 @@ restored backup or the frozen pre-cut-over file), so the SQLite system can resum
   left alone; SQLite-only rows are never deleted.
 - Retention holds: YouTube content past its expiry and Instagram captions past their window do not come back; NAVER
   has nothing stored. Links keep the target's state, so EXPIRED tombstones stay tombstones.
+- RSS discovery the target collected (oracle_rss) goes back to the SQLite discovery store first: items keep their number
+  (items:N is items.id N), runs theirs, observations their exact payload text (target v9), classifications and history
+  B7's keys; food_candidates.source_item_id then refers to the written items. A target item or run whose number another
+  SQLite row holds is a conflict, and so is every row that hangs off it. The raw feed body was never kept on the target,
+  so recovered runs carry raw_response NULL (listed as a loss), and nothing is invented for it.
 - Idempotent and resumable: insert-if-absent, updates set the target's values, chunks commit separately. A re-run
   after any failure converges and its plan shows nothing left. Target state SQLite cannot represent is listed as a
   loss with its reason. No provider API is called; reports carry counts and codes, never values.
@@ -45,7 +50,8 @@ RUNTIME_DROPPED = {'tracking_commands': (), 'tracking_events': ('event_sequence'
                    'tracking_slots': ('plan_id', 'job_id', 'status', 'claimed_at', 'completed_at', 'cancellation_reason')}
 RENAMED = {'quota_charges': {'resource_code': 'resource'}}
 # Loaded tables' target columns derived on load (rebuilt from SQLite, never written back as such).
-DERIVED = {'food_mentions': ('source_code',), 'food_events': ('event_sequence',), 'food_candidates': ('source_item_key',)}
+DERIVED = {'food_mentions': ('source_code',), 'food_events': ('event_sequence',), 'food_candidates': ('source_item_key',),
+           'rss_observations': ('observed_at',)}
 LOAD_BOOKKEEPING = 'target-only load bookkeeping'
 NOT_RECOVERED = {
     'runtime_ownership': 'write ownership of the target itself (bookkeeping without a SQLite counterpart)',
@@ -54,14 +60,19 @@ NOT_RECOVERED = {
     'quota_accounts': 'usage verification stamps of the Oracle runtime (no SQLite counterpart)',
     'legacy_key_map': LOAD_BOOKKEEPING, 'migration_batches': LOAD_BOOKKEEPING, 'migration_rejections': LOAD_BOOKKEEPING,
     'shadow_applied': 'target-only Shadow bookkeeping'}
-RSS_ONLY_ON_SQLITE = ('rss_classifications', 'rss_classification_history')
-# v8 RSS runs and observations collected on the target (oracle_rss); B7 loads no SQLite runs, so every row is target-only.
-RSS_RUNTIME = ('rss_runs', 'rss_observations')
-RSS_NOT_WRITTEN_BACK = 'RSS discovery rows collected on the target are not written back to the SQLite discovery store'
+# RSS discovery written by the target, recovered before the identity tables (food_candidates.source_item_id refers to items).
+RSS = ('rss_items', 'rss_runs', 'rss_observations', 'rss_classifications', 'rss_classification_history')
+RUN_COLUMNS = ('started_at', 'finished_at', 'success', 'error', 'http_status', 'item_count', 'new_count', 'warnings_json', 'food_count',
+               'review_count', 'new_food_count', 'new_review_count', 'classifier_version', 'origin', 'contract_json')
+CANDIDATE_COLUMNS = {'normalized_name': 'normalized_name', 'classification': 'classification', 'reasons_json': 'reasons',
+                     'classifier_version': 'classifier_version', 'entity_type': 'entity_type', 'rule_score': 'rule_score',
+                     'score_basis': 'score_basis', 'evidence_news_json': 'evidence_news', 'classified_at': 'classified_at'}
 LOSSES = {'tracking_slots': 'slot lifecycle (status, claim/completion times, cancellation reason, plan and job) has no SQLite column',
           'instagram_caption_tags': 'original hashtag spellings: the target keeps normalized names only',
           'instagram_caption_captured_at': 'derived from the caption window end, so the expiry instant is unchanged',
-          'youtube_payload_text': 'payload re-serialized canonically; its original SHA-256 stays in item_snapshots.payload_hash'}
+          'youtube_payload_text': 'payload re-serialized canonically; its original SHA-256 stays in item_snapshots.payload_hash',
+          'rss_raw_response': 'the raw RSS feed body is not kept on the target: recovered runs carry raw_response NULL',
+          'rss_observation_payload': 'observed before target v9 (no payload text kept): the observation is not written back'}
 
 
 class RecoveryRefused(RuntimeError):
@@ -158,34 +169,120 @@ class Recovery:
         if table == CONTENT:
             keep = []
             for row in result['only']:
-                reason = ('rss_content_written_on_target' if row['payload_ref'].startswith('items:') else
-                          'expired_content' if row['expires_at'] and utc(row['expires_at']) <= self.now else None)
-                if reason:
-                    result['skipped'][reason] = result['skipped'].get(reason, 0) + 1
+                if row['expires_at'] and utc(row['expires_at']) <= self.now:
+                    result['skipped']['expired_content'] = result['skipped'].get('expired_content', 0) + 1
                 else:
                     keep.append(row)
             result['only'] = keep
         return result
 
+    def _rss_work(self, src, plan, mine_items):
+        """RSS discovery by the keys both stores share. A target item or run whose number another SQLite row holds (another item
+        under that id, the same item under another id, another run) is a conflict, and so is every row that hangs off it."""
+        work = {}
+        theirs = {r['payload_ref']: r for r in self.repo.rows(CONTENT) if r['payload_ref'].startswith('items:')}
+        items = work['rss_items'] = self._classify(CONTENT, mine_items, theirs)
+        held = {row['item_key'] for row in mine_items.values()}
+        bad = {theirs[ref]['item_key'] for ref, _ in items['conflicts']}
+        for row in [r for r in items['only'] if r['item_key'] in held]:
+            items['only'].remove(row)
+            items['conflicts'].append((row['payload_ref'], ['item_number']))
+            bad.add(row['item_key'])
+        items['updates'] = [(row, cols) for row, cols in items['updates'] if row['item_key'] not in bad]
+        self._items.update({row['item_key']: int(row['payload_ref'].partition(':')[2]) for row in items['only']})
+        self._payloads = {}  # an item's latest observed payload text: the SQLite items.payload as the collector wrote it
+        observed = sorted(self.repo.rows('rss_observations'), key=lambda r: r['run_id'])
+        for r in observed:
+            if r['payload_text'] is not None:
+                self._payloads[r['item_key']] = r['payload_text']
+        runs, spec = {}, BY_NAME['rss_runs']
+        for r in src.execute('SELECT * FROM runs'):
+            row = logical('rss_runs', dict({c: r[c] for c in RUN_COLUMNS if c != 'warnings_json'}, run_id=r['id'], warnings_json=r['warnings']))
+            runs[_key(spec, row)] = row
+        theirs_runs = {_key(spec, r): r for r in self.repo.rows('rss_runs')}
+        work['rss_runs'] = self._classify('rss_runs', runs, theirs_runs)
+        bad_runs = {theirs_runs[k]['run_id'] for k, _ in work['rss_runs']['conflicts']}
+        ids = {r['id']: item_key('google_trends_rss', r['source_id']) for r in src.execute('SELECT id,source_id FROM items')}
+        mine, spec = {}, BY_NAME['rss_observations']
+        for r in src.execute('SELECT * FROM observations'):
+            row = logical('rss_observations', dict(run_id=r['run_id'], item_key=ids.get(r['item_id']), payload_ref='items:%d' % r['item_id'],
+                                                   classification_json=r['classification_json'], contract_json=r['contract_json'],
+                                                   observed_at=None, payload_text=r['payload']))
+            mine[_key(spec, row)] = row
+        work['rss_observations'] = self._classify('rss_observations', mine, {_key(spec, r): r for r in observed})
+        missing = [r for r in work['rss_observations']['only'] if r['payload_text'] is None]
+        work['rss_observations']['skipped'] = {'rss_observation_payload': len(missing)} if missing else {}
+        work['rss_observations']['only'] = [r for r in work['rss_observations']['only'] if r['payload_text'] is not None]
+        work['rss_observations']['target'] = len(observed)
+        for table in ('rss_classifications', 'rss_classification_history'):
+            spec = BY_NAME[table]
+            rows = {_key(spec, r): r for r in self.repo.rows(table)}
+            work[table] = self._classify(table, {_key(spec, r): logical(table, r) for r in plan._source_rows(table)}, rows)
+            work[table]['target'] = len(rows)
+        for table in RSS[2:]:  # rows that hang off a conflicting item or run stay where they are
+            w = work[table]
+            orphans = [r for r in w['only'] if r['item_key'] in bad or r.get('run_id') in bad_runs]
+            w['only'] = [r for r in w['only'] if r not in orphans]
+            w['updates'] = [(row, cols) for row, cols in w['updates'] if row['item_key'] not in bad]
+            w['conflicts'] += [(_key(BY_NAME[table], r), ['parent_conflict']) for r in orphans]
+        work['rss_items']['target'], work['rss_runs']['target'] = len(theirs), len(theirs_runs)
+        work['rss_items']['bad'] = (bad, {ref for ref, row in theirs.items() if row['item_key'] in bad})
+        return work
+
+    @staticmethod
+    def _orphan(work, table, hit):
+        w = work[table]
+        orphans = [r for r in w['only'] if hit(r)]
+        if orphans:
+            w['only'] = [r for r in w['only'] if not hit(r)]
+            w['conflicts'] += [(_key(BY_NAME[table], r), ['parent_conflict']) for r in orphans]
+        w['updates'] = [(row, cols) for row, cols in w['updates'] if not hit(row)]
+        return orphans
+
+    def _cascade(self, work):
+        """Rows that hang off a conflicting RSS item (by item key or items:N), RSS run or ingest run stay where they are: they are
+        never attached to the different SQLite row that holds the same number. That covers B4/B5 rows, the candidate keyed by its
+        item number (or whose key another SQLite candidate holds), the bridge's replay commands rss-resolution:RUN:ITEM of such an
+        item, and the events of those candidates and of commands this file already holds with other content."""
+        items, refs = work['rss_items']['bad']
+        numbers = {int(ref.partition(':')[2]) for ref in refs}
+        ingest = {json.loads(key)[0] for key, _ in work['ingest_runs']['conflicts']}
+        for table in ('source_items', 'item_snapshots', 'run_items', 'quality_results', 'item_query_matches', 'food_mentions', 'metric_observations'):
+            self._orphan(work, table, lambda r: r.get('item_key') in items or r.get('payload_ref') in refs or r.get('ingest_run_id') in ingest)
+        candidates = {r['candidate_id'] for r in self._orphan(
+            work, 'food_candidates', lambda r: r['source_item_key'] in items or r['candidate_key'] in self._candidate_keys)}
+
+        def bridge(key):
+            parts = key.split(':')
+            return len(parts) == 3 and parts[0] == 'rss-resolution' and parts[2].isdigit() and int(parts[2]) in numbers
+        commands = {r['request_key'] for r in self._orphan(work, 'food_commands', lambda r: bridge(r['request_key']))}
+        commands |= {json.loads(key)[0] for key, _ in work['food_commands']['conflicts']}
+        self._orphan(work, 'food_events', lambda r: r['request_key'] in commands or (r['subject_type'] == 'candidate' and r['subject_id'] in candidates))
+
     def _work(self):
         with closing(open_source(self.destination)) as src:
             plan = Plan(src, self.now)
             self._items = {item_key('google_trends_rss', r['source_id']): r['id'] for r in src.execute('SELECT id,source_id FROM items')}
-            work = {}
+            self._candidate_keys = {r[0] for r in src.execute('SELECT c.candidate_key FROM food_candidates c')}
+            work, mine_items = {}, {}
             for table in ORDER:
                 theirs = {(r['payload_ref'] if table == CONTENT else _key(BY_NAME[table], r)): r for r in self.repo.rows(table)}
-                work[table] = self._classify(table, self._sqlite_rows(src, plan, table), theirs)
-                work[table]['target'] = len(theirs)
-            for table in RSS_ONLY_ON_SQLITE:
                 mine = self._sqlite_rows(src, plan, table)
-                work[table] = {'only': [r for r in self.repo.rows(table) if _key(BY_NAME[table], r) not in mine]}
+                if table == CONTENT:  # RSS items go back with the rest of the RSS discovery (rss_items)
+                    mine_items = {k: v for k, v in mine.items() if k.startswith('items:')}
+                    mine = {k: v for k, v in mine.items() if not k.startswith('items:')}
+                    theirs = {k: v for k, v in theirs.items() if not k.startswith('items:')}
+                work[table] = self._classify(table, mine, theirs)
+                work[table]['target'] = len(theirs)
+            work.update(self._rss_work(src, plan, mine_items))
+            self._cascade(work)
         return work
 
     def plan(self, work=None):
         """Classify every recoverable row and list what cannot come back; writes nothing to either store."""
         work = work or self._work()
         out = {'tables': {}, 'conflicts': {}, 'losses': {}, 'not_recovered': {}, 'contents_not_recovered': work[CONTENT]['skipped']}
-        for table in ORDER:
+        for table in RSS + ORDER:
             w = work[table]
             out['tables'][table] = {'target': w['target'], 'target_only': len(w['only']), 'same': w['same'], 'mutable_updates': len(w['updates']),
                                     'conflicts': len(w['conflicts']), 'sqlite_only': len(w['sqlite_only'])}
@@ -197,16 +294,14 @@ class Recovery:
                            ('instagram_caption_captured_at', held), ('youtube_payload_text', youtube)):
             if rows:
                 out['losses'][name] = {'rows': len(rows), 'reason': LOSSES[name]}
-        for table in RSS_ONLY_ON_SQLITE:
-            if work[table]['only']:
-                out['losses'][table] = {'rows': len(work[table]['only']), 'reason': RSS_NOT_WRITTEN_BACK}
-        for table in RSS_RUNTIME:
-            if self.repo.count(table):
-                out['losses'][table] = {'rows': self.repo.count(table), 'reason': RSS_NOT_WRITTEN_BACK}
+        if work['rss_runs']['only']:
+            out['losses']['rss_raw_response'] = {'rows': len(work['rss_runs']['only']), 'reason': LOSSES['rss_raw_response']}
+        for name, count in work['rss_observations']['skipped'].items():
+            out['losses'][name] = {'rows': count, 'reason': LOSSES[name]}
         unlinked = [r for r in work['food_candidates']['only'] if r['source_item_key'] and r['source_item_key'] not in self._items]
         if unlinked:
-            out['losses']['candidate_rss_item'] = {'rows': len(unlinked), 'reason': 'the RSS item was collected on the target: the candidate '
-                                                   'returns without its SQLite item id (source_item_id NULL)'}
+            out['losses']['candidate_rss_item'] = {'rows': len(unlinked), 'reason': 'the RSS item conflicts with another SQLite item: the '
+                                                   'candidate returns without its SQLite item id (source_item_id NULL)'}
         for table, reason in NOT_RECOVERED.items():
             out['not_recovered'][table] = {'rows': self.repo.count(table), 'reason': reason}
         totals = out['tables'].values()
@@ -250,6 +345,24 @@ class Recovery:
 
     def _write(self, work, authorized):
         counts = {'inserted': 0, 'content_rows': 0, 'updated': 0, 'ignored': 0}
+        for table in RSS:
+            rows, updates = self._ordered(table, work[table]['only']), work[table]['updates'] if authorized else []
+            for start in range(0, len(rows), self.chunk):
+                with closing(sqlite3.connect(self.destination, timeout=30)) as db:
+                    db.execute('PRAGMA foreign_keys=ON')
+                    with db:
+                        for n, row in enumerate(rows[start:start + self.chunk]):
+                            self.fault('row', table, start + n)
+                            written = self._insert_rss(db, table, row)
+                            counts['inserted'] += written
+                            counts['ignored'] += not written
+                self.fault('after_commit', table, start + self.chunk)
+            if updates:
+                with closing(sqlite3.connect(self.destination, timeout=30)) as db:
+                    db.execute('PRAGMA foreign_keys=ON')
+                    with db:
+                        for row, changed in updates:
+                            counts['updated'] += self._update_rss(db, table, row, changed)
         for table in ORDER:
             rows, updates = self._ordered(table, work[table]['only']), work[table]['updates'] if authorized else []
             for start in range(0, len(rows), self.chunk):
@@ -273,6 +386,10 @@ class Recovery:
     @staticmethod
     def _ordered(table, rows):
         """Rows a SQLite foreign key inside the same table needs first: merge targets, reversed events, append order."""
+        if table == 'rss_items':
+            return sorted(rows, key=lambda r: int(r['payload_ref'].partition(':')[2]))
+        if table in ('rss_runs', 'rss_observations'):
+            return sorted(rows, key=lambda r: (r['run_id'], r.get('item_key') or ''))
         if table in ('food_events', 'tracking_events'):
             return sorted(rows, key=lambda r: (r['event_sequence'] is None, r['event_sequence'] or 0, r['occurred_at'], r['event_id']))
         if table != 'food_entities':
@@ -306,6 +423,43 @@ class Recovery:
         sets, keys = [name[c] for c in changed], [name[k] for k in spec.key]
         return db.execute('UPDATE %s SET %s WHERE %s' % (table, ','.join('%s=?' % s for s in sets), ' AND '.join('%s=?' % k for k in keys)),
                           tuple(values[s] for s in sets) + tuple(values[k] for k in keys)).rowcount
+
+    def _insert_rss(self, db, table, row):
+        """One RSS discovery row into the SQLite collector store, under the number the target kept."""
+        if table == 'rss_items':
+            body = json.loads(row['content_json'])
+            return db.execute('INSERT OR IGNORE INTO items (id,source_id,keyword,published_at,first_seen,last_seen,payload) VALUES (?,?,?,?,?,?,?)',
+                              (int(row['payload_ref'].partition(':')[2]), body['source_id'], body['keyword'], body.get('published_at'),
+                               row['captured_at'], row['refreshed_at'], self._payloads.get(row['item_key'], row['content_json']))).rowcount
+        if table == 'rss_runs':
+            return db.execute('''INSERT OR IGNORE INTO runs (id,started_at,finished_at,success,error,http_status,item_count,new_count,warnings,
+                raw_response,food_count,review_count,new_food_count,new_review_count,classifier_version,origin,contract_json)
+                VALUES (?,?,?,?,?,?,?,?,?,NULL,?,?,?,?,?,?,?)''', (row['run_id'],) + tuple(row[c] for c in RUN_COLUMNS)).rowcount
+        item = self._items.get(row['item_key'])
+        if item is None:
+            return 0
+        if table == 'rss_observations':
+            return db.execute('INSERT OR IGNORE INTO observations (run_id,item_id,payload,classification_json,contract_json) VALUES (?,?,?,?,?)',
+                              (row['run_id'], item, row['payload_text'], row['classification_json'], row['contract_json'])).rowcount
+        if table == 'rss_classifications':
+            return db.execute('INSERT OR IGNORE INTO candidates (item_id,%s) VALUES (?%s)' % (','.join(CANDIDATE_COLUMNS.values()), ',?' * len(CANDIDATE_COLUMNS)),
+                              (item,) + tuple(row[c] for c in CANDIDATE_COLUMNS)).rowcount
+        return db.execute('INSERT INTO classification_history (item_id,recorded_at,result_json) VALUES (?,?,?)',
+                          (item, row['recorded_at'], row['result_json'])).rowcount
+
+    def _update_rss(self, db, table, row, changed):
+        """A mutable change the target made to a row this file already holds (authorized updates only)."""
+        if table == 'rss_items':
+            return db.execute('UPDATE items SET last_seen=?,payload=? WHERE id=?', (row['refreshed_at'], self._payloads.get(row['item_key'], row['content_json']),
+                                                                               int(row['payload_ref'].partition(':')[2]))).rowcount
+        if table == 'rss_runs':
+            names = {c: ('warnings' if c == 'warnings_json' else c) for c in changed}
+            return db.execute('UPDATE runs SET %s WHERE id=?' % ','.join('%s=?' % names[c] for c in changed),
+                              tuple(row[c] for c in changed) + (row['run_id'],)).rowcount
+        if table == 'rss_classifications' and self._items.get(row['item_key']) is not None:
+            return db.execute('UPDATE candidates SET %s WHERE item_id=?' % ','.join('%s=?' % CANDIDATE_COLUMNS[c] for c in changed),
+                              tuple(row[c] for c in changed) + (self._items[row['item_key']],)).rowcount
+        return 0
 
     def _caption(self, content):
         """The caption the destination may hold now, or None (purged, window closed or never held)."""
