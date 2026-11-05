@@ -1,8 +1,8 @@
 # MZFoodTraker
 
-MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. B3에서 Outbox·Lease/Fencing 기반 실행기를 기존 출처 클라이언트·저장소에 연결했고, B4~B5에서 네 출처의 공통 스테이징·품질 검사와 FOOD_ID 중심 검색 근거·음식 언급·지표 모델을 구현했습니다. B8에서는 이 관측을 읽기 시 집계하는 모바일 앱용 읽기 전용 데이터 API(`/api/v1`, OpenAPI 명세·Mock 서버)를 추가했고, SQLite와 개발용 Oracle 테스트 스키마에서 같은 응답을 내는지 확인했습니다. ORACLE-CUTOVER-PREP-1에서는 음식 등록·별칭 승인·추적 명령까지 Oracle에서 실행해 백엔드 전체를 Oracle 단독으로 검증하고, 운영 DB 격리 사본의 Oracle 이관 리허설과 Oracle→SQLite 역방향 복구를 구현했습니다(운영 전환은 미실행). 기본은 Mock 전용이며 Live와 자동 실행은 꺼져 있습니다.
+MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적을 목표로 개발하는 로컬 MVP입니다. Google Trends RSS에서 음식 후보를 분류하고, Instagram·NAVER·YouTube를 각각 조회하거나 추적합니다. 공통 FOOD_ID·정확 별칭 승인·수동 등록과 B1~B2 추적 대상·검색 요청 계획을 구현했습니다. B3에서 Outbox·Lease/Fencing 기반 실행기를 기존 출처 클라이언트·저장소에 연결했고, B4~B5에서 네 출처의 공통 스테이징·품질 검사와 FOOD_ID 중심 검색 근거·음식 언급·지표 모델을 구현했습니다. B8에서는 이 관측을 읽기 시 집계하는 모바일 앱용 읽기 전용 데이터 API(`/api/v1`, OpenAPI 명세·Mock 서버)를 추가했고, SQLite와 개발용 Oracle 테스트 스키마에서 같은 응답을 내는지 확인했습니다. ORACLE-CUTOVER-PREP-1에서는 음식 등록·별칭 승인·추적 명령까지 Oracle에서 실행해 백엔드 전체를 Oracle 단독으로 검증하고, 운영 DB 격리 사본의 Oracle 이관 리허설과 Oracle→SQLite 역방향 복구를 구현했습니다(운영 전환은 미실행). ORACLE-BACKEND-COMPLETION-1에서는 Google RSS 발굴·후보 가져오기와 관리 웹 서버까지 Oracle에 연결해, RSS 발굴부터 관리자 승인·추적·Mock 수집·B8 조회까지 SQLite 없이 하나의 Oracle 백엔드로 동작함을 개발용 Oracle에서 검증했습니다(운영 전환·Live 수집은 미실행). 기본은 Mock 전용이며 Live와 자동 실행은 꺼져 있습니다.
 
-아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md), [B3 보완·B4~B5 개발 결과](reports/development-b4-b5-2026-10-28/REPORT.md), [B6~B7 Oracle 이관 준비](reports/development-b6-b7-2026-11-02/REPORT.md), [ORACLE-RUNTIME-1 Oracle 실행 연결](reports/development-oracle-runtime-1-2026-11-03/REPORT.md), [ORACLE-RUNTIME-2 Oracle 계획·스케줄·소유권·예산](reports/development-oracle-runtime-2-2026-11-04/REPORT.md), [PARALLEL-B8-API 앱 데이터 API](reports/development-b8-app-api-2026-11-04/REPORT.md), [B8-INTEGRATION-1 통합·Oracle 동등성](reports/development-b8-integration-2026-11-05/REPORT.md), [ORACLE-CUTOVER-PREP-1 전환 준비·실데이터 이관 검증](reports/development-oracle-cutover-prep-2026-11-05/REPORT.md)을 반영합니다. 현재 코드의 명시적 SQLite migration 버전은 **11**, Oracle 대상 스키마 버전은 **7**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
+아래 구현 구분은 통합 감사, [A1~A3 개발 결과](reports/development-a1-a3-2026-10-27/REPORT.md), [A4~A5 개발 결과](reports/development-a4-a5-2026-10-27/REPORT.md), [B1~B2 개발·API·이관·B3 인수 계약](reports/development-b1-b2-2026-10-27/REPORT.md), [B3 실행 전달 개발·인수 검증](reports/development-b3-2026-10-27/REPORT.md), [B3 보완·B4~B5 개발 결과](reports/development-b4-b5-2026-10-28/REPORT.md), [B6~B7 Oracle 이관 준비](reports/development-b6-b7-2026-11-02/REPORT.md), [ORACLE-RUNTIME-1 Oracle 실행 연결](reports/development-oracle-runtime-1-2026-11-03/REPORT.md), [ORACLE-RUNTIME-2 Oracle 계획·스케줄·소유권·예산](reports/development-oracle-runtime-2-2026-11-04/REPORT.md), [PARALLEL-B8-API 앱 데이터 API](reports/development-b8-app-api-2026-11-04/REPORT.md), [B8-INTEGRATION-1 통합·Oracle 동등성](reports/development-b8-integration-2026-11-05/REPORT.md), [ORACLE-CUTOVER-PREP-1 전환 준비·실데이터 이관 검증](reports/development-oracle-cutover-prep-2026-11-05/REPORT.md), [ORACLE-BACKEND-COMPLETION-1 RSS·관리 서버 Oracle 연결](reports/development-oracle-backend-completion-2026-11-05/REPORT.md)을 반영합니다. 현재 코드의 명시적 SQLite migration 버전은 **11**, Oracle 대상 스키마 버전은 **8**입니다. 운영 DB는 버전 0으로 남아 있으며 이번 개발에서 마이그레이션·서버 재시작을 수행하지 않았습니다.
 
 ## 현재 구현 현황
 
@@ -20,13 +20,14 @@ MZ 유행 음식의 발견, 음식 개체 정규화, 여러 플랫폼의 추적�
 | Oracle 대상·이관 (B6~B7) | 같은 명세로 Oracle/SQLite 대상 DDL 생성, `python-oracledb` Thin 어댑터, 이식 SQL Repository, SQLite→대상 단계 이관·대조, 기본 비활성 Shadow(SQLite 변경 기록→멱등 전달). 개발용 Oracle AI Database 26ai Free(23.26.3, WSL2 컨테이너)에서 계약·이관·Shadow 검증 통과([G-OPS-0](reports/development-g-ops-0-2026-11-02/REPORT.md)), 운영 전환은 승인 게이트 대상 |
 | Oracle 실행 연결 (ORACLE-RUNTIME-1) | B3 실행(Outbox·Lease/Fencing·`FOR UPDATE SKIP LOCKED` claim·예산·재시도), B4 스테이징·DQ, B5 검색 근거·언급·지표·재처리를 대상 스키마에서 실행. SQLite 경로와 같은 Mock 입력의 논리 결과를 표 단위로 대조해 실제 Oracle(MZ_TEST)에서 일치 확인. Mock 전용, `--runtime-status sqlite\|oracle-test\|oracle-production`으로 저장소를 명시 선택(운영 Oracle은 비활성). 계획 수립·Live·역방향 복구는 후속 과제 |
 | Oracle 계획·스케줄·소유권·예산 (ORACLE-RUNTIME-2) | Oracle 런타임이 SQLite 계획기 없이 계획 수립(Preview 읽기 전용·Commit 멱등) → 예정 슬롯(`tracking_slots`) → 실행 → Mock 수집 → 정제 → 관측을 단독 수행, SQLite 경로와 논리 결과 일치. Shadow·런타임 동시 쓰기를 대상 DB의 소유 모드(IDLE·SHADOW·RUNTIME_TEST, RUNTIME_PRODUCTION 불허)와 임대로 차단. 레거시 호출 사용량을 근거·불확실성과 함께 원장으로 옮기고, 외부 사용량을 확인하지 못한 계정 범위는 실행 차단. Mock 전용, 운영 전환·Live·역방향 복구는 후속 과제 |
-| Oracle 전환 준비 (ORACLE-CUTOVER-PREP-1) | B7이 만료된 B5 근거를 내용 없는 `EXPIRED` 묘비로 옮겨 Oracle에서도 `EVIDENCE_EXPIRED` 유지. 음식 제출·검토·별칭·관계·병합과 추적 대상 명령을 Oracle 서비스로 실행(`runtime_storage.oracle_backend`, 대상 v7 `tracking_commands/events`). 운영 DB 격리 사본 리허설(`tests/rehearse_cutover.py`, 개발 Oracle에 15,671행·29개 표 해시 일치), 역방향 복구(`--recovery plan\|apply`), 적재 CLI(`--target-load`). 운영 Oracle 쓰기·Live·RSS 발굴 Oracle 저장·관리 서버 연결은 BLOCKED([절차서](reports/development-oracle-cutover-prep-2026-11-05/CUTOVER_RUNBOOK.md)) |
+| Oracle 전환 준비 (ORACLE-CUTOVER-PREP-1) | B7이 만료된 B5 근거를 내용 없는 `EXPIRED` 묘비로 옮겨 Oracle에서도 `EVIDENCE_EXPIRED` 유지. 음식 제출·검토·별칭·관계·병합과 추적 대상 명령을 Oracle 서비스로 실행(`runtime_storage.oracle_backend`, 대상 v7 `tracking_commands/events`). 운영 DB 격리 사본 리허설(`tests/rehearse_cutover.py`, 개발 Oracle에 15,671행·29개 표 해시 일치), 역방향 복구(`--recovery plan\|apply`), 적재 CLI(`--target-load`). 운영 Oracle 쓰기·Live는 BLOCKED([절차서](reports/development-oracle-cutover-prep-2026-11-05/CUTOVER_RUNBOOK.md)). RSS 발굴 Oracle 저장·관리 서버 연결은 아래 ORACLE-BACKEND-COMPLETION-1에서 해소 |
+| Oracle 백엔드 완성 (ORACLE-BACKEND-COMPLETION-1) | Google RSS 발굴 결과를 Oracle에 직접 기록(대상 v8 `rss_runs`·`rss_observations`; 항목 번호·후보 키·B4 키가 SQLite와 같음)하고 FOOD/REVIEW 항목을 Oracle 검토 후보로 가져옴(브랜드·매장은 유형 게이트에서 차단, FOOD 0건도 정상 결과). 관리 웹 서버를 `--backend oracle-test`로 Oracle 서비스에 연결(관리 토큰·Origin·루프백 보호 그대로, 레거시 직접 수집기는 503, 수집원별 수집·실패·예산 요약 추가)하고 Oracle 유지보수(`--backend oracle-test --maintenance`) 추가. RSS Mock 수집 → 후보 → 승인 → 별칭 → 추적 → 계획 → Mock 수집 → B4·B5 → B8 조회를 HTTP로 SQLite 연결 0건 검증. Oracle에서는 Mock 수집만 하며 Live·운영 전환은 미실행 |
 | 앱 데이터 API (B8) | 모바일 앱용 읽기 전용 `/api/v1` 7개 엔드포인트(연결 상태, 음식 목록·검색, 상세, 일·주 추이, 기간 통계, 출처별 순위, 수집 상태)와 OpenAPI 3.0 명세·예시 32개·Mock 서버([앱 개발자 가이드](docs/app-api/README.md)). B5 관측의 읽기 시 집계: 확인된 언급의 고유 콘텐츠 수, 미관측은 `null`(0 아님), 출처별 순위만 제공, 종합 점수 없음. 저장소는 `--store sqlite\|oracle-test`로 명시 선택하고(운영 Oracle 거부), Oracle은 요청마다 읽기 전용 트랜잭션. 루프백 전용 개발 서버이며 외부 공개 배포는 별도 과제 |
 | 추이 분석 및 시각화 | 출처별 상태·그래프·관계 표 구현. 음식별 일·주·기간 집계(B8)는 앱 데이터 API의 읽기 시 집계로 제공(저장 집계는 설계만). 통합 유행 점수는 미구현 |
 
 2026-10-27 A1~A3 개발 검증에서는 기존 97개와 신규 17개를 합친 114개 자동화 테스트가 통과했습니다. 2026-10-26 통합 감사의 최신 RSS 표본은 FOOD 0건이어서 실제 음식 양성의 전 출처 자동 연결은 검증되지 않았습니다. 테스트 통과는 탐지 정확도나 이용약관 준수의 인증이 아닙니다. 과거 실제 호출 결과와 제약은 [통합 감사](reports/integrated-audit-2026-10-26/REPORT.md)를 참고하세요.
 
-B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 280개, 실제 Oracle 포함 전체 **356개 통과(skip 0)**, Oracle 없는 기본 환경에서는 324개 통과·Oracle 32개 skip이었습니다. ORACLE-RUNTIME-1 이후 기본 환경 373개 통과·Oracle 74개 skip, 실제 Oracle 포함 447개 통과(skip 0)였습니다. ORACLE-RUNTIME-2 이후 기본 환경 403개 통과·Oracle 104개 skip입니다. 실제 Oracle 포함 전체 회귀는 마지막 소유권 임대 보완 전 코드에서 505개 통과했고, 보완 후에는 영향받는 10개 모듈 178개(실제 Oracle 88개 포함)를 다시 실행해 통과했습니다([ORACLE-RUNTIME-2 보고서](reports/development-oracle-runtime-2-2026-11-04/REPORT.md)). B8 앱 데이터 API 통합(B8-INTEGRATION-1) 이후 최종 코드에서 기본 환경 456개 통과·Oracle 120개 skip, 실제 Oracle 포함 전체 576개 통과(skip 0)였습니다. ORACLE-CUTOVER-PREP-1 이후 최종 코드에서 기본 환경 490개 통과·Oracle 153개 skip, 실제 Oracle 포함 전체 **643개 통과(skip 0)**입니다([ORACLE-CUTOVER-PREP-1 보고서](reports/development-oracle-cutover-prep-2026-11-05/REPORT.md)). 앱 API는 SQLite와 실제 Oracle(MZ_TEST)에서 같은 응답을 내며 계약 예시 32개를 그대로 재현합니다([B8-INTEGRATION-1 보고서](reports/development-b8-integration-2026-11-05/REPORT.md)). 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
+B1~B2 검증은 기존 141개 + B1 18개 + B2 40개 = **199개 통과**였고, B3 245개를 거쳐 B4~B5 280개, 실제 Oracle 포함 전체 **356개 통과(skip 0)**, Oracle 없는 기본 환경에서는 324개 통과·Oracle 32개 skip이었습니다. ORACLE-RUNTIME-1 이후 기본 환경 373개 통과·Oracle 74개 skip, 실제 Oracle 포함 447개 통과(skip 0)였습니다. ORACLE-RUNTIME-2 이후 기본 환경 403개 통과·Oracle 104개 skip입니다. 실제 Oracle 포함 전체 회귀는 마지막 소유권 임대 보완 전 코드에서 505개 통과했고, 보완 후에는 영향받는 10개 모듈 178개(실제 Oracle 88개 포함)를 다시 실행해 통과했습니다([ORACLE-RUNTIME-2 보고서](reports/development-oracle-runtime-2-2026-11-04/REPORT.md)). B8 앱 데이터 API 통합(B8-INTEGRATION-1) 이후 최종 코드에서 기본 환경 456개 통과·Oracle 120개 skip, 실제 Oracle 포함 전체 576개 통과(skip 0)였습니다. ORACLE-CUTOVER-PREP-1 이후 최종 코드에서 기본 환경 490개 통과·Oracle 153개 skip, 실제 Oracle 포함 전체 643개 통과(skip 0)였습니다([ORACLE-CUTOVER-PREP-1 보고서](reports/development-oracle-cutover-prep-2026-11-05/REPORT.md)). ORACLE-BACKEND-COMPLETION-1 이후 최종 코드에서 기본 환경 503개 통과·Oracle 166개 skip, 실제 Oracle 포함 전체 **669개 통과(skip 0)**입니다([ORACLE-BACKEND-COMPLETION-1 보고서](reports/development-oracle-backend-completion-2026-11-05/REPORT.md)). 앱 API는 SQLite와 실제 Oracle(MZ_TEST)에서 같은 응답을 내며 계약 예시 32개를 그대로 재현합니다([B8-INTEGRATION-1 보고서](reports/development-b8-integration-2026-11-05/REPORT.md)). 로컬 서버의 상태 변경 POST에는 서버 프로세스별 관리 토큰이 필요하며 화면이 자동으로 붙입니다(스크립트 사용 시 `MZ_ADMIN_TOKEN`). Live 준비 점검은 `--execution-readiness <registry>`(읽기 전용), 스테이징 보충은 `--ingest-pending`/`--ingest-legacy`(API 호출 없음)입니다. 운영 DB를 쓰지 않는 화면 검토는 `py -3.12 -B -m food_trends.food_demo --mock-tracking --port 8010`으로 실행합니다. `.env`를 읽지 않고 별도 `data/food-identity-demo.sqlite3`를 사용하며, 음식·계획 관리 외 실제 수집 POST를 차단합니다. 기본 live 계정은 정책·권한 미확인으로 차단되어 있으며 Mock 표시가 실제 연결 성공을 의미하지 않습니다.
 
 ## 디렉터리 구조
 
@@ -114,7 +115,15 @@ python -m food_trends --collect-once
 
 # NAVER 사용자 지정 검색어 실시간 조회 (인증 필요)
 python -m food_trends --naver-keyword '두쫀쿠' --naver-days 30
+
+# 개발용 Oracle 테스트 스키마(ORACLE_TEST_*)에서 관리 서버 실행: SQLite를 열지 않고 RSS는 Mock 응답만 수집
+python -m food_trends --backend oracle-test --rss-mock-file <로컬 RSS XML>
+
+# 위 Oracle 스키마의 보존 정리와 별칭·병합 변경 재처리 (API 호출 없음)
+python -m food_trends --backend oracle-test --maintenance
 ```
+
+`--backend oracle-test`는 관리 서버 실행과 `--maintenance`에만 쓰며 다른 SQLite 명령과 함께 쓸 수 없습니다(`oracle-production`은 승인 전이라 연결 전에 거부). Oracle 모드는 RSS를 실제로 수집하지 않고(`--rss-mock-file`이 없으면 수집 요청 거부), YouTube·NAVER·Instagram 레거시 직접 수집 패널은 연결하지 않아 503으로 표시됩니다. 추적·계획·실행(Mock)과 앱 API `--store oracle-test`가 같은 Oracle 데이터를 씁니다. 경로 전수 점검은 [관리 API 점검](reports/development-oracle-backend-completion-2026-11-05/ADMIN_API_INVENTORY.md)을 참고하세요.
 
 서버는 루프백에 바인딩하며 실행 중에만 스케줄러가 동작합니다. RSS 기본 주기는 30분입니다. 기존 서버·DB를 유지하려면 별도 포트와 DB 경로를 지정하세요. `--reanalyze` 등 유지 관리 명령은 저장 결과를 변경하므로 각 보고서를 확인한 뒤 실행하세요.
 
@@ -159,7 +168,7 @@ py -3.12 -B tests/run_offline.py --output data/publication-tests
 | --- | --- | --- |
 | 운영 SQLite (`data/trends.sqlite3`) | v0 (마이그레이션 전) | 기존 수집·관리 서버. 앱 API는 최신 스키마가 아니라서 열지 않음. 마이그레이션은 승인 게이트 G-OPS-3 |
 | 개발·테스트 SQLite (테스트 임시 DB, 데모 DB) | v11 | 자동화 테스트, 앱 API `--store sqlite` |
-| 개발용 Oracle 테스트 스키마 (MZ_TEST, WSL2 컨테이너) | 대상 v7 | Oracle 런타임·이관·앱 API `--store oracle-test` 검증. 테스트가 매번 초기화하는 폐기용 스키마 |
+| 개발용 Oracle 테스트 스키마 (MZ_TEST, WSL2 컨테이너) | 대상 v8 | Oracle 런타임·관리 서버 `--backend oracle-test`·이관·앱 API `--store oracle-test` 검증. 테스트가 매번 초기화하는 폐기용 스키마 |
 | 운영 Oracle | 없음 | 운영 전환(G-OPS-6) 승인 전. 앱 API와 런타임 모두 코드에서 거부 |
 
 `*_browser_check.py`, `*_verify` 명령은 별도 검증이며 실행 중인 서버·실제 API·로컬 데이터에 접근할 수 있습니다. 단위 테스트와 구분해서 실행하세요. A3 이후 생성자는 스키마 버전만 확인하며 데이터 조회는 읽기 전용 연결을 사용합니다. 마이그레이션·만료 정리·대상 동기화·재분류는 명시적 쓰기 경로로 분리했습니다. 백그라운드 수집·유지관리가 실행 중이면 해당 작업은 DB를 변경할 수 있습니다.
@@ -171,7 +180,7 @@ py -3.12 -B tests/run_offline.py --output data/publication-tests
 1. A1 후보 연결 보존, A2 출처 계약 메타데이터, A3 읽기 조회·마이그레이션 분리를 구현했습니다. 출처별 보존·파생 분석 권한 확인과 운영 배포 검증은 계속 필요합니다.
 2. 공통 음식 개체·정확 별칭·승인·매핑 이력, 수동 음식 등록의 공통 진입 구현
 3. 공통 추적 대상·쿼리 계획·예산·outbox·lease/fencing·관측 및 품질 모델 구현
-4. Oracle repository와 명시적 마이그레이션·이관·대조·복구 검증(B6~ORACLE-CUTOVER-PREP-1에서 개발 Oracle로 구현·검증, 역방향 복구 포함). 운영 전환은 G-OPS 승인과 BLOCKED 항목 해결 후
+4. Oracle repository와 명시적 마이그레이션·이관·대조·복구 검증(B6~ORACLE-BACKEND-COMPLETION-1에서 개발 Oracle로 구현·검증, 역방향 복구·RSS 발굴·관리 서버 연결 포함). 운영 전환은 G-OPS 승인과 남은 BLOCKED 항목(운영 Oracle 쓰기 잠금 해제 경로, Live 수집) 해결 후
 5. 승인된 출처별 일 집계와 커버리지 표시(B8 읽기 시 집계·앱 API로 구현, 저장 집계는 설계만), 독립 사람 라벨 기반 정확도 평가, 정책이 허용하는 범위의 발굴·기간 집계 확장
 
 통합 유행 점수의 공식·가중치는 확정하지 않았습니다. 정책상 허용이 확인되지 않은 경로의 자동 수집·저장·파생 기능은 공통 설계의 완료로 간주하지 않습니다.
@@ -185,6 +194,7 @@ py -3.12 -B tests/run_offline.py --output data/publication-tests
 - [앱 데이터 API 개발자 가이드](docs/app-api/README.md), [OpenAPI 명세](docs/app-api/openapi.yaml), [데이터 사전](docs/app-api/DATA_DICTIONARY.md), [오류 코드](docs/app-api/ERRORS.md)
 - [PARALLEL-B8-API 앱 데이터 API·계약](reports/development-b8-app-api-2026-11-04/REPORT.md), [B8-INTEGRATION-1 통합·Oracle 동등성 검증](reports/development-b8-integration-2026-11-05/REPORT.md)
 - [ORACLE-CUTOVER-PREP-1 전환 준비·실데이터 이관·역방향 복구](reports/development-oracle-cutover-prep-2026-11-05/REPORT.md), [운영 전환 절차서](reports/development-oracle-cutover-prep-2026-11-05/CUTOVER_RUNBOOK.md)
+- [ORACLE-BACKEND-COMPLETION-1 RSS 발굴·관리 서버 Oracle 연결·E2E](reports/development-oracle-backend-completion-2026-11-05/REPORT.md), [관리 API 점검](reports/development-oracle-backend-completion-2026-11-05/ADMIN_API_INVENTORY.md)
 - [RSS 검증](VERIFICATION.md), [분류 감사](AUDIT_REPORT.md)
 - [Instagram 연동](INSTAGRAM_INTEGRATION.md), [해시태그 분석](INSTAGRAM_HASHTAG_ANALYSIS.md), [실환경 검증](INSTAGRAM_LIVE_VERIFICATION.md), [토큰 적용 검증](INSTAGRAM_TOKEN_APPLICATION.md)
 - [NAVER 연동](NAVER_DATALAB_INTEGRATION.md), [실환경 검증](NAVER_LIVE_VERIFICATION.md)
