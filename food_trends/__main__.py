@@ -107,20 +107,26 @@ def oracle_admin_server(repo, port, admin_token=None, rss_fetcher=None, clock=No
 
 def oracle_command(args, parser):
     """--backend oracle-test: the admin server (mock, or live from an approved registry), the Oracle maintenance, the live
-    readiness check and the writer transfer, all on the Oracle runtime alone (no SQLite database is opened)."""
+    readiness check, the writer transfer, its release and the writer status, all on the Oracle runtime alone (no SQLite database
+    is opened)."""
     import json
     from .food_service import FoodError
-    from .oracle_live import oracle_live_backend, oracle_live_readiness, transfer_writer
+    from .oracle_live import oracle_live_backend, oracle_live_readiness, release_writer, transfer_writer, writer_status
     from .runtime_storage import oracle_backend, oracle_maintenance, select
     from .tracking_access import mock_accounts
     allowed = ('backend', 'rss_mock_file', 'no_schedulers', 'maintenance', 'execution_mode', 'execution_registry', 'execution_automatic',
-               'execution_readiness', 'writer_transfer')
+               'execution_readiness', 'writer_transfer', 'writer_release', 'release_wait', 'writer_status')
     conflicts = sorted('--' + k.replace('_', '-') for k, v in vars(args).items() if k not in allowed and v != parser.get_default(k))
     if conflicts:
-        parser.error('--backend %s는 관리 서버·--maintenance·Live 점검/이전에만 사용합니다: %s' % (args.backend, ', '.join(conflicts)))
+        parser.error('--backend %s는 관리 서버·--maintenance·Live 점검·Writer 이전/철회/상태에만 사용합니다: %s' % (args.backend, ', '.join(conflicts)))
+    commands = [k for k in ('maintenance', 'execution_readiness', 'writer_transfer', 'writer_release', 'writer_status') if getattr(args, k)]
+    if len(commands) > 1:
+        parser.error('한 번에 하나만 실행합니다: ' + ', '.join('--' + k.replace('_', '-') for k in commands))
     live = args.execution_mode == 'live'
-    if (live or args.writer_transfer) and not args.execution_registry:
-        parser.error('Live 실행과 Writer 이전에는 --execution-registry가 필요합니다')
+    if (live or args.writer_transfer or args.writer_release) and not args.execution_registry:
+        parser.error('Live 실행과 Writer 이전·철회에는 --execution-registry가 필요합니다')
+    if args.release_wait and not args.writer_release or not 0 <= args.release_wait <= 600:
+        parser.error('--release-wait(0~600초)는 --writer-release와 함께만 사용합니다')
     if args.execution_automatic and not live:
         parser.error('--execution-automatic은 --execution-mode live와 함께만 사용합니다')
     if args.rss_mock_file and live:
@@ -132,6 +138,10 @@ def oracle_command(args, parser):
             result = oracle_live_readiness(repo, args.execution_readiness)
         elif args.writer_transfer:
             result = transfer_writer(repo, args.writer_transfer, args.execution_registry)
+        elif args.writer_release:
+            result = release_writer(repo, args.writer_release, args.execution_registry, wait_seconds=args.release_wait)
+        elif args.writer_status:
+            result = writer_status(repo)
         elif args.maintenance:
             backend = oracle_backend(repo, mock_accounts())
             result = oracle_maintenance(backend)
@@ -157,7 +167,8 @@ def oracle_command(args, parser):
         if error is not None:
             parser.exit(2, error + '\n')
         print(json.dumps(result, ensure_ascii=False, default=str))
-        return 2 if args.execution_readiness and not result['ready'] else 0
+        unfinished = args.execution_readiness and not result['ready'] or args.writer_release and result['status'] != 'RELEASED'
+        return 2 if unfinished else 0  # a release still DRAINING is not done: run it again
     print(f'Local ({args.backend}, {"Live 승인 수집원" if live else "Mock 수집만"}): http://127.0.0.1:{port}', flush=True)
     try:
         server.serve_forever()
@@ -262,6 +273,18 @@ def main():
     parser.add_argument('--rss-mock-file', metavar='PATH', help='--backend oracle-test: RSS 수집에 실제 HTTP 대신 쓸 로컬 RSS XML(Mock 응답)')
     parser.add_argument('--writer-transfer', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
                         help='--backend oracle-test: 기존 SQLite 수집기를 멈춘 수집원을 Oracle 런타임 단독 Writer로 기록(G-OPS 승인 후, --execution-registry 필요)')
+    parser.add_argument('--writer-release', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
+                        help='--backend oracle-test: Oracle 단독 Writer 철회. 새 요청은 즉시 중단, 진행 중 요청이 끝나면 남은 작업을 '
+                             'WRITER_RELEASED로 닫고 IMPORTED로 되돌림(진행 중이면 DRAINING, 다시 실행; --execution-registry 필요)')
+    parser.add_argument('--release-wait', type=int, default=0, metavar='SECONDS',
+                        help='--writer-release: 진행 중 요청이 끝나기를 기다릴 최대 초(0~600, 기본 0)')
+    parser.add_argument('--writer-status', action='store_true',
+                        help='--backend oracle-test: 수집원별 Writer 상태·이전/철회 이력·열린 작업·인계할 사용량(읽기 전용)')
+    parser.add_argument('--writer-handover', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
+                        help='철회한 수집원의 Oracle 기간 API 사용량을 설정된 SQLite DB의 레거시 호출 기록으로 인계(--recovery-target 필요, '
+                             '운영 DB는 --allow-operational-database)')
+    parser.add_argument('--legacy-resume-check', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
+                        help='기존 SQLite 수집기를 다시 켜도 되는지 판정(읽기 전용, --recovery-target 필요)')
     parser.add_argument('--runtime-status', choices=('sqlite', 'oracle-test', 'oracle-production'),
                         help='실행 저장소 선택 점검(읽기 전용). oracle-test는 ORACLE_TEST_* 필요, oracle-production은 승인 전 비활성')
     parser.add_argument('--execution-readiness', metavar='REGISTRY',
@@ -285,8 +308,8 @@ def main():
         parser.error('수집 간격과 타임아웃은 양수여야 합니다')
     if args.backend != 'sqlite':
         raise SystemExit(oracle_command(args, parser))  # only the Oracle runtime; every SQLite command keeps its own path
-    if args.rss_mock_file or args.writer_transfer:
-        parser.error('--rss-mock-file과 --writer-transfer는 --backend oracle-test와 함께만 사용합니다')
+    if args.rss_mock_file or args.writer_transfer or args.writer_release or args.release_wait or args.writer_status:
+        parser.error('--rss-mock-file, --writer-transfer, --writer-release, --writer-status는 --backend oracle-test와 함께만 사용합니다')
     from .paths import database_path as resolve_database
     database_path = str(resolve_database())
     if args.runtime_status:
@@ -298,18 +321,31 @@ def main():
             parser.exit(2, 'runtime storage error: %s\n' % getattr(exc, 'code', type(exc).__name__))
         print(json.dumps(result, ensure_ascii=False))
         return
-    if args.target_load or args.recovery:
+    if args.target_load or args.recovery or args.writer_handover or args.legacy_resume_check:
         import json
+        from .usage_handover import handover, resume_readiness
+        commands = [k for k in ('target_load', 'recovery', 'writer_handover', 'legacy_resume_check') if getattr(args, k)]
+        if len(commands) > 1:
+            parser.error('한 번에 하나만 실행합니다: ' + ', '.join('--' + k.replace('_', '-') for k in commands))
         try:
-            if args.recovery and not args.recovery_target:
+            if not args.target_load and not args.recovery_target:
                 raise ValueError('--recovery-target이 필요합니다.')
             repository = target_repository(args.target_load or args.recovery_target, args.target_sqlite, database_path)
-            result = target_load(repository, database_path) if args.target_load else recovery_command(repository, database_path, args)
+            if args.target_load:
+                result = target_load(repository, database_path)
+            elif args.recovery:
+                result = recovery_command(repository, database_path, args)
+            elif args.writer_handover:
+                result = handover(repository, args.writer_handover, database_path, allow_operational=args.allow_operational_database)
+            else:
+                result = resume_readiness(repository, args.legacy_resume_check, database_path)
         except ValueError as exc:
             parser.exit(2, str(exc) + '\n')
         except Exception as exc:  # error codes only; DSN and credentials never printed
             parser.exit(2, 'target error: %s\n' % getattr(exc, 'code', type(exc).__name__))
         print(json.dumps(result, ensure_ascii=False, default=str))
+        if args.legacy_resume_check and not result['ready']:
+            raise SystemExit(2)  # not yet: the legacy collector stays off
         return
     if args.target_migrate or args.target_status:
         import json

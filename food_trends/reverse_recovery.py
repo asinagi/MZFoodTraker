@@ -58,6 +58,7 @@ NOT_RECOVERED = {
     'runtime_participants': 'process leases of the target writers (bookkeeping without a SQLite counterpart)',
     'quota_usage_ledger': "a copy of SQLite's own legacy call tables; the Oracle period's usage returns as quota_reservations/quota_charges",
     'quota_accounts': 'usage verification stamps of the Oracle runtime (no SQLite counterpart)',
+    'writer_transfer_events': 'writer transfer and release history of the target; the usage itself goes to SQLite by usage_handover',
     'legacy_key_map': LOAD_BOOKKEEPING, 'migration_batches': LOAD_BOOKKEEPING, 'migration_rejections': LOAD_BOOKKEEPING,
     'shadow_applied': 'target-only Shadow bookkeeping'}
 # RSS discovery written by the target, recovered before the identity tables (food_candidates.source_item_id refers to items).

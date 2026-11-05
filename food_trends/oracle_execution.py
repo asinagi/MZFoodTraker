@@ -13,7 +13,9 @@ deadlock with a claimer. No transaction is open while a provider request is in f
 Mock by default. Live settings are accepted only from the live assembly (oracle_live) with a passed readiness
 check, and a live job still needs, at enqueue and again before its first request, live enabled for its source,
 a live account, the source transferred to this runtime as its only writer (quota_accounts EXCLUSIVE, so its external
-usage is known) and no active block; an Oracle target labelled production is refused. Construction
+usage is known) and no active block; an Oracle target labelled production is refused. A writer release of the account
+(quota_accounts.release_requested_at, oracle_live.release_writer) stops it at once: enqueue and every request read the gate
+under the account row lock that the release takes first, while a request already sent still lands its page. Construction
 checks the target schema version and never runs DDL. The legacy call tables (youtube_calls, naver_calls,
 instagram_searches) and quota_events do not exist on the target: budget usage is the workflow charges
 recorded here, and reservation transitions are kept on quota_reservations only.
@@ -39,6 +41,18 @@ from .target_schema import BY_NAME, TARGET_SCHEMA_VERSION
 from .tracking_service import instant, stamp
 
 ACTIVE_STATES = ('READY', 'RETRY_WAIT', 'CLAIMED', 'RUNNING')
+RELEASE_REASONS = ('WRITER_RELEASE_IN_PROGRESS', 'WRITER_RELEASED')
+
+
+def release_reasons(account):
+    """A writer release of the account (its quota_accounts row): draining while still EXCLUSIVE, done once it is not."""
+    if not account or account.get('release_requested_at') is None:
+        return []
+    return [RELEASE_REASONS[0] if account['usage_status'] == 'EXCLUSIVE' else RELEASE_REASONS[1]]
+
+
+class WriterDraining(RuntimeError):
+    """A writer release that cannot finish yet: a live job of the account holds a live lease (a request may be in flight)."""
 
 
 def _states(values):
@@ -148,9 +162,22 @@ class OracleQuota(QuotaManager):
             observed = len(known)
         return observed, known
 
+    @staticmethod
+    def account_row(db, source, scope):
+        return db.one('SELECT * FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a', 'quota_accounts', b_s=source, b_a=scope)
+
+    @staticmethod
+    def lock_row(db, source, scope):
+        """Lock the account's row (if it exists) for the rest of the transaction: a writer release and every live enqueue or request
+        serialize on it. The stand-in's write transactions are serialized already."""
+        if db.oracle:
+            db.run('SELECT source_id FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a FOR UPDATE', b_s=source, b_a=scope).fetchall()
+
     def coverage(self, db, source, scope, now):
         """How well usage outside this runtime is known for one account scope."""
-        row = db.one('SELECT * FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a', 'quota_accounts', b_s=source, b_a=scope)
+        return self.coverage_of(self.account_row(db, source, scope), now)
+
+    def coverage_of(self, row, now):
         if row is None or row['usage_status'] == 'UNVERIFIED':
             return 'UNVERIFIED'
         if row['usage_status'] == 'EXCLUSIVE':
@@ -182,9 +209,7 @@ class OracleQuota(QuotaManager):
         row = dict(source_id=plan['source_id'], account_scope=plan['account_scope'], usage_status='UNVERIFIED', legacy_observed_through=None,
                    evidence_ref=None, updated_at=self.execution.now())
         db.insert_absent('quota_accounts', row)
-        if db.oracle:
-            db.run('SELECT source_id FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a FOR UPDATE',
-                   b_s=plan['source_id'], b_a=plan['account_scope']).fetchall()
+        self.lock_row(db, plan['source_id'], plan['account_scope'])
 
     def _recorded(self, db, source, scope, resource):
         rows = db.rows('''SELECT c.reservation_id,c.resource_code,c.cost,c.distinct_key,c.window_start,c.window_end,r.state,r.expires_at
@@ -435,7 +460,10 @@ class OracleExecution:
         reasons = list(account.blockers())
         if account.mode != mode:
             reasons.append('EXECUTION_MODE_MISMATCH')
-        coverage = self.quota.coverage(t, plan['source_id'], plan['account_scope'], self.now())
+        row = self.quota.account_row(t, plan['source_id'], plan['account_scope'])
+        coverage = self.quota.coverage_of(row, self.now())
+        if mode == 'live':
+            reasons += release_reasons(row)  # a writer release stops the account at once, also while its last requests drain
         if mode == 'live' and (not self.settings.live_enabled or plan['source_id'] not in self.settings.exclusive_live_sources):
             reasons.append('LIVE_DISABLED_OR_LEGACY_WRITER_NOT_TRANSFERRED')
         if mode == 'live' and coverage != 'RUNTIME_EXCLUSIVE':
@@ -472,6 +500,8 @@ class OracleExecution:
                     t.run('SELECT query_id FROM planner_queries WHERE query_id=:b_q FOR UPDATE', b_q=p['query_id']).fetchall()
                     for target_id in sorted({m['target_id'] for m in p['targets']}):
                         t.run('SELECT target_id FROM tracking_targets WHERE target_id=:b_t FOR UPDATE', b_t=target_id).fetchall()
+                if mode == 'live':  # then the account: a writer release cannot commit between this gate and the new job
+                    self.quota.lock_row(t, p['source_id'], p['account_scope'])
                 reasons = self._gate(t, p, mode)
                 validation = self._validate(t, p, self.now())
                 if reasons or not validation['valid']:
@@ -677,6 +707,9 @@ class OracleExecution:
             # A shared job may outlive its original plan's targets; all member plans are checked.
             eligible = self._eligible(t, job)
             reasons += [r for r in validation['reasons'] if r != 'NO_CURRENT_TARGET_MAPPING']
+            if set(reasons) & set(RELEASE_REASONS):
+                self._terminal(t, job, 'CANCELLED', 'WRITER_RELEASED')
+                return None
             if reasons or plan['targets'] and not eligible:
                 self._terminal(t, job, 'BLOCKED' if reasons else 'CANCELLED', reasons[0] if reasons else 'NO_ACTIVE_TARGETS')
                 return None
@@ -711,13 +744,15 @@ class OracleExecution:
     def fail(self, claim, error):
         kind = getattr(error, 'kind', 'internal')
         allowed = {'authentication', 'permission', 'rate_limit', 'quota', 'budget', 'network', 'upstream', 'invalid_response', 'validation',
-                   'policy', 'no_targets', 'checkpoint_expired', 'window_changed', 'internal'}
+                   'policy', 'no_targets', 'checkpoint_expired', 'window_changed', 'internal', 'writer_released'}
         if kind not in allowed:
             kind = 'internal'
         with self.transaction() as t:
             job = self._fence(t, claim['job']['job_id'], claim['owner_id'], claim['fencing_generation'])
             now = self.now()
-            if kind in ('authentication', 'permission'):
+            if kind == 'writer_released':  # stopped before its next request by a writer release; committed pages stay
+                self._terminal(t, job, 'CANCELLED', 'WRITER_RELEASED')
+            elif kind in ('authentication', 'permission'):
                 self._put_block(t, job['source_id'], job['account_scope'], kind, None)
                 self._terminal(t, job, 'BLOCKED', kind)
             elif kind in ('policy', 'validation', 'invalid_response', 'checkpoint_expired'):
@@ -742,6 +777,42 @@ class OracleExecution:
                 if self._job(t, job['job_id'])['status'] == 'RETRY_WAIT':
                     t.run('UPDATE execution_jobs SET next_retry_at=:b_u WHERE job_id=:b_j AND next_retry_at<:b_u', b_u=until, b_j=job['job_id'])
             t.update('execution_leases', {'resource_key': job['job_id']}, expires_at=now)
+
+    def close_released_account(self, t, source, scope):
+        """The last step of a writer release (oracle_live.release_writer), in its transaction under the account lock.
+
+        Raises WriterDraining, writing nothing, while a live job of the account holds a live lease: a request may be in flight
+        (it lands its page; the job's next request meets the release). Otherwise every live job of the account still open ends
+        CANCELLED with WRITER_RELEASED, its slots cancelled with that reason and its unsent reservation released; a call a crashed
+        worker left SENT becomes UNKNOWN (still charged, a remote duplicate possible). Committed pages and observations stay."""
+        now = self.now()
+        ids = [r['job_id'] for r in t.rows(f'''SELECT job_id FROM execution_jobs WHERE source_id=:b_s AND account_scope=:b_a
+            AND exec_mode='live' AND status IN {_states(ACTIVE_STATES)} ORDER BY created_at,job_id''', b_s=source, b_a=scope)]
+
+        def busy(job_ids):
+            leases = [(j, self._lease(t, j)) for j in job_ids]
+            return [{'job_id': j, 'lease_expires_at': stamp(utc_value(lease['expires_at']))} for j, lease in leases
+                    if lease and utc_value(lease['expires_at']) > now]
+        if busy(ids):
+            raise WriterDraining({'jobs': busy(ids)})
+        closed, interrupted = [], 0
+        for job_id in ids:
+            if t.oracle:  # job row lock, as a claim takes it; a claim that won meanwhile shows as a live lease below
+                t.run('SELECT job_id FROM execution_jobs WHERE job_id=:b_j FOR UPDATE', b_j=job_id).fetchall()
+            if busy([job_id]):
+                raise WriterDraining({'jobs': busy([job_id])})
+            job = self._job(t, job_id)
+            if job['status'] not in ACTIVE_STATES:
+                continue
+            sent = t.run("UPDATE execution_calls SET status='UNKNOWN',error_kind='INTERRUPTED_AFTER_SEND' WHERE job_id=:b_j AND status='SENT'",
+                         b_j=job_id).rowcount
+            if sent:
+                t.update('execution_jobs', {'job_id': job_id}, remote_duplicate_possible=1)
+                interrupted += sent
+            t.run("UPDATE quota_reservations SET state='RELEASED' WHERE attempt_key LIKE :b_k AND state='RESERVED'", b_k=job_id + ':%')
+            self._terminal(t, job, 'CANCELLED', 'WRITER_RELEASED')
+            closed.append(job_id)
+        return {'closed_jobs': closed, 'interrupted_calls': interrupted}
 
     def status(self, job_id=None):
         with self.reader() as t:
@@ -877,8 +948,10 @@ class OracleRequestSession(RequestSession):
         e, p = self.execution, self.plan
         with e.transaction() as t:
             job = self._fence(t)
-            if e._gate(t, p, job['mode']):
-                raise ExecutionError('policy')
+            e.quota.lock_row(t, p['source_id'], p['account_scope'])  # the gate is read under the account lock a writer release takes first
+            reasons = e._gate(t, p, job['mode'])
+            if reasons:
+                raise ExecutionError('writer_released' if set(reasons) & set(RELEASE_REASONS) else 'policy')
             validation = e._validate(t, p, e.now())
             if not validation['valid']:
                 raise ExecutionError('no_targets' if validation['reasons'] == ['NO_CURRENT_TARGET_MAPPING'] else 'policy')
@@ -929,7 +1002,8 @@ class OracleRequestSession(RequestSession):
             self._check_state(next_state)
             with self.execution.transaction() as t:
                 job = self._fence(t)
-                if self.execution._gate(t, self.plan, job['mode']):
+                # A writer release that began while this request was in flight lets its page land; no further request starts.
+                if [r for r in self.execution._gate(t, self.plan, job['mode']) if r not in RELEASE_REASONS]:
                     raise ExecutionError('policy')
                 returned, accepted = persist(t, parsed, self.execution._eligible(t, job, started_only=True))
                 now = self.execution.now()

@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 9
+TARGET_SCHEMA_VERSION = 10
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -321,10 +321,19 @@ TABLES = (
                   _status('confidence', ('CONFIRMED', 'COUNTED', 'UNCERTAIN', 'UNKNOWN'))),
           indexes=(('source_id', 'account_scope', 'quota_type', 'window_start'),),
           mutable=('usage', 'evidence', 'confidence', 'imported_at'), meta={'since': 6}),
+    # v10 release_requested_at: when a writer release of the account began (oracle_live.release_writer). While the account is still
+    # EXCLUSIVE it drains (no new request starts); once IMPORTED it was released. A new writer transfer clears it.
     Table('quota_accounts', (NN('source_id', 'code'), NN('account_scope', 'code'), NN('usage_status', 'code'), C('legacy_observed_through', 'ts'),
-          C('evidence_ref', 'key'), NN('updated_at', 'ts')), ('source_id', 'account_scope'),
+          C('evidence_ref', 'key'), NN('updated_at', 'ts'), C('release_requested_at', 'ts')), ('source_id', 'account_scope'),
           checks=(_status('usage_status', ('UNVERIFIED', 'IMPORTED', 'EXCLUSIVE')),),
-          mutable=('usage_status', 'legacy_observed_through', 'evidence_ref', 'updated_at'), meta={'since': 6}),
+          mutable=('usage_status', 'legacy_observed_through', 'evidence_ref', 'updated_at', 'release_requested_at'), meta={'since': 6}),
+    # v10 writer transfer history (oracle_live): append-only, one row per transfer, release request, release and usage handover of
+    # a source account, never updated or deleted, so who handed which writer to the runtime and back, and when, stays auditable.
+    Table('writer_transfer_events', (NN('event_id', 'id'), NN('source_id', 'code'), NN('account_scope', 'code'), NN('cycle_no', 'int'),
+          NN('action', 'code'), NN('occurred_at', 'ts'), NN('approved_by', 'text'), NN('status_before', 'code'), NN('status_after', 'code'),
+          NN('details_json', 'json')), ('event_id',),
+          checks=(_status('action', ('TRANSFER', 'RELEASE_REQUESTED', 'RELEASED', 'USAGE_HANDOVER')), 'cycle_no>=1'),
+          indexes=(('source_id', 'account_scope', 'cycle_no'),), meta={'since': 10}),
     # v7 tracking commands on the target (OracleTrackingService): the SQLite command log and lifecycle history contract.
     # Runtime-owned like v2-v6: SQLite keeps its own history, which B7 does not copy (Shadow captures no command log).
     Table('tracking_commands', (NN('request_key', 'key'), NN('operation', 'code'), NN('payload_hash', 'hash'),

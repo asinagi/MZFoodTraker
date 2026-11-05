@@ -16,7 +16,9 @@ run with no FOOD item is a normal result. Opens no SQLite database. The raw resp
 
 The mock assembly (runtime_storage.oracle_backend) collects only an injected mock response and never fetches. The live
 assembly (oracle_live) passes the existing collector.fetch, labels runs live_api and a gate that re-checks, before every
-live collection, that live RSS is still enabled and transferred to this runtime. A run another process started less
+live collection, that live RSS is still enabled and transferred to this runtime; a live run starts only after the feed's
+writer is checked again under the RSS lock, which a writer release takes too, so no fetch begins once a release has. A run
+another process started less
 than STALE_AFTER ago makes a collection wait (no duplicate fetch); an older unfinished run is a crash and is finished
 as failed ('interrupted') before the next one, so a restart resumes without a hole. The scheduler (start) runs only
 for an approved live service, every interval seconds (30 minutes by default).
@@ -33,13 +35,14 @@ from .contracts import encode, envelope
 from .execution_runtime import ExecutionController
 from .food_service import FoodError
 from .ingestion import digest, ingest_safely, item_key
-from .oracle_execution import utc_value
+from .oracle_execution import release_reasons, utc_value
 from .oracle_ingestion import OracleIngestionService
 from .target_db import canonical_json
 from .target_repository import policy
 from .tracking_service import stamp
 
 SOURCE_CODE = 'google_trends_rss'
+FEED_SCOPE = 'public-feed'  # the feed's account scope in quota_accounts (oracle_live.RSS_SCOPE)
 REQUEST = {'geo': 'KR', 'endpoint': 'trending/rss'}
 # The SQLite observation contract's mapping from feed elements to envelope fields (Storage.finish).
 FIELD_MAP = {'title': 'keyword', 'pubDate': 'published_raw', 'approx_traffic': 'traffic', 'news_item': 'news'}
@@ -49,6 +52,10 @@ STALE_AFTER = timedelta(minutes=10)  # far beyond a fetch timeout and one run's 
 
 class Busy(RuntimeError):
     """Another collector started a run moments ago."""
+
+
+class Blocked(RuntimeError):
+    """A live run refused under the RSS lock: the feed's writer is no longer this runtime (args[0]: the reasons)."""
 
 
 def _number(payload_ref):
@@ -113,10 +120,24 @@ class OracleRssStore:
     def _unfinished(self, t):
         return t.rows('SELECT * FROM rss_runs WHERE finished_at IS NULL ORDER BY run_id', 'rss_runs')
 
+    def _writer_refusals(self, t):
+        """Why the live feed's writer is not this runtime now (oracle_live's account rules), read inside the run's transaction."""
+        row = t.one('SELECT * FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a', 'quota_accounts', b_s=SOURCE_CODE, b_a=FEED_SCOPE)
+        reasons = release_reasons(row)
+        if row is None or row['usage_status'] != 'EXCLUSIVE':
+            reasons.append('LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED')
+        block = t.one('SELECT * FROM execution_blocks WHERE source_id=:b_s AND account_scope=:b_a', 'execution_blocks', b_s=SOURCE_CODE, b_a=FEED_SCOPE)
+        if block and (block['until_at'] is None or utc_value(block['until_at']) > self.execution.now()):
+            reasons.append('ACCOUNT_BLOCKED_' + block['error_kind'])
+        return reasons
+
     def start(self, origin='mock'):
         contract = envelope(SOURCE_CODE, origin, self.now(), request=REQUEST)
         with self.execution.transaction() as t:
             self._lock(t)
+            refused = self._writer_refusals(t) if origin == 'live_api' else []
+            if refused:
+                raise Blocked(refused)
             if any(utc_value(r['started_at']) > self.execution.now() - STALE_AFTER for r in self._unfinished(t)):
                 raise Busy('rss_collection_in_progress')
             run_id = self._next_run(t)
@@ -380,6 +401,8 @@ class OracleRssService:
                 run_id = self.storage.start(origin=self.origin)
             except Busy:
                 return {'accepted': False, 'message': '다른 수집기가 수집 중입니다'}
+            except Blocked as exc:  # the writer was released between the gate and the run: no fetch
+                return {'accepted': False, 'success': False, 'error': 'oracle_live_rss_blocked', 'blockers': exc.args[0]}
             raw, status = self.fetcher(self.timeout)
             items, warnings = collector.parse(raw)
             summary = self.storage.finish(run_id, items, raw, status, warnings=warnings)
