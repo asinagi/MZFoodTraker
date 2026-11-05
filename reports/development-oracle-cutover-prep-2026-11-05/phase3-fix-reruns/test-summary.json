@@ -1,0 +1,52 @@
+{
+  "standin_modules_run": {
+    "summary": {
+      "tests": 390,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 145,
+      "blocked_external_attempts": 0,
+      "production_database": "blocked",
+      "successful": false
+    },
+    "failing": [
+      "test_target_covers_every_source_column_with_matching_nullability"
+    ],
+    "cause": "test_target_schema did not know the new derived column food_events.event_sequence (SQLite rowid); added beside food_mentions.source_code"
+  },
+  "standin_schema_rerun": {
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "blocked_external_attempts": 0,
+    "production_database": "blocked",
+    "successful": true
+  },
+  "oracle_modules_run": {
+    "summary": {
+      "tests": 203,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "blocked_external_attempts": 0,
+      "production_database": "blocked",
+      "successful": false
+    },
+    "failing": [
+      "test_failure_partial_pages_and_expiry_are_labelled",
+      "test_load_reconciles_answers_alike_and_a_rerun_writes_nothing"
+    ],
+    "cause": "ORA-01466: the app API reads in a READ ONLY transaction seconds after the disposable schema was recreated; tests now wait until the newest DDL is 4 s old (oracle_support.settle_after_ddl)"
+  },
+  "oracle_new_modules_rerun": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "blocked_external_attempts": 0,
+    "production_database": "blocked",
+    "successful": true
+  },
+  "oracle_new_modules_rerun_selection": "test_oracle_backend, test_cutover, test_reverse_recovery (stand-in and Oracle classes)"
+}

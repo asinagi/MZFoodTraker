@@ -1,7 +1,7 @@
 """Food-based target state and deterministic scheduling; deliberately no HTTP clients."""
 import hashlib
 import json
-import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from .food_service import FoodService, FoodError, identity, text, dump
 from .entity_types import FOOD_KINDS
@@ -31,6 +31,86 @@ class TrackingService:
         if len(self.accounts) != len(accounts):
             raise ValueError('Duplicate account scope')
 
+    # Storage primitives. The Oracle runtime (oracle_tracking) overrides only these; the decisions below stay shared.
+
+    def _reader(self):
+        return self.storage.reader()
+
+    @contextmanager
+    def _writer(self):
+        with self.storage.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            yield db
+
+    @staticmethod
+    def _lock_target(db, target_id):
+        pass  # BEGIN IMMEDIATE already serializes every SQLite writer
+
+    @staticmethod
+    def _resolved_candidate(db, food_id):
+        return db.execute("SELECT 1 FROM food_candidates WHERE resolved_food_id=? AND status='RESOLVED' LIMIT 1", (food_id,)).fetchone() is not None
+
+    @staticmethod
+    def _target_ids(db, food_id):
+        sql, args = ('SELECT target_id FROM tracking_targets', ())
+        if food_id is not None:
+            sql += ' WHERE food_id=?'; args = (food_id,)
+        return [r[0] for r in db.execute(sql + ' ORDER BY created_at,target_id', args)]
+
+    @staticmethod
+    def _history(db, target_id):
+        return [dict(r) for r in db.execute('SELECT rowid AS event_sequence,* FROM tracking_events WHERE target_id=? ORDER BY rowid', (target_id,))]
+
+    @staticmethod
+    def _put_event(db, row):
+        db.execute('INSERT INTO tracking_events VALUES (?,?,?,?,?,?,?,?,?)', tuple(row.values()))
+
+    @staticmethod
+    def _command(db, key):
+        row = db.execute('SELECT * FROM tracking_commands WHERE request_key=?', (key,)).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def _put_command(db, key, operation, fingerprint, created_at):
+        db.execute('INSERT INTO tracking_commands VALUES (?,?,?,?,?)', (key, operation, fingerprint, '{}', created_at))
+
+    @staticmethod
+    def _command_result(db, key, result):
+        db.execute('UPDATE tracking_commands SET result_json=? WHERE request_key=?', (dump(result), key))
+
+    @staticmethod
+    def _has_alias(db, food_id, scope):
+        return db.execute("SELECT 1 FROM food_aliases WHERE food_id=? AND scope=? AND status='ACTIVE'", (food_id, scope)).fetchone() is not None
+
+    @staticmethod
+    def _target_for(db, food_id, source, scope):
+        row = db.execute('SELECT * FROM tracking_targets WHERE food_id=? AND source_id=? AND account_scope=?', (food_id, source, scope)).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def _reregister(db, target, food_revision, now):
+        db.execute("UPDATE tracking_targets SET status='PENDING',generation=generation+1,revision=revision+1,food_revision=?,next_due_at=NULL,updated_at=? WHERE target_id=?", (food_revision, now, target['target_id']))
+
+    @staticmethod
+    def _put_target(db, row):
+        db.execute('''INSERT INTO tracking_targets VALUES (?,?,?,?,?,'PENDING',1,?,NULL,NULL,?,?,?,?,1,?,?)''', tuple(row.values()))
+
+    @staticmethod
+    def _put_slot(db, row):
+        db.execute('INSERT INTO tracking_slots VALUES (?,?,?,?,?,?)', tuple(row.values()))
+
+    @staticmethod
+    def _advance_due(db, target, next_due, now):
+        db.execute('UPDATE tracking_targets SET next_due_at=?,revision=revision+1,updated_at=? WHERE target_id=?', (next_due, now, target['target_id']))
+
+    @staticmethod
+    def _set_state(db, target, status, next_due, food_revision, interval, now):
+        db.execute('''UPDATE tracking_targets SET status=?,next_due_at=?,food_revision=?,interval_seconds=?,
+            generation=generation+1,revision=revision+1,updated_at=? WHERE target_id=?''',
+                   (status, next_due, food_revision, interval, now, target['target_id']))
+
+    # Decisions
+
     def account(self, source, scope):
         account = self.accounts.get((source, scope))
         if account is None:
@@ -39,8 +119,7 @@ class TrackingService:
 
     def _approved_food(self, db, food_id):
         food = self.foods._active(db, food_id)
-        approved = db.execute("SELECT 1 FROM food_candidates WHERE resolved_food_id=? AND status='RESOLVED' LIMIT 1", (food_id,)).fetchone()
-        if food['entity_kind'] not in FOOD_KINDS or not approved:
+        if food['entity_kind'] not in FOOD_KINDS or not self._resolved_candidate(db, food_id):
             raise FoodError('승인·식별된 음식만 추적할 수 있습니다.', 409)
         return food
 
@@ -65,23 +144,20 @@ class TrackingService:
         return row
 
     def target(self, target_id):
-        with self.storage.reader() as db:
+        with self._reader() as db:
             return self._target(db, target_id)
 
     def list(self, food_id=None):
-        with self.storage.reader() as db:
-            sql, args = ('SELECT target_id FROM tracking_targets', ())
-            if food_id is not None:
-                sql += ' WHERE food_id=?'; args = (food_id,)
-            return [self._target(db, r[0]) for r in db.execute(sql + ' ORDER BY created_at,target_id', args)]
+        with self._reader() as db:
+            return [self._target(db, target_id) for target_id in self._target_ids(db, food_id)]
 
     def due(self, at=None):
         now = instant(at or self.clock())
         return [r for r in self.list() if r['planning_eligible'] and r['next_due_at'] and instant(r['next_due_at']) <= now]
 
     def history(self, target_id):
-        with self.storage.reader() as db:
-            return [dict(r) for r in db.execute('SELECT rowid AS event_sequence,* FROM tracking_events WHERE target_id=? ORDER BY rowid', (target_id,))]
+        with self._reader() as db:
+            return self._history(db, target_id)
 
     def valid_mapping(self, db, target_id, generation, food_revision):
         target = self._target(db, target_id)
@@ -89,9 +165,9 @@ class TrackingService:
 
     def _event(self, db, row, action, before, ctx):
         after = self.foods._row(db, 'tracking_targets', 'target_id', row['target_id'])
-        db.execute('INSERT INTO tracking_events VALUES (?,?,?,?,?,?,?,?,?)',
-                   (identity('TEVT'), row['target_id'], action, ctx['actor_ref'], ctx['reason'], stamp(self.clock()),
-                    dump(before) if before else None, dump(after), ctx['request_key']))
+        self._put_event(db, dict(event_id=identity('TEVT'), target_id=row['target_id'], action=action, actor_ref=ctx['actor_ref'],
+                                 reason=ctx['reason'], occurred_at=stamp(self.clock()), before_json=dump(before) if before else None,
+                                 after_json=dump(after), request_key=ctx['request_key']))
 
     def command(self, operation, body):
         common = {'request_key', 'actor_ref', 'reason'}
@@ -106,16 +182,15 @@ class TrackingService:
         ctx = dict(body, request_key=text(body.get('request_key'), 128),
                    actor_ref=text(body.get('actor_ref'), 100), reason=text(body.get('reason'), 1000))
         fingerprint = hashlib.sha256(dump(body).encode()).hexdigest()
-        with self.storage.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            old = db.execute('SELECT * FROM tracking_commands WHERE request_key=?', (ctx['request_key'],)).fetchone()
+        with self._writer() as db:
+            old = self._command(db, ctx['request_key'])
             if old:
                 if old['operation'] != operation or old['payload_hash'] != fingerprint:
                     raise FoodError('같은 요청 키의 입력이 다릅니다.', 409)
                 return json.loads(old['result_json'])
-            db.execute('INSERT INTO tracking_commands VALUES (?,?,?,?,?)', (ctx['request_key'], operation, fingerprint, '{}', stamp(self.clock())))
+            self._put_command(db, ctx['request_key'], operation, fingerprint, stamp(self.clock()))
             result = self._register(db, ctx) if operation == 'register' else self._change(db, operation, ctx)
-            db.execute('UPDATE tracking_commands SET result_json=? WHERE request_key=?', (dump(result), ctx['request_key']))
+            self._command_result(db, ctx['request_key'], result)
             return result
 
     def _interval(self, source, value):
@@ -131,15 +206,14 @@ class TrackingService:
         account = self.account(source, scope)
         interval = self._interval(source, ctx.get('interval_seconds', account.interval_seconds or DEFAULT_INTERVALS[source]))
         alias_scope = self.foods._scope(ctx.get('alias_scope', food['default_scope']))
-        aliases = db.execute("SELECT 1 FROM food_aliases WHERE food_id=? AND scope=? AND status='ACTIVE'", (food['food_id'], alias_scope)).fetchone()
-        if not aliases:
+        if not self._has_alias(db, food['food_id'], alias_scope):
             raise FoodError('해당 범위에 승인된 정확 별칭이 없습니다.', 409)
-        previous = db.execute('SELECT * FROM tracking_targets WHERE food_id=? AND source_id=? AND account_scope=?', (food['food_id'], source, scope)).fetchone()
+        previous = self._target_for(db, food['food_id'], source, scope)
         if previous:
             if previous['status'] == 'STOPPED' and ctx.get('reregister') is True:
-                self.foods._revision(dict(previous), ctx.get('expected_revision'))
-                db.execute("UPDATE tracking_targets SET status='PENDING',generation=generation+1,revision=revision+1,food_revision=?,next_due_at=NULL,updated_at=? WHERE target_id=?", (food['revision'], stamp(self.clock()), previous['target_id']))
-                self._event(db, dict(previous), 'REREGISTERED', dict(previous), ctx)
+                self.foods._revision(previous, ctx.get('expected_revision'))
+                self._reregister(db, previous, food['revision'], stamp(self.clock()))
+                self._event(db, previous, 'REREGISTERED', previous, ctx)
             return self._target(db, previous['target_id'])
         origin, method = 'user', 'MANUAL'
         if ctx.get('candidate_id') is not None:
@@ -148,12 +222,14 @@ class TrackingService:
                 raise FoodError('식별된 후보와 음식 ID가 일치하지 않습니다.', 409)
             origin, method = candidate['origin'], 'DISCOVERY' if candidate['source_code'] != 'user_input' else 'MANUAL'
         target_id, now = identity('TARGET'), stamp(self.clock())
-        db.execute('''INSERT INTO tracking_targets VALUES (?,?,?,?,?,'PENDING',1,?,NULL,NULL,?,?,?,?,1,?,?)''',
-                   (target_id, food['food_id'], source, scope, alias_scope, interval, origin, method, ctx.get('candidate_id'), food['revision'], now, now))
+        self._put_target(db, dict(target_id=target_id, food_id=food['food_id'], source_id=source, account_scope=scope, alias_scope=alias_scope,
+                                  interval_seconds=interval, origin=origin, registration_method=method, candidate_id=ctx.get('candidate_id'),
+                                  food_revision=food['revision'], created_at=now, updated_at=now))
         self._event(db, {'target_id': target_id}, 'REGISTERED', None, ctx)
         return self._target(db, target_id)
 
     def _change(self, db, action, ctx):
+        self._lock_target(db, ctx.get('target_id'))
         row = self.foods._row(db, 'tracking_targets', 'target_id', ctx.get('target_id'))
         self.foods._revision(row, ctx.get('expected_revision'))
         now = instant(self.clock())
@@ -162,11 +238,12 @@ class TrackingService:
             if not target['planning_eligible'] or not row['next_due_at'] or instant(row['next_due_at']) > now:
                 raise FoodError('현재 예정된 활성 대상이 아닙니다.', 409)
             slot_id = identity('SLOT')
-            db.execute('INSERT INTO tracking_slots VALUES (?,?,?,?,?,?)', (slot_id, row['target_id'], row['generation'], row['food_revision'], row['next_due_at'], stamp(now)))
+            self._put_slot(db, dict(slot_id=slot_id, target_id=row['target_id'], generation=row['generation'], food_revision=row['food_revision'],
+                                    due_slot=row['next_due_at'], created_at=stamp(now)))
             due = instant(row['next_due_at'])
             steps = int((now - due).total_seconds() // row['interval_seconds']) + 1
             next_due = stamp(due + timedelta(seconds=steps * row['interval_seconds']))
-            db.execute('UPDATE tracking_targets SET next_due_at=?,revision=revision+1,updated_at=? WHERE target_id=?', (next_due, stamp(now), row['target_id']))
+            self._advance_due(db, row, next_due, stamp(now))
             self._event(db, row, 'SLOT_SCHEDULED', row, ctx)
             return {'slot_id': slot_id, 'due_slot': row['next_due_at'], 'target': self._target(db, row['target_id']), 'http_job_created': False}
         status, next_due, food_revision, interval = row['status'], row['next_due_at'], row['food_revision'], row['interval_seconds']
@@ -191,8 +268,6 @@ class TrackingService:
         elif action == 'refresh':
             food_revision = self._approved_food(db, row['food_id'])['revision']
             next_due = stamp(now) if status == 'ACTIVE' else None
-        db.execute('''UPDATE tracking_targets SET status=?,next_due_at=?,food_revision=?,interval_seconds=?,
-            generation=generation+1,revision=revision+1,updated_at=? WHERE target_id=?''',
-                   (status, next_due, food_revision, interval, stamp(now), row['target_id']))
+        self._set_state(db, row, status, next_due, food_revision, interval, stamp(now))
         self._event(db, row, action.upper(), row, ctx)
         return self._target(db, row['target_id'])

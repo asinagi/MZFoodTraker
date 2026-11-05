@@ -5,6 +5,7 @@ import re
 import sqlite3
 import unicodedata
 import uuid
+from contextlib import contextmanager
 
 from .classifier import normalize
 from .contracts import envelope, encode, require_operation
@@ -43,6 +44,139 @@ class FoodService:
     def __init__(self, storage):
         self.storage = storage
 
+    # Storage primitives. The Oracle runtime (oracle_foods) overrides only these; the decisions below stay shared.
+
+    def _reader(self):
+        return self.storage.reader()
+
+    @contextmanager
+    def _writer(self):
+        """One command transaction; a constraint conflict surfaces as a reviewable 409."""
+        try:
+            with self.storage.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                yield db
+        except sqlite3.IntegrityError as exc:
+            raise FoodError('별칭·관계·이력 제약에 충돌했습니다. 새로 조회 후 검토하세요.', 409) from exc
+
+    @staticmethod
+    def _command(db, key):
+        row = db.execute('SELECT * FROM food_commands WHERE request_key=?', (key,)).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def _put_command(db, key, operation, fingerprint):
+        db.execute('INSERT INTO food_commands VALUES (?,?,?,?,?)', (key, operation, fingerprint, '{}', utcnow()))
+
+    @staticmethod
+    def _command_result(db, key, result):
+        db.execute('UPDATE food_commands SET result_json=? WHERE request_key=?', (dump(result), key))
+
+    @staticmethod
+    def _put_event(db, row):
+        db.execute('INSERT INTO food_events VALUES (?,?,?,?,?,?,?,?,?,?,?)', tuple(row.values()))
+
+    @staticmethod
+    def _touch(db, food_id):
+        db.execute('UPDATE food_entities SET revision=revision+1,updated_at=? WHERE food_id=?', (utcnow(), food_id))
+
+    @staticmethod
+    def _aliases_of(db, food_id, status):
+        return [dict(r) for r in db.execute('''SELECT * FROM food_aliases
+            WHERE food_id=? AND status=? ORDER BY scope,normalized_form,alias_id''', (food_id, status))]
+
+    @staticmethod
+    def _relations_of(db, food_id):
+        return [dict(r) for r in db.execute('''SELECT * FROM food_relations WHERE status='ACTIVE'
+            AND (from_food_id=? OR to_food_id=?) ORDER BY relation_id''', (food_id, food_id))]
+
+    @staticmethod
+    def _food_ids(db):
+        return [r[0] for r in db.execute('SELECT food_id FROM food_entities ORDER BY created_at,food_id')]
+
+    @staticmethod
+    def _candidate_ids(db):
+        return [r[0] for r in db.execute('SELECT candidate_id FROM food_candidates ORDER BY created_at,candidate_id')]
+
+    @staticmethod
+    def _event_rows(db, subject_id):
+        # Wall-clock timestamps can tie on Windows; append order is authoritative.
+        return [dict(r) for r in db.execute('SELECT rowid AS event_sequence,* FROM food_events WHERE subject_id=? ORDER BY rowid', (subject_id,))]
+
+    @staticmethod
+    def _exact(db, name, scope):
+        return db.execute('''SELECT a.* FROM food_aliases a JOIN food_entities f ON f.food_id=a.food_id
+            WHERE a.normalized_form=? AND a.scope=? AND a.normalization_version=?
+            AND a.status='ACTIVE' AND f.status='ACTIVE' ''', (text(name), scope, NORMALIZATION_VERSION)).fetchone()
+
+    @staticmethod
+    def _candidate_by_key(db, candidate_key):
+        row = db.execute('SELECT candidate_id FROM food_candidates WHERE candidate_key=?', (candidate_key,)).fetchone()
+        return row[0] if row else None
+
+    @staticmethod
+    def _put_candidate(db, row):
+        db.execute('''INSERT INTO food_candidates(candidate_id,candidate_key,source_code,source_item_id,origin,
+            surface_form,normalized_form,scope,proposed_kind,proposed_aliases_json,description,proposed_relations_json,
+            status,resolution_version,type_gate,contract_json,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'NEW',?,?,?,?,?)''', tuple(row.values()))
+
+    @staticmethod
+    def _set_candidate(db, candidate_id, status, food_id, alias_id, method):
+        db.execute('''UPDATE food_candidates SET status=?,resolved_food_id=?,resolution_alias_id=?,resolution_method=?,
+            revision=revision+1,updated_at=? WHERE candidate_id=?''', (status, food_id, alias_id, method, utcnow(), candidate_id))
+
+    @staticmethod
+    def _put_alias(db, row):
+        db.execute('INSERT INTO food_aliases VALUES (?,?,?,?,?,?,?,1,?,?)', tuple(row.values()))
+
+    @staticmethod
+    def _put_food(db, row):
+        db.execute("INSERT INTO food_entities VALUES (?,?,?,'ACTIVE',1,?,NULL,?,?)", tuple(row.values()))
+
+    @staticmethod
+    def _rename(db, food_id, name):
+        db.execute('UPDATE food_entities SET canonical_name=?,revision=revision+1,updated_at=? WHERE food_id=?', (name, utcnow(), food_id))
+
+    @staticmethod
+    def _resolved_by_alias(db, alias_id):
+        return [r[0] for r in db.execute("SELECT candidate_id FROM food_candidates WHERE resolution_alias_id=? AND status='RESOLVED'", (alias_id,))]
+
+    @staticmethod
+    def _set_alias(db, alias_id, food_id, status):
+        db.execute('UPDATE food_aliases SET food_id=?,status=?,revision=revision+1,updated_at=? WHERE alias_id=?',
+                   (food_id, status, utcnow(), alias_id))
+
+    @staticmethod
+    def _variant_cycle(db, source, target):
+        """Whether target already reaches source through active VARIANT_OF relations."""
+        return db.execute('''WITH RECURSIVE ancestors(id) AS (SELECT ? UNION
+                SELECT r.to_food_id FROM food_relations r JOIN ancestors a ON r.from_food_id=a.id
+                WHERE r.status='ACTIVE' AND r.relation_type='VARIANT_OF') SELECT 1 FROM ancestors WHERE id=?''', (target, source)).fetchone() is not None
+
+    @staticmethod
+    def _active_relation(db, source, target, kind):
+        row = db.execute("SELECT * FROM food_relations WHERE from_food_id=? AND to_food_id=? AND relation_type=? AND status='ACTIVE'", (source, target, kind)).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def _put_relation(db, row):
+        db.execute("INSERT INTO food_relations VALUES (?,?,?,?,'ACTIVE',1,?,?)", tuple(row.values()))
+
+    @staticmethod
+    def _has_relation(db, food_id):
+        return db.execute("SELECT 1 FROM food_relations WHERE status='ACTIVE' AND (from_food_id=? OR to_food_id=?)", (food_id, food_id)).fetchone() is not None
+
+    @staticmethod
+    def _merge_aliases(db, food_id):
+        return [dict(r) for r in db.execute("SELECT * FROM food_aliases WHERE food_id=? AND status='ACTIVE'", (food_id,))]
+
+    @staticmethod
+    def _mark_merged(db, food_id, target_id):
+        db.execute("UPDATE food_entities SET status='MERGED',merged_into=?,revision=revision+1,updated_at=? WHERE food_id=?", (target_id, utcnow(), food_id))
+
+    # Decisions
+
     def _row(self, db, table, column, value):
         if type(value) not in (str, int):
             raise FoodError('대상 ID 형식을 확인하세요.')
@@ -64,14 +198,11 @@ class FoodService:
 
     def _event(self, db, kind, subject, action, before, after, ctx, reverses=None):
         event_id = identity('EVT')
-        db.execute('INSERT INTO food_events VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-                   (event_id, kind, subject, action, ctx['actor_ref'], ctx['reason'], utcnow(),
-                    dump(before) if before is not None else None,
-                    dump(after) if after is not None else None, ctx['request_key'], reverses))
+        self._put_event(db, dict(event_id=event_id, subject_type=kind, subject_id=subject, action=action, actor_ref=ctx['actor_ref'],
+                                 reason=ctx['reason'], occurred_at=utcnow(), before_json=dump(before) if before is not None else None,
+                                 after_json=dump(after) if after is not None else None, request_key=ctx['request_key'],
+                                 reverses_event_id=reverses))
         return event_id
-
-    def _touch(self, db, food_id):
-        db.execute('UPDATE food_entities SET revision=revision+1,updated_at=? WHERE food_id=?', (utcnow(), food_id))
 
     def _descriptor(self, db, food_id):
         food = self._row(db, 'food_entities', 'food_id', food_id)
@@ -79,21 +210,18 @@ class FoodService:
         food['resolution_version'] = RESOLUTION_VERSION
         food['approval_status'] = 'APPROVED' if food['status'] == 'ACTIVE' else 'INACTIVE'
         food['tracking_eligible'] = food['status'] == 'ACTIVE'
-        food['approved_aliases'] = [dict(r) for r in db.execute('''SELECT * FROM food_aliases
-            WHERE food_id=? AND status='ACTIVE' ORDER BY scope,normalized_form,alias_id''', (food_id,))]
-        food['revoked_aliases'] = [dict(r) for r in db.execute('''SELECT * FROM food_aliases
-            WHERE food_id=? AND status='REVOKED' ORDER BY scope,normalized_form,alias_id''', (food_id,))]
-        food['relations'] = [dict(r) for r in db.execute('''SELECT * FROM food_relations WHERE status='ACTIVE'
-            AND (from_food_id=? OR to_food_id=?) ORDER BY relation_id''', (food_id, food_id))]
+        food['approved_aliases'] = self._aliases_of(db, food_id, 'ACTIVE')
+        food['revoked_aliases'] = self._aliases_of(db, food_id, 'REVOKED')
+        food['relations'] = self._relations_of(db, food_id)
         return food
 
     def food(self, food_id):
-        with self.storage.reader() as db:
+        with self._reader() as db:
             return self._descriptor(db, food_id)
 
     def foods(self):
-        with self.storage.reader() as db:
-            return [self._descriptor(db, r[0]) for r in db.execute('SELECT food_id FROM food_entities ORDER BY created_at,food_id')]
+        with self._reader() as db:
+            return [self._descriptor(db, food_id) for food_id in self._food_ids(db)]
 
     def _candidate(self, db, candidate_id):
         row = self._row(db, 'food_candidates', 'candidate_id', candidate_id)
@@ -104,18 +232,17 @@ class FoodService:
         return row
 
     def candidate(self, candidate_id):
-        with self.storage.reader() as db:
+        with self._reader() as db:
             return self._candidate(db, candidate_id)
 
     def candidates(self):
-        with self.storage.reader() as db:
-            return [self._candidate(db, r[0]) for r in db.execute('SELECT candidate_id FROM food_candidates ORDER BY created_at,candidate_id')]
+        with self._reader() as db:
+            return [self._candidate(db, candidate_id) for candidate_id in self._candidate_ids(db)]
 
     def events(self, subject_id):
-        with self.storage.reader() as db:
+        with self._reader() as db:
             result = []
-            # Wall-clock timestamps can tie on Windows; append order is authoritative.
-            for row in db.execute('SELECT rowid AS event_sequence,* FROM food_events WHERE subject_id=? ORDER BY rowid', (subject_id,)):
+            for row in self._event_rows(db, subject_id):
                 item = dict(row)
                 item['before'] = json.loads(item.pop('before_json')) if item['before_json'] is not None else None
                 item['after'] = json.loads(item.pop('after_json')) if item['after_json'] is not None else None
@@ -127,13 +254,8 @@ class FoodService:
             raise FoodError('별칭 범위를 확인하세요.')
         return value
 
-    def _exact(self, db, name, scope):
-        return db.execute('''SELECT a.* FROM food_aliases a JOIN food_entities f ON f.food_id=a.food_id
-            WHERE a.normalized_form=? AND a.scope=? AND a.normalization_version=?
-            AND a.status='ACTIVE' AND f.status='ACTIVE' ''', (text(name), scope, NORMALIZATION_VERSION)).fetchone()
-
     def resolve_name(self, name, scope=DEFAULT_SCOPE):
-        with self.storage.reader() as db:
+        with self._reader() as db:
             alias = self._exact(db, name, self._scope(scope))
             return {'status': 'RESOLVED' if alias else 'NEEDS_REVIEW',
                     'resolution': self._descriptor(db, alias['food_id']) if alias else None,
@@ -168,21 +290,17 @@ class FoodService:
         else:
             ctx.update(actor_ref='local-user' if operation == 'submit' else 'resolver', reason='명시적 후보 등록·정확 별칭 확인')
         fingerprint = hashlib.sha256(dump(body).encode()).hexdigest()
-        try:
-            with self.storage.connect() as db:
-                db.execute('BEGIN IMMEDIATE')
-                prior = db.execute('SELECT * FROM food_commands WHERE request_key=?', (key,)).fetchone()
-                if prior:
-                    if prior['operation'] != operation or prior['payload_hash'] != fingerprint:
-                        raise FoodError('같은 request_key에 다른 요청을 사용할 수 없습니다.', 409)
-                    return json.loads(prior['result_json'])
-                db.execute('INSERT INTO food_commands VALUES (?,?,?,?,?)', (key, operation, fingerprint, '{}', utcnow()))
-                handler = getattr(self, '_do_' + operation.replace('-', '_'))
-                result = handler(db, ctx)
-                db.execute('UPDATE food_commands SET result_json=? WHERE request_key=?', (dump(result), key))
-                return result
-        except sqlite3.IntegrityError as exc:
-            raise FoodError('별칭·관계·이력 제약에 충돌했습니다. 새로 조회 후 검토하세요.', 409) from exc
+        with self._writer() as db:
+            prior = self._command(db, key)
+            if prior:
+                if prior['operation'] != operation or prior['payload_hash'] != fingerprint:
+                    raise FoodError('같은 request_key에 다른 요청을 사용할 수 없습니다.', 409)
+                return json.loads(prior['result_json'])
+            self._put_command(db, key, operation, fingerprint)
+            handler = getattr(self, '_do_' + operation.replace('-', '_'))
+            result = handler(db, ctx)
+            self._command_result(db, key, result)
+            return result
 
     def _names(self, value):
         if not isinstance(value, list) or len(value) > 30:
@@ -205,18 +323,16 @@ class FoodService:
             raise FoodError('음식 유형을 확인하세요.')
         material = [source, item_id] if item_id is not None else [source, name, scope]
         candidate_key = hashlib.sha256(dump(material).encode()).hexdigest()
-        old = db.execute('SELECT candidate_id FROM food_candidates WHERE candidate_key=?', (candidate_key,)).fetchone()
+        old = self._candidate_by_key(db, candidate_key)
         if old:
-            self._resolve(db, old[0], ctx)
-            return self._candidate(db, old[0])
+            self._resolve(db, old, ctx)
+            return self._candidate(db, old)
         candidate_id, stamp = identity('CAND'), utcnow()
         gate = 'BLOCKED_NON_FOOD' if kind in ('BRAND', 'STORE', 'NON_FOOD') else 'REQUIRES_TYPE_APPROVAL' if kind == 'UNKNOWN' else 'FOOD'
-        db.execute('''INSERT INTO food_candidates(candidate_id,candidate_key,source_code,source_item_id,origin,
-            surface_form,normalized_form,scope,proposed_kind,proposed_aliases_json,description,proposed_relations_json,
-            status,resolution_version,type_gate,contract_json,created_at,updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'NEW',?,?,?,?,?)''',
-            (candidate_id, candidate_key, source, item_id, origin, name, name, scope, kind, dump(aliases),
-             description, dump(relations), RESOLUTION_VERSION, gate, encode(contract), stamp, stamp))
+        self._put_candidate(db, dict(candidate_id=candidate_id, candidate_key=candidate_key, source_code=source, source_item_id=item_id,
+            origin=origin, surface_form=name, normalized_form=name, scope=scope, proposed_kind=kind, proposed_aliases_json=dump(aliases),
+            description=description, proposed_relations_json=dump(relations), resolution_version=RESOLUTION_VERSION, type_gate=gate,
+            contract_json=encode(contract), created_at=stamp, updated_at=stamp))
         self._event(db, 'candidate', candidate_id, 'SUBMITTED', None, self._row(db, 'food_candidates', 'candidate_id', candidate_id), ctx)
         self._transition(db, candidate_id, 'NEEDS_REVIEW', ctx)
         self._resolve(db, candidate_id, ctx)
@@ -288,8 +404,7 @@ class FoodService:
 
     def _transition(self, db, candidate_id, status, ctx, food_id=None, alias_id=None, method=None):
         before = self._row(db, 'food_candidates', 'candidate_id', candidate_id)
-        db.execute('''UPDATE food_candidates SET status=?,resolved_food_id=?,resolution_alias_id=?,resolution_method=?,
-            revision=revision+1,updated_at=? WHERE candidate_id=?''', (status, food_id, alias_id, method, utcnow(), candidate_id))
+        self._set_candidate(db, candidate_id, status, food_id, alias_id, method)
         self._event(db, 'candidate', candidate_id, status, before, self._row(db, 'food_candidates', 'candidate_id', candidate_id), ctx)
 
     def _resolve(self, db, candidate_id, ctx):
@@ -315,8 +430,8 @@ class FoodService:
                 raise FoodError('이미 다른 음식에 승인된 별칭입니다. 모호한 명칭은 별도 scope로 검토하세요.', 409)
             return dict(old)
         stamp, alias_id = utcnow(), identity('ALIAS')
-        db.execute('INSERT INTO food_aliases VALUES (?,?,?,?,?,?,?,1,?,?)',
-                   (alias_id, food_id, surface, surface, scope, NORMALIZATION_VERSION, 'ACTIVE', stamp, stamp))
+        self._put_alias(db, dict(alias_id=alias_id, food_id=food_id, surface_form=surface, normalized_form=surface, scope=scope,
+                                 normalization_version=NORMALIZATION_VERSION, status='ACTIVE', created_at=stamp, updated_at=stamp))
         self._touch(db, food_id)
         after = self._row(db, 'food_aliases', 'alias_id', alias_id)
         self._event(db, 'alias', alias_id, 'APPROVED', None, after, ctx)
@@ -339,8 +454,8 @@ class FoodService:
         if action in ('create', 'create_variant'):
             food_id, stamp = identity('FOOD'), utcnow()
             name = text(ctx.get('canonical_name', candidate['surface_form']))
-            db.execute('INSERT INTO food_entities VALUES (?,?,?,\'ACTIVE\',1,?,NULL,?,?)',
-                       (food_id, name, kind, candidate['scope'], stamp, stamp))
+            self._put_food(db, dict(food_id=food_id, canonical_name=name, entity_kind=kind, default_scope=candidate['scope'],
+                                    created_at=stamp, updated_at=stamp))
             self._event(db, 'food', food_id, 'CREATED', None, self._row(db, 'food_entities', 'food_id', food_id), ctx)
             names = [name, candidate['surface_form']] + json.loads(candidate['proposed_aliases_json']) + self._names(ctx.get('aliases', []))
             for alias in dict.fromkeys(names):
@@ -366,19 +481,17 @@ class FoodService:
         self._revision(before, ctx.get('expected_revision'))
         name = text(ctx.get('canonical_name'))
         self._approve_alias(db, before['food_id'], name, before['default_scope'], ctx)
-        db.execute('UPDATE food_entities SET canonical_name=?,revision=revision+1,updated_at=? WHERE food_id=?', (name, utcnow(), before['food_id']))
+        self._rename(db, before['food_id'], name)
         self._event(db, 'food', before['food_id'], 'RENAMED', before, self._row(db, 'food_entities', 'food_id', before['food_id']), ctx)
         return self._descriptor(db, before['food_id'])
 
     def _invalidate(self, db, alias_id, ctx):
-        rows = db.execute("SELECT candidate_id FROM food_candidates WHERE resolution_alias_id=? AND status='RESOLVED'", (alias_id,)).fetchall()
-        for row in rows:
-            self._transition(db, row[0], 'NEEDS_REVIEW', ctx)
+        for candidate_id in self._resolved_by_alias(db, alias_id):
+            self._transition(db, candidate_id, 'NEEDS_REVIEW', ctx)
 
     def _change_alias(self, db, before, food_id, status, ctx, reverses=None):
         self._active(db, food_id)
-        db.execute('UPDATE food_aliases SET food_id=?,status=?,revision=revision+1,updated_at=? WHERE alias_id=?',
-                   (food_id, status, utcnow(), before['alias_id']))
+        self._set_alias(db, before['alias_id'], food_id, status)
         if before['status'] != status or before['food_id'] != food_id:
             self._invalidate(db, before['alias_id'], ctx)
         for affected in set((food_id, before['food_id'])):
@@ -417,17 +530,14 @@ class FoodService:
             raise FoodError('자기 참조 또는 잘못된 관계 유형입니다.', 409)
         if kind == 'RELATED_TO':
             source, target = sorted((source, target))
-        else:
-            cycle = db.execute('''WITH RECURSIVE ancestors(id) AS (SELECT ? UNION
-                SELECT r.to_food_id FROM food_relations r JOIN ancestors a ON r.from_food_id=a.id
-                WHERE r.status='ACTIVE' AND r.relation_type='VARIANT_OF') SELECT 1 FROM ancestors WHERE id=?''', (target, source)).fetchone()
-            if cycle:
-                raise FoodError('파생 음식 관계에 순환을 만들 수 없습니다.', 409)
-        prior = db.execute("SELECT * FROM food_relations WHERE from_food_id=? AND to_food_id=? AND relation_type=? AND status='ACTIVE'", (source, target, kind)).fetchone()
+        elif self._variant_cycle(db, source, target):
+            raise FoodError('파생 음식 관계에 순환을 만들 수 없습니다.', 409)
+        prior = self._active_relation(db, source, target, kind)
         if prior:
-            return dict(prior)
+            return prior
         stamp, relation_id = utcnow(), identity('REL')
-        db.execute('INSERT INTO food_relations VALUES (?,?,?,?,\'ACTIVE\',1,?,?)', (relation_id, source, target, kind, stamp, stamp))
+        self._put_relation(db, dict(relation_id=relation_id, from_food_id=source, to_food_id=target, relation_type=kind,
+                                    created_at=stamp, updated_at=stamp))
         self._touch(db, source); self._touch(db, target)
         after = self._row(db, 'food_relations', 'relation_id', relation_id)
         self._event(db, 'relation', relation_id, 'APPROVED', None, after, ctx)
@@ -444,12 +554,11 @@ class FoodService:
         self._revision(target, ctx.get('expected_target_revision'))
         if source['food_id'] == target['food_id']:
             raise FoodError('같은 음식으로 병합할 수 없습니다.', 409)
-        if db.execute("SELECT 1 FROM food_relations WHERE status='ACTIVE' AND (from_food_id=? OR to_food_id=?)", (source['food_id'], source['food_id'])).fetchone():
+        if self._has_relation(db, source['food_id']):
             raise FoodError('관계가 있는 음식의 병합은 지원하지 않습니다. 관계를 먼저 검토하세요.', 409)
-        aliases = db.execute("SELECT * FROM food_aliases WHERE food_id=? AND status='ACTIVE'", (source['food_id'],)).fetchall()
-        for alias in aliases:
-            self._change_alias(db, dict(alias), target['food_id'], 'ACTIVE', ctx)
+        for alias in self._merge_aliases(db, source['food_id']):
+            self._change_alias(db, alias, target['food_id'], 'ACTIVE', ctx)
         # Keep historical resolved IDs and make their redirect explicit; no destructive rewrites.
-        db.execute("UPDATE food_entities SET status='MERGED',merged_into=?,revision=revision+1,updated_at=? WHERE food_id=?", (target['food_id'], utcnow(), source['food_id']))
+        self._mark_merged(db, source['food_id'], target['food_id'])
         self._event(db, 'food', source['food_id'], 'MERGED', source, self._row(db, 'food_entities', 'food_id', source['food_id']), ctx)
         return {'source': self._descriptor(db, source['food_id']), 'target': self._descriptor(db, target['food_id'])}

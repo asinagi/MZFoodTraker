@@ -55,7 +55,8 @@ class Plan:
 
     def _raw(self, table, where='', args=()):
         spec = BY_NAME[table]
-        for r in self.src.execute('SELECT * FROM %s %s' % (spec.source_table, where), args):
+        rowid = 'rowid AS rowid,' if any(c.src == 'rowid' for c in spec.columns) else ''  # food_events: append order
+        for r in self.src.execute('SELECT %s* FROM %s %s' % (rowid, spec.source_table, where), args):
             r = dict(r)
             yield {c.name: r.get(c.src) for c in spec.columns}, r
 

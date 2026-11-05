@@ -9,7 +9,7 @@ NOT NULL column). Constraint names are short and stable for Oracle error mapping
 import hashlib
 from dataclasses import dataclass, field
 
-TARGET_SCHEMA_VERSION = 6
+TARGET_SCHEMA_VERSION = 7
 ORIGINS = "('live_api','mock','user','legacy_unknown')"
 # Character limits are enforced before binding so both dialects reject the same values.
 KINDS = {
@@ -111,9 +111,12 @@ TABLES = (
           source_table='food_candidates'),
     Table('food_events', (NN('event_id', 'id'), NN('subject_type', 'code'), NN('subject_id', 'id'), NN('action', 'code'),
           NN('actor_ref', 'text'), NN('reason', 'text'), NN('occurred_at', 'ts'), C('before_json', 'json'), C('after_json', 'json'),
-          NN('request_key', 'key'), C('reverses_event_id', 'id')), ('event_id',),
+          NN('request_key', 'key'), C('reverses_event_id', 'id'),
+          # v7: append order (wall-clock times can tie): the SQLite rowid when loaded, the next number when the runtime appends.
+          C('event_sequence', 'int', source='rowid')), ('event_id',),
           fks=((('request_key',), 'food_commands', ('request_key',)), (('reverses_event_id',), 'food_events', ('event_id',))),
-          indexes=(('subject_type', 'subject_id', 'occurred_at'),), source_table='food_events'),
+          indexes=(('subject_type', 'subject_id', 'occurred_at'), ('event_sequence',)),
+          mutable=('event_sequence',), source_table='food_events'),  # filled by a re-load of a target upgraded from v6
     Table('tracking_targets', (NN('target_id', 'id'), NN('food_id', 'id'), NN('source_id', 'code'), NN('account_scope', 'code'),
           NN('alias_scope', 'code'), NN('status', 'code'), NN('generation', 'int'), NN('interval_seconds', 'int'), C('next_due_at', 'ts'),
           C('last_success_at', 'ts'), NN('origin', 'code'), NN('registration_method', 'code'), C('candidate_id', 'id'),
@@ -322,6 +325,15 @@ TABLES = (
           C('evidence_ref', 'key'), NN('updated_at', 'ts')), ('source_id', 'account_scope'),
           checks=(_status('usage_status', ('UNVERIFIED', 'IMPORTED', 'EXCLUSIVE')),),
           mutable=('usage_status', 'legacy_observed_through', 'evidence_ref', 'updated_at'), meta={'since': 6}),
+    # v7 tracking commands on the target (OracleTrackingService): the SQLite command log and lifecycle history contract.
+    # Runtime-owned like v2-v6: SQLite keeps its own history, which B7 does not copy (Shadow captures no command log).
+    Table('tracking_commands', (NN('request_key', 'key'), NN('operation', 'code'), NN('payload_hash', 'hash'),
+          NN('result_json', 'json'), NN('created_at', 'ts')), ('request_key',), meta={'since': 7}),
+    Table('tracking_events', (NN('event_id', 'id'), NN('target_id', 'id'), NN('action', 'code'), NN('actor_ref', 'text'),
+          NN('reason', 'text'), NN('occurred_at', 'ts'), C('before_json', 'json'), NN('after_json', 'json'), NN('request_key', 'key'),
+          C('event_sequence', 'int')), ('event_id',),
+          fks=((('target_id',), 'tracking_targets', ('target_id',)), (('request_key',), 'tracking_commands', ('request_key',))),
+          indexes=(('target_id', 'event_sequence'),), meta={'since': 7}),
     # Target-only bookkeeping.
     Table('legacy_key_map', (NN('legacy_table', 'code'), NN('legacy_key', 'key'), NN('target_table', 'code'), NN('target_key', 'key'),
           NN('source_hash', 'hash'), NN('batch_key', 'id'), NN('mapped_at', 'ts')), ('legacy_table', 'legacy_key', 'target_table'),

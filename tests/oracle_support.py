@@ -5,6 +5,7 @@ configured test user, not a built-in or DBA account, and may own only target-sch
 Anything else stops the run instead of deleting.
 """
 import os
+import time
 from food_trends.target_db import OracleSettings, OracleTarget
 from food_trends.target_schema import TABLES
 
@@ -23,6 +24,22 @@ def oracle_target():
     if settings.environment != 'test':
         raise UnsafeSchema('ORACLE_TEST_ENVIRONMENT must be test')
     return OracleTarget(settings)
+
+
+def settle_after_ddl(db, seconds=4):
+    """Wait until the schema's newest DDL is `seconds` old before the app API reads it.
+
+    The app API reads in a READ ONLY transaction, and Oracle refuses such a transaction's reads of a table defined a
+    moment earlier (ORA-01466, mapped to 503 storage_unavailable: retry later). A long-lived schema never waits; the
+    disposable test schema is recreated seconds before the first request. Returns the seconds waited.
+    """
+    if getattr(db, 'dialect', None) != 'oracle':
+        return 0.0
+    with db.transaction() as tx:
+        age = tx.scalar('SELECT (SYSDATE - max(last_ddl_time)) * 86400 AS age FROM user_objects')
+    wait = max(0.0, seconds - float(age if age is not None else seconds))
+    time.sleep(wait)
+    return wait
 
 
 def reset_target_schema(db):

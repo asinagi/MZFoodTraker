@@ -61,7 +61,8 @@ class TargetSchemaTests(unittest.TestCase):
                         continue
                     source = {r[1]: bool(r[3]) or bool(r[5]) for r in db.execute('PRAGMA table_info(%s)' % table.source_table)}
                     mapped = {c.src: c for c in table.columns}
-                    extra = {'food_mentions': {'source_code'}}.get(table.name, set())
+                    # Derived on load: the mention's source from its item; the event's append order from the SQLite rowid.
+                    extra = {'food_mentions': {'source_code'}, 'food_events': {'rowid'}}.get(table.name, set())
                     self.assertEqual(set(source), set(mapped) - extra, table.name)
                     for name, required in source.items():
                         column = mapped[name]

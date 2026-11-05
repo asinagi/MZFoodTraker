@@ -1,4 +1,5 @@
-"""ORACLE-RUNTIME-1: explicit storage selection for the B3 execution, B4 ingestion and B5 observation services.
+"""ORACLE-RUNTIME-1: explicit storage selection for the backend services (B3 execution, B4 ingestion, B5 observations;
+since ORACLE-CUTOVER-PREP-1 also food identity and tracking commands through oracle_backend).
 
 Three modes, never inferred:
   sqlite             the existing SQLite services on DATABASE_PATH (development and operations compatibility)
@@ -41,6 +42,20 @@ def oracle_services(repo, accounts, clock=None, settings=None):
     from .oracle_observations import OracleObservationService
     execution = OracleExecution(repo, accounts, clock, settings)
     return execution, OracleIngestionService(execution), OracleObservationService(execution)
+
+
+def oracle_backend(repo, accounts, clock=None, transport=None, settings=None):
+    """Every write path of the backend on one target and nothing else: food identity and alias review, tracking
+    commands, planning, due slots, mock execution, B4 staging/DQ and B5 observations. Opens no SQLite database
+    (B8 reads the same target through analytics_reader.TargetAnalyticsStore); checks the schema version, never migrates."""
+    from types import SimpleNamespace
+    from .oracle_execution import oracle_mock_controller
+    from .oracle_foods import OracleFoodService
+    from .oracle_tracking import OracleTrackingService
+    controller = oracle_mock_controller(repo, accounts, clock, transport, settings)
+    execution = controller.execution
+    return SimpleNamespace(foods=OracleFoodService(execution), tracking=OracleTrackingService(execution), planner=execution.planner,
+                           execution=execution, ingestion=controller.ingestion, observations=controller.observations, controller=controller)
 
 
 def status(mode, database_path, environ=None):

@@ -21,7 +21,7 @@ from food_trends.storage import Storage
 from food_trends.target_db import SQLiteTarget
 from food_trends.target_repository import TargetRepository
 import rehearse_cutover
-from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema
+from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema, settle_after_ddl
 
 NOW = datetime(2026, 11, 5, 3, tzinfo=timezone.utc)
 SEEN = NOW - timedelta(days=9)
@@ -124,6 +124,7 @@ class CutoverRehearsalTests(unittest.TestCase):
                                                                           'youtube|live_api': 1, 'youtube|legacy_unknown': 1})
         self.assertEqual(categories['candidates_and_decisions']['rss_classifications'], {'NON_FOOD': 1, 'REVIEW': 1})
         self.assertEqual(categories['captions_held'], 2)
+        settle_after_ddl(repo.db)  # the app API's read-only snapshot cannot read tables defined a moment ago on Oracle
         parity = cutover.api_parity(storage, repo, lambda: NOW)
         self.assertEqual({k: v['mismatches'] for k, v in parity.items()}, {'live_api': [], 'mock': []})
         self.assertGreater(parity['live_api']['requests'], 10)
