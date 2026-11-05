@@ -11,7 +11,7 @@ re-running is a no-op.
 import hashlib
 import json
 import sqlite3
-from contextlib import closing
+from contextlib import closing, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from .contracts import SOURCES
@@ -181,8 +181,28 @@ def fingerprint(path):
     return h.hexdigest()
 
 
-def migrate(source_path, repo, now=None, batch_size=500, fault=None):
-    """Load eligible rows; record exclusions; resume per table from the last committed key."""
+def writer_for(repo, ownership, lease):
+    """Write transactions of a SHADOW-mode writer: each re-checks the ownership lease under a share lock."""
+    @contextmanager
+    def writer():
+        with repo.db.transaction() as tx:
+            ownership.guard(tx, lease)
+            yield tx
+    return writer
+
+
+def migrate(source_path, repo, now=None, batch_size=500, fault=None, ownership=None):
+    """Load eligible rows; record exclusions; resume per table from the last committed key.
+
+    A SHADOW-mode writer (R3): refused while the Oracle runtime owns the target.
+    """
+    from .runtime_ownership import RuntimeOwnership
+    ownership = ownership or RuntimeOwnership(repo)
+    with ownership.held('SHADOW') as lease:
+        return _migrate(source_path, repo, now, batch_size, fault, writer_for(repo, ownership, lease))
+
+
+def _migrate(source_path, repo, now, batch_size, fault, writer):
     now = utc(now or datetime.now(timezone.utc))
     fault = fault or (lambda stage, table, n: None)
     source_fp = fingerprint(source_path)
@@ -190,7 +210,7 @@ def migrate(source_path, repo, now=None, batch_size=500, fault=None):
     with closing(open_source(source_path)) as src:
         plan = Plan(src, now).build()
     report = {'batch_key': batch, 'source_fingerprint': source_fp, 'migration_version': MIGRATION_VERSION, 'tables': {}}
-    with repo.db.transaction() as tx:
+    with writer() as tx:
         for legacy_table, legacy_key, target_table, target_key, source_hash in plan.legacy:
             repo.upsert(tx, 'legacy_key_map', dict(legacy_table=legacy_table, legacy_key=legacy_key, target_table=target_table,
                                                    target_key=target_key, source_hash=source_hash, batch_key=batch, mapped_at=iso(now)))
@@ -203,7 +223,7 @@ def migrate(source_path, repo, now=None, batch_size=500, fault=None):
             pending = [e for e in plan.rows[table] if state.get('last_key') is None or e[0] > state['last_key']]
             for start in range(0, len(pending), batch_size):
                 chunk = pending[start:start + batch_size]
-                with repo.db.transaction() as tx:
+                with writer() as tx:
                     for n, (key, row, disposition, reason) in enumerate(chunk):
                         fault('row', table, start + n)
                         if disposition == LOAD:
@@ -217,7 +237,7 @@ def migrate(source_path, repo, now=None, batch_size=500, fault=None):
                     repo.upsert(tx, 'migration_batches', dict(batch_key=batch, table_name=table, source_fingerprint=source_fp,
                         status='RUNNING', last_key=chunk[-1][0], started_at=state.get('started_at') or iso(now), finished_at=None, **counts))
                 fault('after_commit', table, start + len(chunk))
-            with repo.db.transaction() as tx:
+            with writer() as tx:
                 repo.upsert(tx, 'migration_batches', dict(batch_key=batch, table_name=table, source_fingerprint=source_fp, status='COMPLETED',
                     last_key=plan.rows[table][-1][0] if plan.rows[table] else None, started_at=state.get('started_at') or iso(now),
                     finished_at=iso(now), **counts))
@@ -363,7 +383,7 @@ def derive(src, entity_table, key, now):
     return out
 
 
-def repair(source_path, repo, now=None):
+def repair(source_path, repo, now=None, ownership=None):
     """Make the target equal to the eligible source rows: delete extra/changed, restore missing/changed.
 
     One transaction; deletes run child-first and restores parent-first, foreign keys are checked at commit.
@@ -379,7 +399,9 @@ def repair(source_path, repo, now=None):
         stale = [actual[k] for k in actual if k not in expected or _canonical(table, expected[k]) != json.dumps(actual[k], ensure_ascii=False, sort_keys=True, default=str)]
         restore = [expected[k] for k in expected if k not in actual or actual[k] in stale]
         work.append((table, stale, restore))
-    with repo.db.transaction() as tx:
+    from .runtime_ownership import RuntimeOwnership
+    ownership = ownership or RuntimeOwnership(repo)
+    with ownership.held('SHADOW') as lease, writer_for(repo, ownership, lease)() as tx:
         for table, stale, _ in reversed(work):
             for row in stale:
                 repo.delete(tx, table, row)

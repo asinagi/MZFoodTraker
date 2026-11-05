@@ -110,7 +110,8 @@ class OracleObservationStandInTests(unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(left, default=str)), json.loads(json.dumps(right, default=str)))
 
     def snapshot(self):
-        return {t.name: self.rows(t.name, 'target') for t in BY_NAME.values()}
+        # Ownership leases (R3) record which process wrote, not domain data.
+        return {t.name: self.rows(t.name, 'target') for t in BY_NAME.values() if t.name not in ('runtime_ownership', 'runtime_participants')}
 
     # Scenarios 15-17: search evidence, approved mentions, permitted metrics.
 

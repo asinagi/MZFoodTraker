@@ -2,6 +2,7 @@
 import hashlib
 import json
 import re
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone, date
 from .contracts import envelope, policy_for, validate_metadata, CONTRACT_VERSION, SOURCES
 from .food_service import FoodError, dump, text
@@ -23,6 +24,49 @@ class QueryPlanner:
         if type(rss_interval) is not int or rss_interval<=0:raise ValueError('Invalid RSS interval')
         self.rss_interval=rss_interval
         self.quota=QuotaManager(storage,tracking,self._validate)
+
+    # Storage primitives. The Oracle runtime (oracle_planner) overrides only these.
+
+    def _reader(self):
+        return self.storage.reader()
+
+    @contextmanager
+    def _writer(self):
+        with self.storage.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            yield db
+
+    def _target(self, db, target_id):
+        return self.tracking._target(db, target_id)
+
+    @staticmethod
+    def _target_ids(db):
+        return [r[0] for r in db.execute('SELECT target_id FROM tracking_targets ORDER BY target_id')]
+
+    @staticmethod
+    def _active_aliases(db, food_id, scope):
+        return [dict(r) for r in db.execute("SELECT * FROM food_aliases WHERE food_id=? AND scope=? AND status='ACTIVE' ORDER BY normalized_form,alias_id",
+                                            (food_id, scope))]
+
+    @staticmethod
+    def _command(db, key):
+        row = db.execute('SELECT * FROM planner_commands WHERE request_key=?', (key,)).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def _put_command(db, key, fingerprint, result, created_at):
+        db.execute('INSERT INTO planner_commands VALUES (?,?,?,?)', (key, fingerprint, dump(result), created_at))
+
+    @staticmethod
+    def _put_plan(db, p):
+        """Query, plan and both mapping tables; every row is immutable and inserted only if absent."""
+        db.execute('INSERT OR IGNORE INTO planner_queries VALUES (?,?,?,?,?,?,?,?)',
+            (p['query_id'],p['source_id'],p['account_scope'],p['query_kind'],dump(p['canonical_query']),p['spec_hash'],PLANNER_VERSION,p['created_at']))
+        db.execute('INSERT OR IGNORE INTO planner_plans VALUES (?,?,?,?,?,?,?)',
+            (p['plan_id'],p['query_id'],p['due_slot'],p['mapping_hash'],p['account_fingerprint'],dump(p),p['created_at']))
+        for m in p['targets']:
+            db.execute('INSERT OR IGNORE INTO planner_query_targets VALUES (?,?,?,?,?)',(p['query_id'],m['target_id'],m['generation'],m['food_revision'],dump(m)))
+            db.execute('INSERT OR IGNORE INTO planner_plan_targets VALUES (?,?,?,?,?,?)',(p['plan_id'],m['target_id'],m['generation'],m['food_revision'],m['due_at'],dump(m)))
 
     def _options(self, value, now):
         value={} if value is None else value
@@ -93,23 +137,23 @@ class QueryPlanner:
 
     def preview(self, target_ids=None, options=None):
         now=instant(self.tracking.clock())
-        with self.storage.reader() as db:return self._preview(db,target_ids,options,now)
+        with self._reader() as db:return self._preview(db,target_ids,options,now)
 
     def _preview(self, db, target_ids, options, now):
         options=self._options(options,now)
         if target_ids is not None and (not isinstance(target_ids,list) or len(target_ids)>200 or any(not isinstance(v,str) for v in target_ids)):
             raise FoodError('대상 ID 목록은 200개 이하여야 합니다.')
-        ids=sorted(set(target_ids)) if target_ids is not None else [r[0] for r in db.execute('SELECT target_id FROM tracking_targets ORDER BY target_id')]
+        ids=sorted(set(target_ids)) if target_ids is not None else self._target_ids(db)
         drafts=[];rejections=[];naver={}
         for target_id in ids:
-            t=self.tracking._target(db,target_id);source=t['source_id']
+            t=self._target(db,target_id);source=t['source_id']
             permitted_operation(source,options.get('operation','tracking'))
             if not t['planning_eligible'] or not t['next_due_at']:
                 rejections.append(dict(target_id=target_id,policy_status='BLOCKED',budget_status='NOT_EVALUATED',
                                        reasons=t['blockers'] or [t['status']]))
                 continue
             account=self.tracking.account(source,t['account_scope'])
-            aliases=[dict(r) for r in db.execute("SELECT * FROM food_aliases WHERE food_id=? AND scope=? AND status='ACTIVE' ORDER BY normalized_form,alias_id",(t['food_id'],t['alias_scope']))]
+            aliases=self._active_aliases(db,t['food_id'],t['alias_scope'])
             if not aliases:
                 rejections.append(dict(target_id=target_id,policy_status='BLOCKED',reasons=['NO_APPROVED_ALIAS']));continue
             if source=='naver_datalab':
@@ -204,23 +248,16 @@ class QueryPlanner:
 
     def commit(self, request_key, target_ids=None, options=None):
         key=text(request_key,128);fingerprint=digest({'target_ids':sorted(set(target_ids)) if target_ids is not None else None,'options':options or {}})
-        with self.storage.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            old=db.execute('SELECT * FROM planner_commands WHERE request_key=?',(key,)).fetchone()
+        with self._writer() as db:
+            old=self._command(db,key)
             if old:
                 if old['payload_hash']!=fingerprint:raise FoodError('같은 계획 키의 요청이 다릅니다.',409)
                 return json.loads(old['result_json'])
             preview=self._preview(db,target_ids,options,instant(self.tracking.clock()))
             for p in preview['plans']:
-                db.execute('INSERT OR IGNORE INTO planner_queries VALUES (?,?,?,?,?,?,?,?)',
-                    (p['query_id'],p['source_id'],p['account_scope'],p['query_kind'],dump(p['canonical_query']),p['spec_hash'],PLANNER_VERSION,p['created_at']))
-                db.execute('INSERT OR IGNORE INTO planner_plans VALUES (?,?,?,?,?,?,?)',
-                    (p['plan_id'],p['query_id'],p['due_slot'],p['mapping_hash'],p['account_fingerprint'],dump(p),p['created_at']))
-                for m in p['targets']:
-                    db.execute('INSERT OR IGNORE INTO planner_query_targets VALUES (?,?,?,?,?)',(p['query_id'],m['target_id'],m['generation'],m['food_revision'],dump(m)))
-                    db.execute('INSERT OR IGNORE INTO planner_plan_targets VALUES (?,?,?,?,?,?)',(p['plan_id'],m['target_id'],m['generation'],m['food_revision'],m['due_at'],dump(m)))
+                self._put_plan(db,p)
             result=dict(preview,preview_only=False,stored_plan_ids=[p['plan_id'] for p in preview['plans']])
-            db.execute('INSERT INTO planner_commands VALUES (?,?,?,?)',(key,fingerprint,dump(result),stamp(self.tracking.clock())))
+            self._put_command(db,key,fingerprint,result,stamp(self.tracking.clock()))
             return result
 
     def _validate(self, db, plan, now):

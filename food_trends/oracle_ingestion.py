@@ -95,7 +95,7 @@ class OracleIngestionService(IngestionService):
     def execution_run(self, run_id):
         """Stage a terminal Oracle-runtime run from its job receipts. Non-terminal runs return None."""
         now = self.now()
-        with self.execution.transaction() as t:
+        with self.execution.reader() as t:
             row = t.one('''SELECT r.run_id,r.job_id,r.origin,r.observed_at,r.result_coverage,r.returned_count,r.accepted_count,
                 j.query_id,j.plan_id,j.source_id,j.status AS job_status,j.error_kind AS job_error
                 FROM execution_runs r JOIN execution_jobs j ON j.job_id=r.job_id WHERE r.run_id=:b_r''', b_r=run_id)
@@ -118,7 +118,7 @@ class OracleIngestionService(IngestionService):
 
     def ingest_pending(self, limit=100):
         """Explicit local catch-up for terminal Oracle-runtime runs not yet staged. No HTTP."""
-        with self.execution.transaction() as t:
+        with self.execution.reader() as t:
             fetch = 'FETCH FIRST %d ROWS ONLY' % limit if t.oracle else 'LIMIT %d' % limit
             runs = [r['run_id'] for r in t.rows(f'''SELECT r.run_id FROM execution_runs r JOIN execution_jobs j ON j.job_id=r.job_id
                 WHERE j.status IN {_states(TERMINAL)} AND NOT EXISTS (SELECT 1 FROM ingest_runs g WHERE g.run_ref='execution_runs:'||r.run_id)

@@ -53,7 +53,12 @@ def status(mode, database_path, environ=None):
     repo = select(mode, environ)
     try:
         version = repo.schema_version()
+        owner = None
+        if version == TARGET_SCHEMA_VERSION:
+            from .runtime_ownership import RuntimeOwnership
+            owner = RuntimeOwnership(repo).status()
     finally:
         repo.db.close()
     return {'mode': mode, 'backend': 'oracle', 'environment': repo.db.settings.environment, 'schema_version': version,
-            'required_version': TARGET_SCHEMA_VERSION, 'ready': version == TARGET_SCHEMA_VERSION, 'database_writes': 0, 'http_requests': 0}
+            'required_version': TARGET_SCHEMA_VERSION, 'ready': version == TARGET_SCHEMA_VERSION, 'ownership': owner,
+            'database_writes': 0, 'http_requests': 0}

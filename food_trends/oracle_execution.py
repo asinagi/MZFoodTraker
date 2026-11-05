@@ -2,8 +2,8 @@
 
 Same states, Outbox, lease/fencing, call ledger, budget and result contract as ExecutionService, in
 portable SQL over target transactions. Plans, foods and targets reach the target through B7 migration
-or Shadow; planning and due-slot advancement stay with the SQLite system of record, so execution-time
-revalidation here uses the target's next_due_at (there is no tracking_slots table on the target).
+or Shadow. Planning (oracle_planner) and due-slot scheduling run here too: tracking_slots follows the
+SQLite slot contract (one row per target, generation and due slot) and adds its lifecycle.
 
 Locking: a claim locks the job row with SELECT ... FOR UPDATE SKIP LOCKED on Oracle (BEGIN IMMEDIATE
 serializes the stand-in) and re-reads the lease under that lock. Every fenced write locks the job row,
@@ -29,7 +29,7 @@ from .ingestion import item_key
 from .instagram_analysis import extract_hashtags
 from .query_planner import PLANNER_VERSION, digest
 from .quota import COST_VERSION, QuotaManager, daily_window
-from .target_db import OracleUnavailable, TargetError, canonical_json, convert, iso, logical, utc
+from .target_db import OracleTarget, OracleUnavailable, SQLiteTarget, TargetError, UniqueViolation, canonical_json, convert, iso, logical, utc
 from .target_repository import policy
 from .target_schema import BY_NAME, TARGET_SCHEMA_VERSION
 from .tracking_service import instant, stamp
@@ -89,6 +89,24 @@ class _Tx:
     def insert(self, table, row):
         self.run('INSERT INTO %s (%s) VALUES (%s)' % (table, ','.join(row), ','.join(':b_' + k for k in row)), **self._binds(table, row))
 
+    def insert_absent(self, table, row, key=None):
+        """INSERT OR IGNORE: 1 when inserted, 0 when the key exists. A concurrent insert of the same key counts as
+        present (the failed statement alone is rolled back; the transaction continues)."""
+        spec, dialect = BY_NAME[table], 'oracle' if self.oracle else 'sqlite'
+        key = key or spec.key
+        where = ' AND '.join('%s=:k_%s' % (k, k) for k in key)
+        if self.scalar('SELECT count(*) AS c FROM %s WHERE %s' % (table, where),
+                       **{'k_' + k: convert(spec.column(k), row[k], dialect) for k in key}):
+            return 0
+        try:
+            self.insert(table, row)
+        except Exception as exc:
+            mapped = exc if isinstance(exc, TargetError) else (OracleTarget if self.oracle else SQLiteTarget).map_error(exc)
+            if isinstance(mapped, UniqueViolation):
+                return 0
+            raise mapped from None
+        return 1
+
     def update(self, table, where, **changes):
         binds = self._binds(table, changes)
         binds.update({'w_' + k: v for k, v in self._binds(table, where).items()})
@@ -97,14 +115,72 @@ class _Tx:
 
 
 class OracleQuota(QuotaManager):
-    """B2 budget accounting over the target's quota_reservations/quota_charges (no legacy call tables)."""
+    """B2 budget accounting on the target: workflow reservations plus the imported legacy usage ledger (R4).
+
+    Legacy usage is counted exactly as QuotaManager._observed counts the SQLite call tables, from
+    quota_usage_ledger rows for the same account scope and window, so assess() equals the SQLite result.
+    usage() adds per line where the usage came from and how certain it is; nothing claims a provider-confirmed debit.
+    """
+    LEGACY_FRESH = timedelta(minutes=15)
 
     def __init__(self, execution):
         super().__init__(None, execution, execution._validate)
         self.execution = execution
 
+    def _ledger(self, db, scope, resource):
+        return db.rows('''SELECT * FROM quota_usage_ledger WHERE account_scope=:b_a AND quota_type=:b_r''', 'quota_usage_ledger',
+                       b_a=scope, b_r=resource)
+
     def _observed(self, db, plan, resource, now):
-        return 0, {}
+        scope, observed, known = plan['account_scope'], 0, {}
+        if resource.startswith('youtube.') or resource == 'naver.calls':
+            zone = 'America/Los_Angeles' if resource.startswith('youtube.') else 'Asia/Seoul'
+            start = instant(daily_window(now, zone)['start'])
+            observed = sum(r['usage'] for r in self._ledger(db, scope, resource) if instant(r['window_start']) == start)
+        elif resource == 'instagram.unique_tags':
+            for r in self._ledger(db, scope, resource):
+                if instant(r['window_end']) > instant(now):
+                    known.setdefault(r['distinct_key'], r['window_end'])
+            observed = len(known)
+        return observed, known
+
+    def coverage(self, db, source, scope, now):
+        """How well usage outside this runtime is known for one account scope."""
+        row = db.one('SELECT * FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a', 'quota_accounts', b_s=source, b_a=scope)
+        if row is None or row['usage_status'] == 'UNVERIFIED':
+            return 'UNVERIFIED'
+        if row['usage_status'] == 'EXCLUSIVE':
+            return 'RUNTIME_EXCLUSIVE'
+        if row['legacy_observed_through'] is None or instant(row['legacy_observed_through']) < instant(now) - self.LEGACY_FRESH:
+            return 'STALE'
+        return 'IMPORTED_LEGACY'
+
+    def usage(self, db, plan, now, exclude=None):
+        """assess() plus, per line, where the usage came from and how certain it is (assess() itself stays the SQLite contract)."""
+        budget = self.assess(db, plan, now, exclude)
+        coverage = self.coverage(db, plan['source_id'], plan['account_scope'], now)
+        for line in budget['lines']:
+            rows = [r for r in self._ledger(db, plan['account_scope'], line['resource'])
+                    if instant(r['window_end']) > instant(now) and instant(r['window_start']) <= instant(now)]
+            legacy, _ = self._observed(db, plan, line['resource'], now)
+            uncertain = any(r['confidence'] != 'COUNTED' for r in rows)
+            window = {'start': line['window_start'], 'end': line['window_end'], 'timezone': line['reset_timezone']}
+            line.update(legacy_usage=legacy, workflow_usage=line['observed_usage'] - legacy, provider_window=window, local_window=window,
+                        provider_timezone=line['reset_timezone'], legacy_evidence=sorted({r['evidence'] for r in rows}),
+                        usage_confidence=coverage + ('_WITH_UNCERTAIN' if uncertain and coverage == 'IMPORTED_LEGACY' else ''),
+                        source_of_truth='target:quota_usage_ledger+quota_reservations')
+        budget['usage_coverage'] = coverage
+        budget['usage_verified'] = coverage in ('IMPORTED_LEGACY', 'RUNTIME_EXCLUSIVE')
+        return budget
+
+    def _lock_account(self, db, plan):
+        """Serialize usage assessment and reservation per account scope (two plans cannot both take the last unit)."""
+        row = dict(source_id=plan['source_id'], account_scope=plan['account_scope'], usage_status='UNVERIFIED', legacy_observed_through=None,
+                   evidence_ref=None, updated_at=self.execution.now())
+        db.insert_absent('quota_accounts', row)
+        if db.oracle:
+            db.run('SELECT source_id FROM quota_accounts WHERE source_id=:b_s AND account_scope=:b_a FOR UPDATE',
+                   b_s=plan['source_id'], b_a=plan['account_scope']).fetchall()
 
     def _recorded(self, db, source, scope, resource):
         rows = db.rows('''SELECT c.reservation_id,c.resource_code,c.cost,c.distinct_key,c.window_start,c.window_end,r.state,r.expires_at
@@ -137,6 +213,7 @@ class OracleQuota(QuotaManager):
                 raise FoodError('같은 예약 키의 요청이 다릅니다.', 409)
             return old
         plan = self.execution._plan(db, plan_id)
+        self._lock_account(db, plan)
         validation = self.validator(db, plan, now)
         if not validation['valid']:
             raise FoodError('현재 대상·세대·정책에 유효한 계획이 아닙니다.', 409)
@@ -168,6 +245,7 @@ class OracleQuota(QuotaManager):
         if row['state'] != 'RESERVED' or instant(row['expires_at']) <= now:
             raise FoodError('예약이 해제되었거나 만료됐습니다.', 409)
         plan = self.execution._plan(db, row['plan_id'])
+        self._lock_account(db, plan)
         validation = self.validator(db, plan, now)
         frozen = {t['target_id'] for t in json.loads(row['target_snapshot_json'])}
         eligible = [t for t in validation['eligible_targets'] if t['target_id'] in frozen]
@@ -192,7 +270,8 @@ class OracleExecution:
     """ExecutionService's method contract (enqueue/claim/renew/begin/finish/fail/status) on the target schema."""
     session_class = None  # set below to OracleRequestSession
 
-    def __init__(self, repo, accounts, clock=None, settings=None):
+    def __init__(self, repo, accounts, clock=None, settings=None, ownership=None, require_verified_usage=False):
+        from .runtime_ownership import RuntimeOwnership
         self.repo, self.db = repo, repo.db
         self.accounts = accounts if isinstance(accounts, dict) else {(a.source_id, a.account_scope): a for a in accounts}
         self.clock = clock or repo.clock
@@ -207,10 +286,43 @@ class OracleExecution:
             # Never migrates here: the operator runs --target-migrate explicitly.
             raise TargetError('target_schema_version_mismatch')
         self.quota = OracleQuota(self)
+        self.planner = None  # an OracleQueryPlanner attaches itself (schedule() needs one)
         self.claim_locked = lambda job_id: None  # test hook: runs while the claim holds the job lock
+        self.fault = lambda stage: None  # test hook: failure injection inside write transactions
+        # R3: every write transaction runs under this process's RUNTIME_TEST ownership lease (joined lazily).
+        self.ownership = ownership or RuntimeOwnership(repo)
+        self.participant_id = identity('RUNTIME')
+        self.lease, self._renew_at = None, None
+        # R4: live execution always needs verified external usage; mock runs can opt in to test the rule.
+        self.require_verified_usage = require_verified_usage
 
     def now(self):
         return instant(self.clock())
+
+    def _owned(self):
+        moment = self.ownership.now()
+        if self.lease is None:
+            self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
+            self._renew_at = moment + self.ownership.ttl / 2
+        elif moment >= self._renew_at:
+            from .runtime_ownership import OwnershipRefused
+            try:
+                self.ownership.renew(self.lease)
+            except OwnershipRefused as exc:
+                if exc.code != 'ownership_expired':
+                    raise
+                # The lease lapsed while this process was idle. It is never revived: the process joins again with a new
+                # lease, which is refused while another mode owns the target; job leases and fencing still guard every job.
+                self.participant_id = identity('RUNTIME')
+                self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
+            self._renew_at = moment + self.ownership.ttl / 2
+        return self.lease
+
+    def release(self):
+        """Leave the runtime mode (the target returns to IDLE when no runtime lease or unfinished job remains)."""
+        if self.lease is not None:
+            self.ownership.release(self.lease)
+            self.lease = None
 
     def account(self, source, scope):
         account = self.accounts.get((source, scope))
@@ -220,8 +332,26 @@ class OracleExecution:
 
     @contextmanager
     def transaction(self):
+        """A runtime write transaction, guarded by the ownership lease (refused while Shadow owns the target)."""
+        lease = self._owned()
+        with self.db.transaction() as cursor:
+            t = _Tx(cursor)
+            self.ownership.guard(t, lease)
+            yield t
+
+    @contextmanager
+    def reader(self):
+        """A transaction that only reads (status, preview, history)."""
         with self.db.transaction() as cursor:
             yield _Tx(cursor)
+
+    def schedule(self, options=None, mode='mock'):
+        """ExecutionService.schedule on the target: commit due plans with the Oracle planner, then enqueue them."""
+        if self.planner is None:
+            raise FoodError('Oracle 계획기가 연결되지 않았습니다.', 409)
+        plans = self.planner.commit(identity('SCHEDULE'), options=options)
+        ids = [p['plan_id'] for p in plans['plans'] if p['source_id'] != 'google_trends_rss' and p['decision'] != 'NOT_DUE']
+        return self.enqueue(ids, mode) if ids else []
 
     # Reads
 
@@ -262,7 +392,7 @@ class OracleExecution:
         return row
 
     def _validate(self, t, plan, now):
-        """QueryPlanner._validate on target data (same reasons; next_due_at stands in for tracking_slots)."""
+        """QueryPlanner._validate on target data: same reasons and the same due-slot rule."""
         source, eligible, reasons = plan['source_id'], [], []
         if (plan['planner_version'] != PLANNER_VERSION or plan['contract']['policy_version'] != policy_for(source)['version'] or
                 plan['adapter_version'] != SOURCES[source]['adapter_version'] or plan['contract_version'] != CONTRACT_VERSION or
@@ -283,7 +413,10 @@ class OracleExecution:
             if (not target or not target['planning_eligible'] or target['generation'] != m['generation'] or
                     target['food_revision'] != m['food_revision'] or instant(m['due_at']) > instant(now)):
                 continue
-            if target['next_due_at'] is None or instant(target['next_due_at']) != instant(m['due_at']):
+            due = instant(m['due_at'])
+            current = target['next_due_at'] is not None and instant(target['next_due_at']) == due
+            if not current and not t.scalar('SELECT count(*) AS c FROM tracking_slots WHERE target_id=:b_t AND generation=:b_g AND due_slot=:b_d',
+                                            b_t=m['target_id'], b_g=m['generation'], b_d=stamp(due)):
                 continue
             eligible.append(m)
         if plan['targets'] and not eligible:
@@ -300,6 +433,9 @@ class OracleExecution:
             reasons.append('EXECUTION_MODE_MISMATCH')
         if mode == 'live':
             reasons.append('LIVE_NOT_SUPPORTED_BY_ORACLE_RUNTIME')
+        if (mode == 'live' or self.require_verified_usage) and \
+                self.quota.coverage(t, plan['source_id'], plan['account_scope'], self.now()) not in ('IMPORTED_LEGACY', 'RUNTIME_EXCLUSIVE'):
+            reasons.append('EXTERNAL_USAGE_UNVERIFIED')
         block = t.one('SELECT * FROM execution_blocks WHERE source_id=:b_s AND account_scope=:b_a', 'execution_blocks',
                       b_s=plan['source_id'], b_a=plan['account_scope'])
         if block and (block['until_at'] is None or instant(block['until_at']) > self.now()):
@@ -326,8 +462,10 @@ class OracleExecution:
         with self.transaction() as t:
             for plan_id in dict.fromkeys(plan_ids):
                 p = self._plan(t, plan_id)
-                if t.oracle:  # one enqueuer per query at a time; the stand-in is already serialized
+                if t.oracle:  # one enqueuer per query, then per target (sorted); the stand-in is already serialized
                     t.run('SELECT query_id FROM planner_queries WHERE query_id=:b_q FOR UPDATE', b_q=p['query_id']).fetchall()
+                    for target_id in sorted({m['target_id'] for m in p['targets']}):
+                        t.run('SELECT target_id FROM tracking_targets WHERE target_id=:b_t FOR UPDATE', b_t=target_id).fetchall()
                 reasons = self._gate(t, p, mode)
                 validation = self._validate(t, p, self.now())
                 if reasons or not validation['valid']:
@@ -362,8 +500,50 @@ class OracleExecution:
                     if not t.scalar('SELECT count(*) AS c FROM execution_mappings WHERE job_id=:b_j AND target_id=:b_t', b_j=job_id, b_t=m['target_id']):
                         t.insert('execution_mappings', dict(job_id=job_id, plan_id=plan_id, target_id=m['target_id'], generation=m['generation'],
                                                             food_revision=m['food_revision'], mapping_json=dump(m), started=0))
+                    target = self._target(t, m['target_id'])
+                    if target['next_due_at'] is not None and instant(target['next_due_at']) == instant(m['due_at']):
+                        self._schedule_slot(t, target, plan_id, job_id)
+                self.fault('before_enqueue_commit')
                 result.append(self._job(t, job_id))
         return result
+
+    def _schedule_slot(self, t, target, plan_id, job_id):
+        """TrackingService 'schedule' in the enqueue transaction: the slot, its job and the next due time commit together."""
+        now = self.now()
+        due = instant(target['next_due_at'])
+        if not target['planning_eligible'] or due > now:
+            raise FoodError('현재 예정된 활성 대상이 아닙니다.', 409)
+        t.insert('tracking_slots', dict(slot_id=identity('SLOT'), target_id=target['target_id'], plan_id=plan_id, job_id=job_id,
+                                        generation=target['generation'], food_revision=target['food_revision'], due_slot=stamp(due),
+                                        status='SCHEDULED', created_at=now, claimed_at=None, completed_at=None, cancellation_reason=None))
+        steps = int((now - due).total_seconds() // target['interval_seconds']) + 1
+        t.run('UPDATE tracking_targets SET next_due_at=:b_next,revision=revision+1,updated_at=:b_now WHERE target_id=:b_t',
+              b_next=due + timedelta(seconds=steps * target['interval_seconds']), b_now=now, b_t=target['target_id'])
+        self.fault('after_schedule_slot')
+
+    def _finish_slots(self, t, job, status, error, eligible):
+        """Slots end with their job: completed for targets whose data the run kept, otherwise failed or cancelled with a reason."""
+        kept = {m['target_id'] for m in eligible}
+        for slot in t.rows("SELECT * FROM tracking_slots WHERE job_id=:b_j AND status IN ('SCHEDULED','CLAIMED')", 'tracking_slots', b_j=job['job_id']):
+            target = self._target(t, slot['target_id'])
+            if target is None:
+                reason = 'TARGET_MISSING'
+            elif target['status'] != 'ACTIVE':
+                reason = 'TARGET_' + target['status']
+            elif target['generation'] != slot['generation']:
+                reason = 'STALE_GENERATION'
+            elif target['blockers']:
+                reason = target['blockers'][0]
+            else:
+                reason = error
+            if status in ('SUCCEEDED', 'PARTIAL', 'LIMITED') and slot['target_id'] in kept:
+                state, reason = 'COMPLETED', None
+            elif status == 'FAILED' and reason == error:
+                state = 'FAILED'
+            else:
+                state = 'CANCELLED'
+            t.update('tracking_slots', {'slot_id': slot['slot_id']}, status=state, completed_at=self.now(),
+                     cancellation_reason=None if state == 'COMPLETED' else reason or status)
 
     def _fence(self, t, job_id, owner, token):
         if t.oracle:  # job row, then lease row: the same order as claim, so no deadlock
@@ -421,6 +601,8 @@ class OracleExecution:
                 t.run('''UPDATE execution_jobs SET status='CLAIMED',attempt_count=attempt_count+1,started_at=coalesce(started_at,:b_now),
                     next_retry_at=NULL WHERE job_id=:b_j''', b_now=now, b_j=candidate)
                 t.run('UPDATE execution_outbox SET delivery_count=delivery_count+1 WHERE job_id=:b_j', b_j=candidate)
+                t.run('''UPDATE tracking_slots SET status='CLAIMED',claimed_at=coalesce(claimed_at,:b_now)
+                    WHERE job_id=:b_j AND status IN ('SCHEDULED','CLAIMED')''', b_now=now, b_j=candidate)
                 return {'job': self._job(t, candidate), 'owner_id': owner, 'fencing_generation': token}
         return None
 
@@ -478,6 +660,7 @@ class OracleExecution:
                 t.run('UPDATE tracking_targets SET last_success_at=:b_now WHERE target_id=:b_t AND generation=:b_g AND food_revision=:b_r',
                       b_now=now, b_t=m['target_id'], b_g=m['generation'], b_r=m['food_revision'])
         t.update('execution_outbox', {'job_id': job['job_id']}, delivered_at=now)
+        self._finish_slots(t, job, status, error, eligible)
 
     def begin(self, claim):
         with self.transaction() as t:
@@ -555,7 +738,7 @@ class OracleExecution:
             t.update('execution_leases', {'resource_key': job['job_id']}, expires_at=now)
 
     def status(self, job_id=None):
-        with self.transaction() as t:
+        with self.reader() as t:
             if job_id:
                 rows = [self._job(t, job_id)]
             else:
@@ -565,7 +748,7 @@ class OracleExecution:
                 plan = self._plan(t, row['plan_id'])
                 row['execution_blockers'] = self._gate(t, plan, row['mode'])
                 row['eligible_target_ids'] = [m['target_id'] for m in self._eligible(t, row)]
-                row['current_budget'] = self.quota.assess(t, plan, self.now())
+                row['current_budget'] = self.quota.usage(t, plan, self.now())
                 row['calls'] = t.rows('SELECT * FROM execution_calls WHERE job_id=:b_j ORDER BY call_id', 'execution_calls', b_j=row['job_id'])
                 run = t.one('SELECT * FROM execution_runs WHERE job_id=:b_j', 'execution_runs', b_j=row['job_id'])
                 run['result_contract'] = json.loads(run.pop('result_contract_json') or 'null')
@@ -621,7 +804,7 @@ class OracleRequestSession(RequestSession):
         self.reservation_id = None
         self.counts = {}
         self.state = {}
-        with execution.transaction() as t:
+        with execution.reader() as t:
             checkpoint = t.one('SELECT * FROM execution_checkpoints WHERE job_id=:b_j', 'execution_checkpoints', b_j=claim['job']['job_id'])
         if checkpoint:
             if instant(checkpoint['expires_at']) <= execution.now():
@@ -859,7 +1042,9 @@ def oracle_mock_controller(repo, accounts, clock=None, transport=None, settings=
     """
     from .execution_mock import MockTransport, mock_clients
     from .execution_runtime import ExecutionController
+    from .oracle_planner import OracleQueryPlanner
     execution = OracleExecution(repo, accounts, clock, settings)
+    OracleQueryPlanner(execution)
     clients = mock_clients(execution.accounts.values(), transport or MockTransport())
     ingestion = observations = None
     if pipeline:

@@ -374,7 +374,7 @@ class FoodObservationService:
                 metrics = [dict(r) for r in db.execute(f'''SELECT metric_code,unit,observed_at,value_state,count_value,decimal_value,raw_value,
                     coverage,context_hash,origin FROM metric_observations WHERE source_code=? AND status='ACTIVE'
                     AND (food_id IN ({marks}) OR item_key IN (SELECT item_key FROM food_mentions WHERE status='ACTIVE' AND food_id IN ({marks})))
-                    ORDER BY observed_at,metric_code''', (source, *ids, *ids))]
+                    ORDER BY observed_at,metric_code,context_hash''', (source, *ids, *ids))]
                 sources[source] = {'mention_policy': mention_policy(source), 'confirmed_items': confirmed[0], 'mentions': confirmed[1],
                                    'search_matched_items': searched[0], 'search_matches': searched[1], 'metrics': metrics,
                                    'metric_storage': 'TRANSIENT_ONLY' if source == 'naver_datalab' else
