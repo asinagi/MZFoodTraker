@@ -196,6 +196,9 @@ G-OPS 승인 후 순서: (1) G-OPS-1 백업과 백업 사본 리허설(`tests/re
 | `1aeabe3` | feat: rehearse the Oracle cut-over on an isolated copy of the operational DB |
 | `916d699` | feat: run food identity and tracking commands on the Oracle target |
 | `5af42a3` | feat: recover the Oracle period back into SQLite (rollback path) |
-| Phase 5 커밋 | 복구·적재 CLI, 보고서·절차서·README, 최종 회귀 증거 |
+| `5c750bb` | docs: record Oracle cut-over readiness, runbook and final verification(복구·적재 CLI, 보고서·절차서·README, 최종 회귀 증거) |
+| 이 문단 커밋 | docs: main 통합 기록 |
+
+`main` 통합: 최종 회귀(기본 490·실제 Oracle 643, 실패 0) 통과와 원격 `main`이 기준 `10e0d54` 그대로이며 브랜치의 조상임을 확인한 뒤, 이 보고서를 포함한 브랜치 HEAD를 `git push origin feat/oracle-cutover-prep:main`으로 Fast-forward했다(force 없음).
 
 커밋마다 관련 파일만 스테이징하고, 스테이징 diff에서 비밀값 형태와 로컬 Oracle·컨테이너 접속 정보 값 대조를 거쳤다(비밀번호·DSN 일치 0; 일치한 것은 README에 이미 공개된 테스트 스키마 이름뿐). `origin/feat/oracle-cutover-prep`에 단계별 Push 후 원격 HEAD를 확인했다. reset hard·force push·기존 작업 삭제 없음. `.env`·DB·백업·자격 증명·로그(`*.log`는 저장소 규칙상 제외)는 커밋하지 않았다.
