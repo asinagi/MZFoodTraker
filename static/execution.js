@@ -2,9 +2,9 @@
 (() => {
   const panel=document.querySelector('#execution-overview');if(!panel)return;
   const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
-  const heading=el('h2','추적 실행 관리'),note=el('p'),toolbar=el('div'),summary=el('p'),list=el('div');
+  const heading=el('h2','추적 실행 관리'),note=el('p'),toolbar=el('div'),summary=el('p'),sources=el('div'),list=el('div');
   note.className='note';note.textContent='미리보기는 읽기 전용입니다. 실행은 승인된 대상·정책·예산을 다시 확인하며, 운영 자동 실행은 기본 비활성입니다.';
-  toolbar.className='tools';panel.append(heading,note,toolbar,summary,list);
+  toolbar.className='tools';panel.append(heading,note,toolbar,summary,sources,list);
   const message=el('p');message.setAttribute('role','status');panel.append(message);
   const refresh=el('button','실행 상태 새로고침');refresh.id='execution-refresh';refresh.type='button';toolbar.append(refresh);
   const queue=el('button','Mock 예정 작업 등록');queue.id='execution-schedule';queue.type='button';toolbar.append(queue);
@@ -17,6 +17,7 @@
     const data=await api('/api/execution/status');list.replaceChildren();
     queue.disabled=!data.available_modes.includes('mock');
     summary.textContent=`모드 ${data.available_modes.join(' / ')} · 자동 실행 ${data.automatic_enabled?'켜짐':'꺼짐'} · 마지막 성공 ${when(data.last_success_at)} · 상태 ${JSON.stringify(data.counts)}`;
+    sources.replaceChildren(...(data.sources||[]).map(s=>el('p',`${s.source_id} · 작업 ${JSON.stringify(s.job_counts)} · 마지막 성공 ${when(s.last_success_at)} · 최근 실패 ${s.last_failure?(s.last_failure.error_kind||s.last_failure.error||s.last_failure.status):'없음'} · 차단 ${s.block?s.block.error_kind:'없음'} · 예산 ${s.budget?s.budget.status:'해당 없음'}`)));
     if(!data.items.length)list.append(el('p','등록된 실행 작업이 없습니다. 음식을 승인하고 출처별 대상을 활성화한 후 작업을 등록하세요.'));
     data.items.forEach(job=>{
       const card=el('article');card.className='food-card execution-job';card.dataset.jobId=job.job_id;

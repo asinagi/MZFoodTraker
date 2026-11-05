@@ -63,6 +63,15 @@ def oracle_backend(repo, accounts, clock=None, transport=None, settings=None, rs
                            execution=execution, ingestion=controller.ingestion, observations=controller.observations, controller=controller)
 
 
+def oracle_maintenance(backend, at=None):
+    """What --maintenance does on SQLite, for the target: B4 source retention and staging expiry, B5 link expiry, then the
+    reprocessing of approved alias and food decisions (so alias changes reach B8). No HTTP, no DDL."""
+    staging = backend.ingestion.purge(at)
+    links = backend.observations.purge(at)
+    effects = backend.observations.apply_entity_changes()
+    return {'success': True, 'staging': staging, 'links': links, 'entity_changes_reprocessed': len(effects), 'api_requests': 0}
+
+
 def status(mode, database_path, environ=None):
     """Read-only: which backend a mode selects and whether its schema is ready. No DDL, no writes, no API calls."""
     if mode == 'sqlite':

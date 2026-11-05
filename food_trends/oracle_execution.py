@@ -756,7 +756,36 @@ class OracleExecution:
             last = t.scalar("SELECT max(finished_at) AS m FROM execution_jobs WHERE status='SUCCEEDED'")
             return {'items': rows, 'live_enabled': False, 'automatic_enabled': False,
                     'counts': {r['status']: int(r['n']) for r in t.rows('SELECT status,count(*) AS n FROM execution_jobs GROUP BY status')},
-                    'last_success_at': stamp(utc_value(last)) if last else None, 'read_only': True, 'storage': self.storage_label()}
+                    'last_success_at': stamp(utc_value(last)) if last else None, 'read_only': True, 'storage': self.storage_label(),
+                    'sources': self._sources(t)}
+
+    def _sources(self, t):
+        """Per source account: job outcomes, the latest failure, an active block and the budget of its latest plan; RSS discovery
+        from its own runs (collected outside B3, no budget). Additive to the SQLite status shape; reads only."""
+        now, limit, out = self.now(), ' FETCH FIRST 1 ROWS ONLY' if t.oracle else ' LIMIT 1', []
+        for source, scope in sorted(self.accounts):
+            jobs, where = 'FROM execution_jobs WHERE source_id=:b_s AND account_scope=:b_a', {'b_s': source, 'b_a': scope}
+            success = t.scalar("SELECT max(finished_at) AS m %s AND status='SUCCEEDED'" % jobs, **where)
+            failure = t.one('SELECT * %s AND error_kind IS NOT NULL ORDER BY coalesce(finished_at,created_at) DESC,job_id%s' % (jobs, limit),
+                            'execution_jobs', **where)
+            block = t.one('SELECT * FROM execution_blocks WHERE source_id=:b_s AND account_scope=:b_a', 'execution_blocks', **where)
+            latest = t.one('SELECT plan_id %s ORDER BY created_at DESC,job_id%s' % (jobs, limit), **where)
+            out.append({'source_id': source, 'account_scope': scope,
+                        'job_counts': {r['status']: int(r['n']) for r in t.rows('SELECT status,count(*) AS n %s GROUP BY status' % jobs, **where)},
+                        'last_success_at': stamp(utc_value(success)) if success else None,
+                        'last_failure': {k: failure[k] for k in ('job_id', 'status', 'error_kind', 'finished_at')} if failure else None,
+                        'block': {k: block[k] for k in ('error_kind', 'blocked_at', 'until_at')}
+                                 if block and (block['until_at'] is None or instant(block['until_at']) > now) else None,
+                        'budget': self.quota.usage(t, self._plan(t, latest['plan_id']), now) if latest else None})
+        runs = {int(r['success']): int(r['n']) for r in t.rows('SELECT success,count(*) AS n FROM rss_runs WHERE finished_at IS NOT NULL GROUP BY success')}
+        success = t.scalar('SELECT max(finished_at) AS m FROM rss_runs WHERE success=1')
+        failure = t.one('SELECT * FROM rss_runs WHERE success=0 ORDER BY run_id DESC' + limit, 'rss_runs')
+        out.append({'source_id': 'google_trends_rss', 'account_scope': 'public-feed', 'collector': 'oracle_rss',
+                    'job_counts': {'SUCCEEDED': runs.get(1, 0), 'FAILED': runs.get(0, 0)},
+                    'last_success_at': stamp(utc_value(success)) if success else None,
+                    'last_failure': {'run_id': failure['run_id'], 'error': failure['error'], 'finished_at': failure['finished_at']} if failure else None,
+                    'block': None, 'budget': None})
+        return out
 
     def storage_label(self):
         settings = getattr(self.db, 'settings', None)
