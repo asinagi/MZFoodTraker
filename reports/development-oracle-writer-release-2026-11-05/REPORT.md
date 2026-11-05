@@ -149,7 +149,7 @@
 | 커밋 | 내용 |
 | --- | --- |
 | `3b8c7cb` | 철회·인계·재개 판정 구현과 테스트(대상 v10) |
-| 보고 커밋 | 보고서, 요청서 갱신, README, 테스트 증거 |
+| `471f56f` | 보고: 보고서, 요청서 갱신, README, 테스트 증거 |
 
 `main` 통합은 아래 통합 기록에 남긴다(fast-forward만, Force Push·Reset Hard 없음).
 
@@ -185,3 +185,7 @@
 | `food_trends/__main__.py` | `--writer-release`·`--release-wait`·`--writer-status`·`--writer-handover`·`--legacy-resume-check` |
 | `tests/test_writer_release.py` (신규) | 검증 |
 | `README.md`, 이 디렉터리, [요청서](../development-oracle-live-integration-2026-11-05/LIVE_VERIFICATION_REQUEST.md) | 실행 방법·현황·판정 |
+
+## 통합 기록
+
+`main`을 `1b848f9`에서 `471f56f`(보고 커밋, 위 구현 커밋 포함)로 fast-forward하고 `origin/main`에 push했다. 이 기록 커밋도 같은 방식으로 `main`에 fast-forward했다. 강제 push·reset hard·기존 작업 삭제는 없었다. 병합 직전에 다시 가져온 `origin/main`은 기준 `1b848f9` 그대로였다.
