@@ -6,6 +6,7 @@ target schema (Oracle, or its SQLite stand-in). Timestamps are returned as UTC i
 Python; KST days belong to the analytics layer. Nothing here writes: the SQLite store reads through the
 read-only, query_only connection and the target store opens a read-only transaction on Oracle.
 """
+import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -28,7 +29,12 @@ def instant(value):
 
 
 def _text(value):
-    return value.read() if hasattr(value, 'read') else value  # Oracle CLOB
+    """Text of a JSON column: a SQLite string, an Oracle CLOB, or the parsed value Oracle returns for IS JSON columns."""
+    if hasattr(value, 'read'):
+        return value.read()
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'))  # canonical, as the target stores it
+    return value
 
 
 def _in(column, values, prefix):
@@ -142,27 +148,41 @@ class SQLiteAnalyticsStore:
 
 
 class TargetAnalyticsStore:
-    """The B6 target schema through TargetRepository's adapter: Oracle (read-only transaction) or the SQLite stand-in."""
+    """The B6 target schema through TargetRepository's adapter: Oracle (read-only transaction) or the SQLite stand-in.
+
+    On Oracle every request, its schema version check included, is one transaction whose first statement is
+    SET TRANSACTION READ ONLY: one consistent snapshot, and the database refuses any write (ORA-01456). No
+    runtime ownership lease is taken, so reads continue whichever mode (SHADOW, RUNTIME_TEST) owns the target.
+    """
 
     def __init__(self, repo):
         self.repo = repo
 
-    def ready(self):
-        from .target_schema import TARGET_SCHEMA_VERSION
+    @contextmanager
+    def _read(self):
+        from .target_db import TargetError
         try:
-            return self.repo.schema_version() == TARGET_SCHEMA_VERSION
+            with self.repo.db.transaction() as tx:
+                if self.repo.db.dialect == 'oracle':
+                    tx.execute('SET TRANSACTION READ ONLY')
+                yield tx
+        except TargetError:  # unreachable or failing database, mapped by the adapter
+            raise AnalyticsUnavailable('storage_unavailable') from None
+
+    def _current(self, tx):
+        from .target_schema import TARGET_SCHEMA_VERSION
+        return self.repo.schema_version(tx) == TARGET_SCHEMA_VERSION
+
+    def ready(self):
+        try:
+            with self._read() as tx:
+                return self._current(tx)
         except Exception:
             return False
 
     @contextmanager
     def session(self):
-        if not self.ready():
-            raise AnalyticsUnavailable('schema_not_ready')
-        from .target_db import TargetError
-        try:
-            with self.repo.db.transaction() as tx:
-                if self.repo.db.dialect == 'oracle':
-                    tx.execute('SET TRANSACTION READ ONLY')  # one consistent snapshot for every statement of a request
-                yield ReadSession(tx.rows)
-        except TargetError:
-            raise AnalyticsUnavailable('storage_unavailable') from None
+        with self._read() as tx:
+            if not self._current(tx):
+                raise AnalyticsUnavailable('schema_not_ready')
+            yield ReadSession(tx.rows)

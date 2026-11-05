@@ -240,7 +240,10 @@ class OracleTarget:
     @contextmanager
     def transaction(self):
         oracledb = self._driver()
-        conn = self.pool().acquire()
+        try:
+            conn = self.pool().acquire()
+        except oracledb.Error as exc:  # unreachable database or refused login: a TargetError code like any driver error
+            raise self.map_error(exc) from None
         try:
             conn.call_timeout = self.settings.call_timeout_ms
             try:

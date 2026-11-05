@@ -97,11 +97,14 @@ class TargetRepository:
                        {'b_v': TARGET_SCHEMA_VERSION, 'b_c': self.checksum(), 'b_t': stamp}, ts_binds=('b_t',) if oracle else ())
         return {'version': TARGET_SCHEMA_VERSION, 'applied': list(range(current + 1, TARGET_SCHEMA_VERSION + 1)), 'created_objects': created}
 
-    def schema_version(self):
-        with self.db.transaction() as tx:
-            if not self._exists(tx, 'target_schema_migrations'):
-                return 0
-            return tx.scalar('SELECT max(version) FROM target_schema_migrations') or 0
+    def schema_version(self, tx=None):
+        """Applied version; inside the caller's transaction when one is given (e.g. a read-only one)."""
+        if tx is None:
+            with self.db.transaction() as tx:
+                return self.schema_version(tx)
+        if not self._exists(tx, 'target_schema_migrations'):
+            return 0
+        return tx.scalar('SELECT max(version) FROM target_schema_migrations') or 0
 
     # Rows
 

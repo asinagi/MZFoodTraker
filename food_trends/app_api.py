@@ -18,7 +18,7 @@ from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
 from . import app_contract as contract
-from .analytics_reader import AnalyticsUnavailable, SQLiteAnalyticsStore
+from .analytics_reader import AnalyticsUnavailable, SQLiteAnalyticsStore, TargetAnalyticsStore
 from .analytics_service import B8_SOURCES, FoodAnalytics, FoodNotFound, SourceNotRankable, parse_day, stamp
 from .api import LOOPBACK, TOKEN_HEADER
 from .classifier import normalize
@@ -317,33 +317,78 @@ def make_app_server(api, host='127.0.0.1', port=8020, cors_origins=(), any_origi
     return AppServer((host, port), Handler)
 
 
+STORES = ('sqlite', 'oracle-test', 'oracle-production')
+
+
+class StartRefused(Exception):
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def open_store(mode, database=None, environ=None):
+    """(analytics store, close) for a server storage mode, chosen explicitly and never inferred.
+
+    sqlite reads the given SQLite database; oracle-test reads the isolated Oracle test schema (ORACLE_TEST_*,
+    environment test) through read-only transactions; oracle-production is refused before any connection
+    (G-OPS-6). Nothing here runs DDL or migrations: a store whose schema is not current is refused.
+    """
+    if mode == 'sqlite':
+        from .migrations import MigrationRequired
+        from .storage import Storage
+        try:
+            return SQLiteAnalyticsStore(Storage(database)), lambda: None
+        except MigrationRequired as exc:
+            raise StartRefused(str(exc)) from None
+    from .runtime_storage import select
+    from .target_db import TargetError
+    try:
+        repo = select(mode, environ)
+    except TargetError as exc:  # production refused, test schema not configured, driver missing
+        raise StartRefused(exc.code) from None
+    store = TargetAnalyticsStore(repo)
+    if not store.ready():
+        repo.db.close()
+        raise StartRefused('target_schema_not_ready')
+    return store, repo.db.close
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='읽기 전용 앱 데이터 API (/api/v1). DB를 읽기 전용으로 열고 외부 API를 호출하지 않습니다.')
-    parser.add_argument('--database', required=True, help='읽을 SQLite DB 경로 (스키마가 최신이어야 함, 변경하지 않음)')
+    parser.add_argument('--store', choices=STORES, default='sqlite',
+                        help='저장소. sqlite(기본, --database 필요) | oracle-test(ORACLE_TEST_* 격리 테스트 스키마, 읽기 전용 트랜잭션) | '
+                             'oracle-production(미승인, 시작 거부)')
+    parser.add_argument('--database', help='sqlite 저장소에서 읽을 SQLite DB 경로 (스키마가 최신이어야 함, 변경하지 않음)')
     parser.add_argument('--port', type=int, default=8020)
     parser.add_argument('--observation-origin', choices=('live_api', 'mock'), default='live_api',
                         help='집계에 넣을 관측 회차 origin. 운영은 live_api, Mock 수집 테스트 DB는 mock')
     parser.add_argument('--cors-origin', action='append', default=[], help='브라우저 웹앱 개발 Origin 허용 (여러 번 지정 가능)')
     args = parser.parse_args(argv)
     from pathlib import Path
-    from .migrations import MigrationRequired
-    from .storage import Storage
-    if not Path(args.database).is_file():
-        parser.error('DB 파일이 없습니다: %s' % args.database)
+    if args.store == 'sqlite':
+        if not args.database:
+            parser.error('sqlite 저장소에는 --database가 필요합니다')
+        if not Path(args.database).is_file():
+            parser.error('DB 파일이 없습니다: %s' % args.database)
+    elif args.database:
+        parser.error('--database는 sqlite 저장소에서만 사용합니다')
     try:
-        storage = Storage(args.database)
-    except MigrationRequired as exc:
-        print(json.dumps({'started': False, 'error': str(exc)}, ensure_ascii=False))
+        store, close = open_store(args.store, args.database)
+    except StartRefused as exc:
+        print(json.dumps({'started': False, 'store': args.store, 'error': exc.reason}, ensure_ascii=False))
         return 2
-    api = AppApi(FoodAnalytics(SQLiteAnalyticsStore(storage), origin=args.observation_origin))
-    server = make_app_server(api, port=args.port, cors_origins=args.cors_origin)
-    print('App API (read-only): http://127.0.0.1:%d/api/v1/health' % server.server_port, flush=True)
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
+        api = AppApi(FoodAnalytics(store, origin=args.observation_origin))
+        server = make_app_server(api, port=args.port, cors_origins=args.cors_origin)
+        print('App API (read-only, %s): http://127.0.0.1:%d/api/v1/health' % (args.store, server.server_port), flush=True)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.server_close()
     finally:
-        server.server_close()
+        close()
     return 0
 
 
