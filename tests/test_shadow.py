@@ -163,6 +163,23 @@ class ShadowTests(unittest.TestCase):
         self.assertEqual({r['availability'] for r in self.repo.rows('source_items') if r['source_code'] == 'youtube'}, {'DELETED'})
         self.assertTrue(self.shadow.compare()['consistent'])
 
+    def test_evidence_expiry_reaches_the_target_as_a_tombstone(self):
+        self.start('instagram_graph')
+        before = {m['mention_key'] for m in self.repo.rows('food_mentions') if m['status'] == 'ACTIVE' and m['expires_at']}
+        self.assertTrue(before)
+        self.now += timedelta(days=31)  # past the caption window: the source store drops the caption, B5 expires the link
+        with self.storage.connect() as db:
+            db.execute('UPDATE instagram_media SET caption=NULL,caption_purged_at=? WHERE caption IS NOT NULL', (self.now.isoformat(),))
+        FoodObservationService(self.storage, lambda: self.now).purge()
+        self.shadow.deliver(limit=100000)
+        after = {m['mention_key']: m['status'] for m in self.repo.rows('food_mentions')}
+        self.assertEqual({k: after.get(k) for k in before}, dict.fromkeys(before, 'EXPIRED'))  # kept as EXPIRED, never deleted
+        self.assertFalse([c for c in self.repo.rows('source_contents') if c['source_code'] == 'instagram_graph' and 'caption' in c['content_json']])
+        result = self.shadow.compare()
+        self.assertTrue(result['consistent'], result['summary'])
+        self.assertEqual(result['checks']['expired_rows_in_target'], 0)
+        self.assertGreaterEqual(result['checks']['expired_tombstones_in_target'], len(before))
+
 
 @unittest.skipUnless(ORACLE_READY, SKIP_REASON)
 class OracleShadowTests(ShadowTests):

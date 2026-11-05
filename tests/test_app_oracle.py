@@ -13,7 +13,7 @@ import socket
 import tempfile
 import unittest
 from contextlib import contextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlencode
@@ -36,9 +36,9 @@ from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_targe
 from test_app_contract import DOCS, TARGETS, schema_for
 
 PERIODS = tuple(contract.PERIODS)
-# B7 excludes rows whose retention elapsed before the load (EXCLUDED_EXPIRED), and with them B5's EXPIRED evidence
-# tombstones that mark EVIDENCE_EXPIRED days. Loading as of a year before the fixture clock copies every row the SQLite
-# store holds, so both stores answer from the same logical rows; the gap of a load after expiry is a B7 follow-up.
+# Loading as of a year before the fixture clock copies every row the SQLite store holds. LiveFixtureLoadedAfterExpiry
+# loads at the fixture clock instead, after the Instagram captions' retention elapsed, as a real cut-over would: B7 then
+# carries B5's content-less EXPIRED evidence tombstones, which mark the EVIDENCE_EXPIRED days.
 LOAD_AS_OF = timedelta(days=365)
 RUNTIME_TABLES = ('runtime_ownership', 'runtime_participants', 'execution_outbox', 'execution_jobs', 'execution_leases',
                   'quota_reservations', 'quota_charges', 'aggregate_invalidations', 'entity_change_effects')
@@ -136,7 +136,7 @@ def build_target_fixture(directory):
 
 class TargetCase:
     """Mixin: one fixture, loaded once per class into the target (SQLite stand-in here, MZ_TEST in the Oracle subclasses)."""
-    clock, origin, data_mode = NOW, 'live_api', 'database'
+    clock, origin, data_mode, load_as_of = NOW, 'live_api', 'database', LOAD_AS_OF
 
     @classmethod
     def make_target(cls):
@@ -148,7 +148,7 @@ class TargetCase:
         cls.storage = cls.fixture()
         cls.repo = TargetRepository(cls.make_target(), clock=lambda: cls.clock)
         cls.repo.migrate()
-        cls.load = migrate(cls.storage.path, cls.repo, now=cls.clock - LOAD_AS_OF)
+        cls.load = migrate(cls.storage.path, cls.repo, now=cls.clock - cls.load_as_of)
         cls.sqlite, cls.target = cls.api(SQLiteAnalyticsStore(cls.storage)), cls.api(TargetAnalyticsStore(cls.repo))
 
     @classmethod
@@ -294,6 +294,27 @@ class LiveFixtureOnTarget(TargetCase, unittest.TestCase):
         self.assertEqual((health['status'], health['schema_ready']), ('unavailable', False))
 
 
+class LiveFixtureLoadedAfterExpiry(LiveFixtureOnTarget):
+    """The same fixture loaded at the fixture clock, after ten days of Instagram evidence lost their caption retention.
+
+    Every inherited comparison runs on this load: the target must still mark those days EVIDENCE_EXPIRED (never
+    OBSERVED from the remaining items) because B7 carries B5's EXPIRED tombstones; no caption is carried with them.
+    """
+    load_as_of = timedelta(0)
+
+    def test_expired_evidence_arrives_as_contentless_tombstones(self):
+        with self.storage.reader() as db:
+            expired = {r[0] for r in db.execute("SELECT mention_key FROM food_mentions WHERE status='EXPIRED'")}
+        self.assertEqual(len(expired), 10)
+        mentions = self.repo.rows('food_mentions')
+        self.assertEqual({m['mention_key'] for m in mentions if m['status'] == 'EXPIRED'}, expired)
+        self.assertEqual(self.load['tables']['food_mentions']['tombstones'], len(expired))
+        self.assertFalse([m for m in mentions if m['status'] == 'ACTIVE' and m['expires_at'] and datetime.fromisoformat(m['expires_at']) <= self.clock])
+        contents = [r for r in self.repo.rows('source_contents') if r['source_code'] == 'instagram_graph' and r['field_purged_at']]
+        self.assertGreaterEqual(len(contents), 10)
+        self.assertFalse([r for r in contents if 'caption' in json.loads(r['content_json'])])
+
+
 class MockDatasetOnTarget(TargetCase, unittest.TestCase):
     """The mock dataset behind the published examples, loaded into the target."""
     clock, origin, data_mode = app_mock.MOCK_NOW, 'mock', 'mock'
@@ -401,6 +422,17 @@ class OracleLiveFixtureOnTarget(LiveFixtureOnTarget):
             with self.assertRaises(StartRefused) as refused:
                 open_store('oracle-test')
         self.assertEqual(refused.exception.reason, 'target_schema_not_ready')
+
+
+@unittest.skipUnless(ORACLE_READY, SKIP_REASON)
+class OracleLiveFixtureLoadedAfterExpiry(LiveFixtureLoadedAfterExpiry):
+    """The post-expiry load on the real disposable Oracle test schema."""
+
+    @classmethod
+    def make_target(cls):
+        db = oracle_target()
+        reset_target_schema(db)
+        return db
 
 
 @unittest.skipUnless(ORACLE_READY, SKIP_REASON)

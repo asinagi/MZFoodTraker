@@ -13,6 +13,8 @@ from urllib.parse import unquote, urlsplit
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', default='reports/development-a1-a3-2026-10-27')
+    parser.add_argument('--pattern', default='test_*.py', help='module file pattern (a stage run selects its modules)')
+    parser.add_argument('-k', dest='names', action='append', help='unittest test name pattern; repeatable')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(root))
@@ -60,7 +62,9 @@ def main():
     try:
         with (output / 'tests.log').open('w', encoding='utf-8') as stream:
             with contextlib.redirect_stderr(stream):
-                suite = unittest.defaultTestLoader.discover(str(root / 'tests'), pattern='test_*.py')
+                loader = unittest.TestLoader()
+                loader.testNamePatterns = [n if '*' in n else '*%s*' % n for n in args.names] if args.names else None
+                suite = loader.discover(str(root / 'tests'), pattern=args.pattern)
                 result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
     finally:
         socket.socket.connect, socket.socket.connect_ex, socket.getaddrinfo = original_connect, original_connect_ex, original_resolve

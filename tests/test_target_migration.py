@@ -10,9 +10,12 @@ from urllib.error import URLError
 from food_trends.execution_mock import MockTransport, mock_controller
 from food_trends.food_observations import FoodObservationService
 from food_trends.ingestion import IngestionService
+from food_trends.oracle_execution import OracleExecution
+from food_trends.oracle_ingestion import OracleIngestionService
+from food_trends.oracle_observations import OracleObservationService
 from food_trends.service import CollectionService
 from food_trends.storage import Storage
-from food_trends.target_db import SQLiteTarget, TransientError
+from food_trends.target_db import PolicyRefused, SQLiteTarget, TransientError
 from food_trends.target_migration import migrate, reconcile
 from food_trends.target_repository import TargetRepository
 import test_execution as fixtures
@@ -150,6 +153,53 @@ class MigrationTests(unittest.TestCase):
         target_expiry = {r['item_key']: r['expires_at'] for r in on_time.rows('source_items') if r['source_code'] == 'youtube'}
         self.assertEqual({k: datetime.fromisoformat(v) for k, v in source_expiry.items()},
                          {k: datetime.fromisoformat(v) for k, v in target_expiry.items()})
+
+    def test_expired_evidence_is_carried_as_a_contentless_tombstone(self):
+        late = datetime(2026, 12, 1, tzinfo=timezone.utc)  # past the 30-day caption window of the fixture's Instagram mention
+        with closing(sqlite3.connect(self.source)) as src:
+            stale = src.execute("SELECT count(*) FROM food_mentions WHERE status='ACTIVE' AND expires_at<=?", (late.isoformat(),)).fetchone()[0]
+            live = src.execute("SELECT count(*) FROM food_mentions WHERE expires_at IS NULL").fetchone()[0]
+        self.assertGreater(stale, 0)  # the copy was never purged: the load settles them exactly as the B5 purge would
+        report = self.run_migration(now=late)
+        mentions = report['tables']['food_mentions']
+        self.assertEqual((mentions['loaded_rows'], mentions['tombstones'], mentions['settled_by_load'], mentions['dispositions']),
+                         (stale + live, stale, stale, {}))
+        target = self.repo.rows('food_mentions')
+        self.assertEqual(sorted(m['status'] for m in target if m['expires_at']), ['EXPIRED'] * stale)
+        result = reconcile(self.source, self.repo, now=late)
+        self.assertTrue(result['consistent'], json.dumps(result['summary'], ensure_ascii=False))
+        self.assertEqual((result['checks']['expired_rows_in_target'], result['checks']['expired_tombstones_in_target']), (0, stale))
+        again = self.run_migration(now=late)
+        self.assertEqual({t: v['writes'] for t, v in again['tables'].items()}, {t: {'inserted': 0, 'updated': 0, 'unchanged': 0} for t in again['tables']})
+        # Purging the copy first (the procedure's order) yields the same rows; nothing is left for the load to settle.
+        purged = Path(self.temp.name) / 'purged.sqlite3'
+        backup(self.source, purged)
+        FoodObservationService(Storage(purged), lambda: late).purge()
+        first_purged = self.fresh_repo('purged-first')
+        settled = migrate(purged, first_purged, now=late)['tables']['food_mentions']
+        self.assertEqual((settled['tombstones'], settled['settled_by_load']), (stale, 0))
+        self.assertEqual(sorted(json.dumps(r, sort_keys=True) for r in first_purged.rows('food_mentions')),
+                         sorted(json.dumps(r, sort_keys=True) for r in target))
+
+    def test_tombstones_neither_revive_nor_keep_expired_content(self):
+        late = datetime(2026, 12, 1, tzinfo=timezone.utc)
+        self.run_migration(now=late)
+        tombstone = next(m for m in self.repo.rows('food_mentions') if m['status'] == 'EXPIRED')
+        self.repo.clock = lambda: late
+        with self.assertRaises(PolicyRefused) as refused, self.repo.db.transaction() as tx:
+            self.repo.upsert(tx, 'food_mentions', dict(tombstone, status='ACTIVE'))
+        self.assertEqual(refused.exception.code, 'expired_content')
+        item = next(i for i in self.repo.rows('source_items') if i['item_key'] == tombstone['item_key'])
+        content = next(c for c in self.repo.rows('source_contents') if c['payload_ref'] == item['payload_ref'])
+        self.assertNotIn('caption', json.loads(content['content_json']))
+        self.assertIsNotNone(content['field_purged_at'])
+        # The runtime's own B4/B5 retention would leave exactly this: nothing remains for it to expire or purge.
+        execution = OracleExecution(self.repo, {}, lambda: late)
+        try:
+            counts = dict(OracleIngestionService(execution).purge(late), **OracleObservationService(execution).purge(late))
+        finally:
+            execution.release()
+        self.assertEqual({k: v for k, v in counts.items() if v}, {})
 
     def test_interrupted_batch_rolls_back_and_resumes_without_duplicates(self):
         state = {'raised': False}

@@ -2,11 +2,13 @@
 
 Read-only export -> policy/TTL filter -> mapping -> conversion -> validation -> batched load ->
 reconciliation. The source is opened read-only and never written; no provider API is called.
-Expiry is copied, never recomputed: rows past their source retention are excluded, children of
-excluded parents are excluded with them, and Instagram captions past their window lose the field
-only. Every exclusion and rejection is recorded by table, disposition and reason code with a
-subject hash, never with provider values. Batches resume from the last committed key and
-re-running is a no-op.
+Expiry is copied, never recomputed: content and staging rows past their source retention are
+excluded, children of excluded parents are excluded with them, and Instagram captions past their
+window lose the field only. B5 links carry no provider content and end their active life by status:
+a link whose evidence expired by the load instant is carried as the EXPIRED tombstone the B5 purge
+leaves (B8 reads those to mark EVIDENCE_EXPIRED days; dropping them would show the days as observed).
+Every exclusion and rejection is recorded by table, disposition and reason code with a subject
+hash, never with provider values. Batches resume from the last committed key and re-running is a no-op.
 """
 import hashlib
 import json
@@ -17,12 +19,14 @@ from pathlib import Path
 from .contracts import SOURCES
 from .ingestion import item_key
 from .target_db import ConversionError, PolicyRefused, canonical_json, iso, logical, to_target, utc
-from .target_repository import policy
+from .target_repository import RETENTION, policy
 from .target_schema import BY_NAME, TABLES
 
 MIGRATION_VERSION = 'sqlite-to-target-v1'
 CAPTION_DAYS = SOURCES['instagram_graph']['policy']['retention_days']
 TTL_EXEMPT = ('quota_reservations',)  # expires_at there is a reservation lease, not retention
+# Content-less B5 links whose expiry is a status (ACTIVE -> EXPIRED by the B5 purge), carried as tombstones.
+TOMBSTONES = ('item_query_matches', 'food_mentions', 'metric_observations')
 ORDER = [t.name for t in TABLES if t.source_table or t.name == 'source_contents']
 LOAD, POLICY, EXPIRED, INVALID = 'LOAD', 'EXCLUDED_POLICY', 'EXCLUDED_EXPIRED', 'REJECTED_INVALID'
 
@@ -47,7 +51,7 @@ class Plan:
 
     def __init__(self, src, now):
         self.src, self.now = src, now
-        self.present, self.excluded, self.rows, self.legacy = {}, {}, {}, []
+        self.present, self.excluded, self.rows, self.legacy, self.settled = {}, {}, {}, [], {}
 
     def _raw(self, table, where='', args=()):
         spec = BY_NAME[table]
@@ -130,10 +134,23 @@ class Plan:
                        refreshed_at=r['last_seen'], expires_at=None, field_expires_at=field_expires, field_purged_at=field_purged,
                        source_payload_hash=None)
 
+    def _past(self, row):
+        try:
+            return bool(row.get('expires_at')) and utc(row['expires_at']) <= self.now
+        except ConversionError:
+            return False  # classify() rejects the malformed value
+
+    def settle(self, table, row):
+        """A B5 link whose evidence expired by the load instant arrives as the purge leaves it: EXPIRED, never ACTIVE."""
+        if table in TOMBSTONES and row.get('status') == 'ACTIVE' and self._past(row):
+            self.settled[table] = self.settled.get(table, 0) + 1
+            return dict(row, status='EXPIRED')
+        return row
+
     def classify(self, table, row):
         spec = BY_NAME[table]
         pk = tuple(row.get(k) for k in spec.pk)
-        if 'expires_at' in row and table not in TTL_EXEMPT and row['expires_at'] and utc(row['expires_at']) <= self.now:
+        if 'expires_at' in row and table not in TTL_EXEMPT + TOMBSTONES and row['expires_at'] and utc(row['expires_at']) <= self.now:
             return EXPIRED, 'source_retention_elapsed'
         for cols, parent, _ in spec.fks:
             value = tuple(row.get(c) for c in cols)
@@ -162,6 +179,7 @@ class Plan:
             self.present.setdefault(table, set())
             entries = []
             for row in self._source_rows(table):
+                row = self.settle(table, row)
                 disposition, reason = self.classify(table, row)
                 pk = tuple(row.get(k) for k in spec.pk)
                 if disposition == LOAD:
@@ -245,7 +263,10 @@ def _migrate(source_path, repo, now, batch_size, fault, writer):
         for _, _, disposition, reason in plan.rows[table]:
             if disposition != LOAD:
                 dispositions['%s:%s' % (disposition, reason)] = dispositions.get('%s:%s' % (disposition, reason), 0) + 1
-        report['tables'][table] = dict(candidates=len(plan.rows[table]), **counts, writes=results, dispositions=dispositions)
+        # Loaded links past their expiry (content-less tombstones), and how many of them the load itself settled to EXPIRED.
+        tombstones = sum(1 for _, row, d, _ in plan.rows[table] if d == LOAD and table in TOMBSTONES and plan._past(row))
+        report['tables'][table] = dict(candidates=len(plan.rows[table]), **counts, writes=results, dispositions=dispositions,
+                                       tombstones=tombstones, settled_by_load=plan.settled.get(table, 0))
     return report
 
 
@@ -255,7 +276,11 @@ def _canonical(table, row):
 
 def integrity_checks(repo, now):
     """Target-only integrity, measured in portable SQL: FK orphans, unresolved payload_refs, policy-blocked
-    rows, expired rows still present, NOT_OBSERVED values. Shared by reconcile and the Oracle runtime checks."""
+    rows, expired rows still presented as live, NOT_OBSERVED values. Shared by reconcile and the Oracle runtime checks.
+
+    A row past its expiry is a violation while it is still in its active state (content, an AVAILABLE item, an unpurged
+    snapshot, an ACTIVE link: what policy() refuses to create). In any other state it is a content-less tombstone
+    (EXPIRED link, EXPIRED/DELETED item, purged snapshot), counted separately."""
     now = utc(now)
     checks = {}
     with repo.db.transaction() as tx:
@@ -283,11 +308,18 @@ def integrity_checks(repo, now):
         checks['not_observed_metrics_with_null_value'] = int(tx.scalar(
             "SELECT count(*) FROM metric_observations WHERE value_state='NOT_OBSERVED' AND count_value IS NULL"))
         foods = [r['food_id'] for r in tx.rows("SELECT food_id FROM food_entities ORDER BY food_id")]
-    retained_expired = 0
+    retained_expired = tombstones = 0
     for table in ORDER:
         if 'expires_at' in [c.name for c in BY_NAME[table].columns] and table not in TTL_EXEMPT:
-            retained_expired += sum(1 for r in repo.rows(table) if r['expires_at'] and utc(r['expires_at']) <= now)
+            state = RETENTION.get(table)
+            for r in repo.rows(table):
+                if r['expires_at'] and utc(r['expires_at']) <= now:
+                    if state is None or r[state[0]] == state[1]:
+                        retained_expired += 1
+                    else:
+                        tombstones += 1
     checks['expired_rows_in_target'] = retained_expired
+    checks['expired_tombstones_in_target'] = tombstones
     return checks, foods
 
 
@@ -357,7 +389,7 @@ def derive(src, entity_table, key, now):
     plan, out = Plan(src, utc(now)), []
 
     def emit(table, key_row, rows):
-        rows = list(rows)
+        rows = [plan.settle(table, row) for row in rows]
         if not rows:
             out.append((table, key_row, None, None))
         for row in rows:
