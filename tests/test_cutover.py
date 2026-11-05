@@ -8,8 +8,11 @@ default; the Oracle subclass repeats every case on the disposable MZ_TEST schema
 """
 import hashlib
 import json
+import os
 import socket
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import closing
@@ -25,6 +28,7 @@ from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_targe
 
 NOW = datetime(2026, 11, 5, 3, tzinfo=timezone.utc)
 SEEN = NOW - timedelta(days=9)
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def build_v0(path):
@@ -155,6 +159,41 @@ class CutoverRehearsalTests(unittest.TestCase):
                 sock.connect(('203.0.113.7', 443))
         self.assertEqual(attempts, ['operational_database_write_connection', 'operational_database_write_connection', 'external_socket'])
         sqlite3.connect(self.copy).close()  # restored on exit
+
+
+class CutoverCommandTests(unittest.TestCase):
+    """The runbook's commands on a prepared copy configured as DATABASE_PATH, with the SQLite stand-in as the target."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        source, self.copy = Path(self.temp.name) / 'operational-v0.sqlite3', Path(self.temp.name) / 'copy.sqlite3'
+        build_v0(source)
+        cutover.backup(source, self.copy)
+        cutover.prepare(self.copy, NOW)
+        self.target = str(Path(self.temp.name) / 'target.sqlite3')
+
+    def cli(self, *args):
+        env = {k: v for k, v in os.environ.items() if k != 'DATABASE_PATH'}
+        env.update(PYTHONPATH=str(ROOT), PYTHONIOENCODING='utf-8', DATABASE_PATH=str(self.copy))
+        return subprocess.run([sys.executable, '-B', '-m', 'food_trends', *args, '--target-sqlite', self.target], cwd=self.temp.name, env=env,
+                              capture_output=True, text=True, encoding='utf-8', timeout=300)
+
+    def test_load_reconcile_and_recovery_commands(self):
+        unready = self.cli('--target-load', 'sqlite')
+        self.assertEqual(unready.returncode, 2)  # the target schema is migrated explicitly first
+        self.assertEqual(self.cli('--target-migrate', 'sqlite').returncode, 0)
+        load = self.cli('--target-load', 'sqlite')
+        self.assertEqual(load.returncode, 0, load.stderr)
+        loaded = json.loads(load.stdout)
+        self.assertEqual((loaded['consistent'], loaded['rejected_rows']), (True, 0))  # usage windows follow the wall clock here
+        self.assertGreater(loaded['loaded_rows'], 0)
+        planned = json.loads(self.cli('--recovery', 'plan', '--recovery-target', 'sqlite').stdout)
+        self.assertEqual((planned['summary']['target_only'], planned['summary']['conflicts'], planned['baseline']['verified']), (0, 0, True))
+        refused = self.cli('--recovery', 'apply', '--recovery-target', 'sqlite')
+        self.assertEqual((refused.returncode, refused.stderr.strip()), (2, 'target error: operational_database_requires_approval'))
+        applied = json.loads(self.cli('--recovery', 'apply', '--recovery-target', 'sqlite', '--allow-operational-database').stdout)
+        self.assertEqual((applied['converged'], applied['writes']), (True, {'inserted': 0, 'content_rows': 0, 'updated': 0, 'ignored': 0}))
 
 
 @unittest.skipUnless(ORACLE_READY, SKIP_REASON)

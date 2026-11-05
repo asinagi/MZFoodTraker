@@ -1,6 +1,6 @@
 {
   "task": "ORACLE-CUTOVER-PREP-1 phase 2",
-  "rehearsed_at": "2026-11-05T08:58:16+00:00",
+  "rehearsed_at": "2026-11-05T09:29:56+00:00",
   "source": "trends.sqlite3",
   "operational_source": true,
   "target": "oracle",
@@ -425,12 +425,12 @@
     "tracking_commands": {
       "rows": 0,
       "disposition": "EXCLUDED",
-      "target": "not in the target schema"
+      "target": "SQLite command log; the target keeps its own (v7, runtime-owned); B7 copies no history"
     },
     "tracking_events": {
       "rows": 0,
       "disposition": "EXCLUDED",
-      "target": "not in the target schema"
+      "target": "SQLite lifecycle history; the target keeps its own (v7, runtime-owned); B7 copies no history"
     },
     "tracking_slots": {
       "rows": 0,
@@ -883,8 +883,8 @@
       },
       "http_requests": 0
     },
-    "load_seconds": 11.753,
-    "reconcile_seconds": 5.371,
+    "load_seconds": 11.674,
+    "reconcile_seconds": 5.346,
     "reconciliation": {
       "consistent": true,
       "summary": {
@@ -1316,7 +1316,7 @@
       "mismatches": []
     }
   },
-  "api_parity_seconds": 0.691,
+  "api_parity_seconds": 0.682,
   "rerun": {
     "completed_batch_writes": 0,
     "full_pass_writes": 0,
@@ -1343,7 +1343,7 @@
       "reasons": []
     },
     "baseline": {
-      "fingerprint": "3552b042c81f948251577959b11cf2e28365e22b78a3754a687808d44af8e0dd",
+      "fingerprint": "80e6940c8fcc337de3f1459a3d844d62fd50a991ceb2331b3d8ab6172b52e054",
       "wal_empty": true,
       "matches_completed_load": true,
       "resumes_recovery": false,
@@ -1463,7 +1463,7 @@
       }
     }
   },
-  "copy_bytes": 17985536,
+  "copy_bytes": 17977344,
   "temporary_copy_deleted": true,
   "source_unchanged": {
     "sha256": true,
@@ -1475,6 +1475,6 @@
     "tables": true
   },
   "guard_attempts": [],
-  "seconds": 78.693,
+  "seconds": 77.726,
   "passed": true
 }

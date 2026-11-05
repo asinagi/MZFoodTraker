@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-11-05T09:32:27+00:00",
+  "access": "read-only (mode=ro, query_only)",
+  "tables": 30,
+  "rows": 7701,
+  "schema_migrations_present": false,
+  "schema_version": 0,
+  "integrity_check": "ok",
+  "sha256": "38b880f535dded56e84a11570a1f7793bed1668580950172a417687b689548c0",
+  "unchanged_since_task_start": true,
+  "main_file_modified_at": "2026-10-28T14:20:01",
+  "wal_bytes": 0,
+  "servers_listening": {
+    "8000": false,
+    "8002": false,
+    "8010": false,
+    "8020": false,
+    "8030": false,
+    "1521": false
+  },
+  "note": "Servers 8000/8002 were already stopped before B6-B7 (recorded 2026-11-02); not started or stopped in this task. The rehearsal opened this file read-only only; the Oracle container was stopped again after verification."
+}

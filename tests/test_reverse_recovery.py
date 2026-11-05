@@ -249,8 +249,9 @@ class RecoveryStandInTests(unittest.TestCase):
 
     def test_the_operational_database_is_refused(self):
         root = Path(__file__).resolve().parents[1]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(RecoveryRefused) as refused:
             Recovery(root / 'data' / 'trends.sqlite3', self.repo)
+        self.assertEqual(refused.exception.code, 'operational_database_requires_approval')
 
 
 @unittest.skipUnless(ORACLE_READY, SKIP_REASON)

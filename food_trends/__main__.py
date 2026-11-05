@@ -62,6 +62,36 @@ def target_repository(dialect, sqlite_path, database_path, environ=None):
     return TargetRepository(SQLiteTarget(sqlite_path))
 
 
+def target_load(repository, database_path):
+    """B7 load of the configured SQLite file (opened read-only) into a migrated target, legacy usage import, reconciliation."""
+    from .quota_ledger import import_legacy_usage
+    from .storage import Storage
+    from .target_migration import migrate, reconcile
+    from .target_schema import TARGET_SCHEMA_VERSION
+    if repository.schema_version() != TARGET_SCHEMA_VERSION:
+        raise ValueError('대상 스키마가 준비되지 않았습니다. --target-migrate를 먼저 실행하세요.')
+    load = migrate(database_path, repository)
+    usage = import_legacy_usage(database_path, repository)
+    check = reconcile(database_path, repository, source_storage=Storage(database_path))
+    return {'batch_key': load['batch_key'], 'loaded_rows': sum(t['loaded_rows'] for t in load['tables'].values()),
+            'excluded_rows': sum(t['excluded_rows'] for t in load['tables'].values()),
+            'rejected_rows': sum(t['rejected_rows'] for t in load['tables'].values()),
+            'tombstones': sum(t['tombstones'] for t in load['tables'].values()),
+            'dispositions': {t: v['dispositions'] for t, v in load['tables'].items() if v['dispositions']},
+            'legacy_usage_rows': usage['rows'], 'consistent': check['consistent'], 'summary': check['summary'],
+            'checks': {k: v for k, v in check['checks'].items() if k != 'food_view_mismatches'}, 'http_requests': 0}
+
+
+def recovery_command(repository, database_path, args):
+    from .reverse_recovery import Recovery
+    recovery = Recovery(database_path, repository, allow_operational=args.allow_operational_database or args.recovery == 'plan')
+    if args.recovery == 'plan':  # writes nothing anywhere
+        return dict(recovery.plan(), preconditions=recovery.preconditions(), baseline=recovery.baseline())
+    result = recovery.run(apply_updates=args.apply_updates)
+    return {k: result[k] for k in ('preconditions', 'baseline', 'updates_requested', 'updates_applied', 'writes', 'converged')} | \
+        {'remaining': result['plan_after']['summary'], 'losses': result['plan_after']['losses'], 'conflicts': result['plan_after']['conflicts']}
+
+
 def execution_for_mode(storage, args, environ=None):
     """Explicit B3 mode. Returns (controller or None, error). Live is fail-closed; nothing starts here."""
     from .execution_runtime import live_controller
@@ -121,6 +151,13 @@ def main():
     parser.add_argument('--target-migrate', choices=('oracle', 'sqlite'),
                         help='B6 대상 스키마 명시 생성(SQLite --migrate와 별개). oracle은 ORACLE_DSN/USER/PASSWORD 필요')
     parser.add_argument('--target-status', choices=('oracle', 'sqlite'), help='B6 대상 스키마 버전 조회')
+    parser.add_argument('--target-load', choices=('oracle', 'sqlite'),
+                        help='B7 적재: DATABASE_PATH(읽기 전용)를 대상에 옮기고 레거시 사용량 원장을 가져온 뒤 대조; API 호출 없음')
+    parser.add_argument('--recovery', choices=('plan', 'apply'),
+                        help='Oracle→SQLite 역방향 복구(대상 → DATABASE_PATH). plan은 쓰기 없음, apply는 운영 DB면 --allow-operational-database 필요')
+    parser.add_argument('--recovery-target', choices=('oracle', 'sqlite'), help='역방향 복구의 원천 대상')
+    parser.add_argument('--apply-updates', action='store_true', help='apply: 적재 당시 파일이 그대로일 때만 mutable 열 갱신을 허용')
+    parser.add_argument('--allow-operational-database', action='store_true', help='apply: 설정된 운영 DB로의 복구 허용(G-OPS 승인 후)')
     parser.add_argument('--target-sqlite', metavar='PATH', help='SQLite 대역 대상 DB 경로(운영 DB 경로 사용 불가)')
     parser.add_argument('--shadow', choices=('status', 'enable', 'disable', 'deliver', 'compare', 'repair'),
                         help='B7 Shadow: SQLite 확정 변경을 대상에 멱등 반영; API 호출 없음. enable은 운영 승인 후 사용')
@@ -156,6 +193,19 @@ def main():
         except Exception as exc:  # error codes only; DSN and credentials never printed
             parser.exit(2, 'runtime storage error: %s\n' % getattr(exc, 'code', type(exc).__name__))
         print(json.dumps(result, ensure_ascii=False))
+        return
+    if args.target_load or args.recovery:
+        import json
+        try:
+            if args.recovery and not args.recovery_target:
+                raise ValueError('--recovery-target이 필요합니다.')
+            repository = target_repository(args.target_load or args.recovery_target, args.target_sqlite, database_path)
+            result = target_load(repository, database_path) if args.target_load else recovery_command(repository, database_path, args)
+        except ValueError as exc:
+            parser.exit(2, str(exc) + '\n')
+        except Exception as exc:  # error codes only; DSN and credentials never printed
+            parser.exit(2, 'target error: %s\n' % getattr(exc, 'code', type(exc).__name__))
+        print(json.dumps(result, ensure_ascii=False, default=str))
         return
     if args.target_migrate or args.target_status:
         import json

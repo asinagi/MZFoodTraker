@@ -67,6 +67,18 @@ class RecoveryRefused(RuntimeError):
         self.code = code
 
 
+def _operational(path):
+    """The operational file by name, or the configured DATABASE_PATH (as the observation writer's refusal decides it)."""
+    import os
+    from .paths import DEFAULT_DATABASE, database_path
+    if path.name == DEFAULT_DATABASE.name:
+        return True
+    for configured in {DEFAULT_DATABASE.resolve(), Path(database_path(os.environ)).resolve()}:
+        if path == configured or (path.exists() and configured.exists() and os.path.samefile(path, configured)):
+            return True
+    return False
+
+
 def _key(spec, row):
     return json.dumps([row[k] for k in spec.key], ensure_ascii=False, default=str)
 
@@ -79,9 +91,8 @@ class Recovery:
     def __init__(self, destination, repo, now=None, ownership=None, allow_operational=False, chunk=500, fault=None):
         from .runtime_ownership import RuntimeOwnership
         self.destination = Path(destination).resolve()
-        if not allow_operational:
-            from .observation_writer import refuse_configured_database
-            refuse_configured_database(self.destination)  # the real rollback needs the separately approved switch
+        if not allow_operational and _operational(self.destination):
+            raise RecoveryRefused('operational_database_requires_approval')  # the real rollback needs the separately approved switch
         self.repo, self.now = repo, utc(now or datetime.now(timezone.utc))
         self.ownership = ownership or RuntimeOwnership(repo)
         self.chunk, self.fault = chunk, fault or (lambda stage, table, n: None)
