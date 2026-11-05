@@ -1,6 +1,6 @@
 {
   "task": "ORACLE-CUTOVER-PREP-1 phase 2",
-  "rehearsed_at": "2026-11-05T08:12:07+00:00",
+  "rehearsed_at": "2026-11-05T08:58:16+00:00",
   "source": "trends.sqlite3",
   "operational_source": true,
   "target": "oracle",
@@ -592,16 +592,17 @@
   },
   "load": {
     "target_schema": {
-      "version": 6,
+      "version": 7,
       "applied": [
         1,
         2,
         3,
         4,
         5,
-        6
+        6,
+        7
       ],
-      "created_objects": 96
+      "created_objects": 101
     },
     "tables": {
       "food_commands": {
@@ -882,8 +883,8 @@
       },
       "http_requests": 0
     },
-    "load_seconds": 12.728,
-    "reconcile_seconds": 5.775,
+    "load_seconds": 11.753,
+    "reconcile_seconds": 5.371,
     "reconciliation": {
       "consistent": true,
       "summary": {
@@ -1295,6 +1296,8 @@
         "runtime_participants": 0,
         "quota_usage_ledger": 0,
         "quota_accounts": 0,
+        "tracking_commands": 0,
+        "tracking_events": 0,
         "legacy_key_map": 0,
         "migration_batches": 0,
         "migration_rejections": 0,
@@ -1313,7 +1316,7 @@
       "mismatches": []
     }
   },
-  "api_parity_seconds": 0.685,
+  "api_parity_seconds": 0.691,
   "rerun": {
     "completed_batch_writes": 0,
     "full_pass_writes": 0,
@@ -1322,6 +1325,30 @@
     "row_counts_unchanged": true,
     "changed_tables": [],
     "consistent_after": true
+  },
+  "recovery_dry_run": {
+    "summary": {
+      "target_only": 0,
+      "mutable_updates": 0,
+      "conflicts": 0,
+      "sqlite_only": 0
+    },
+    "losses": {},
+    "conflicts": {},
+    "contents_not_recovered": {},
+    "preconditions": {
+      "mode": "IDLE",
+      "runtime_jobs_in_flight": 0,
+      "ready": true,
+      "reasons": []
+    },
+    "baseline": {
+      "fingerprint": "3552b042c81f948251577959b11cf2e28365e22b78a3754a687808d44af8e0dd",
+      "wal_empty": true,
+      "matches_completed_load": true,
+      "resumes_recovery": false,
+      "verified": true
+    }
   },
   "as_of": {
     "instant": "2026-12-01T00:00:00+00:00",
@@ -1448,6 +1475,6 @@
     "tables": true
   },
   "guard_attempts": [],
-  "seconds": 80.952,
+  "seconds": 78.693,
   "passed": true
 }

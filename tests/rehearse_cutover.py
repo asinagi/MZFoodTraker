@@ -152,10 +152,16 @@ def rehearse(source, target, as_of, production, attempts):
             if target == 'oracle':
                 report['oracle_server'] = oracle_server(repo)
             report['load'] = load_and_compare(copy, repo, now, storage)
+            if target == 'oracle':
+                from oracle_support import settle_after_ddl
+                settle_after_ddl(repo.db)  # a read-only snapshot cannot read tables defined a moment ago (ORA-01466)
             started_api = time.perf_counter()
             report['api_parity'] = cutover.api_parity(storage, repo, lambda: now)
             report['api_parity_seconds'] = round(time.perf_counter() - started_api, 3)
             report['rerun'] = rerun(copy, repo, now, storage)
+            from food_trends.reverse_recovery import plan as recovery_plan
+            recovery = recovery_plan(copy, repo, now)  # dry run: what a rollback right after the load would have to bring back
+            report['recovery_dry_run'] = {k: recovery[k] for k in ('summary', 'losses', 'conflicts', 'contents_not_recovered', 'preconditions', 'baseline')}
         finally:
             if hasattr(repo.db, 'close'):
                 repo.db.close()
@@ -184,6 +190,8 @@ def rehearse(source, target, as_of, production, attempts):
         and load['reconciliation']['consistent'] and load['keys']['clean']
         and not any(v['mismatches'] for v in report['api_parity'].values())
         and again['completed_batch_writes'] == 0 and again['full_pass_writes'] == 0 and again['row_counts_unchanged'] and again['consistent_after']
+        and report['recovery_dry_run']['summary'] == {'target_only': 0, 'mutable_updates': 0, 'conflicts': 0,
+                                                      'sqlite_only': report['recovery_dry_run']['summary']['sqlite_only']}
         and all(report['source_unchanged'].values()) and report['temporary_copy_deleted'] and not attempts
         and (not as_of or report['as_of']['reconciliation']['consistent']))
     return report
