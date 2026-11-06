@@ -229,6 +229,9 @@ def main():
     maintenance_group.add_argument('--ingest-pending', action='store_true', help='완료 회차의 공통 스테이징 처리; API 호출 없음')
     maintenance_group.add_argument('--ingest-legacy', choices=('youtube', 'instagram_graph'),
                                    help='출처 불명 legacy 저장분을 표시된 논리 회차로 스테이징; API 호출 없음')
+    maintenance_group.add_argument('--isolate-database', metavar='PATH',
+                                   help='DATABASE_PATH(읽기 전용)를 SQLite 백업 API로 새 파일 PATH(.sqlite3)에 복사해 격리 표시하고, 사본만 v11 '
+                                        '마이그레이션·스테이징·보존 정리; 운영 DB 경로·기존 파일 거부, API 호출 없음')
     parser.add_argument('--reanalyze', action='store_true')
     parser.add_argument('--no-schedulers', action='store_true', help='자동 외부 수집 없이 로컬 저장 데이터 UI 실행')
     parser.add_argument('--export-json', metavar='PATH', help='RSS 원본/분류/관측/이력을 JSON으로 내보내기')
@@ -257,12 +260,16 @@ def main():
                         help='B6 대상 스키마 명시 생성(SQLite --migrate와 별개). oracle은 ORACLE_DSN/USER/PASSWORD 필요')
     parser.add_argument('--target-status', choices=('oracle', 'sqlite'), help='B6 대상 스키마 버전 조회')
     parser.add_argument('--target-load', choices=('oracle', 'sqlite'),
-                        help='B7 적재: DATABASE_PATH(읽기 전용)를 대상에 옮기고 레거시 사용량 원장을 가져온 뒤 대조; API 호출 없음')
+                        help='B7 적재: DATABASE_PATH 또는 --isolated-database(읽기 전용)를 대상에 옮기고 레거시 사용량 원장을 가져온 뒤 대조; API 호출 없음')
     parser.add_argument('--recovery', choices=('plan', 'apply'),
-                        help='Oracle→SQLite 역방향 복구(대상 → DATABASE_PATH). plan은 쓰기 없음, apply는 운영 DB면 --allow-operational-database 필요')
+                        help='Oracle→SQLite 역방향 복구(대상 → DATABASE_PATH 또는 --isolated-database). plan은 쓰기 없음, apply는 운영 DB면 '
+                             '--allow-operational-database 필요')
     parser.add_argument('--recovery-target', choices=('oracle', 'sqlite'), help='역방향 복구의 원천 대상')
     parser.add_argument('--apply-updates', action='store_true', help='apply: 적재 당시 파일이 그대로일 때만 mutable 열 갱신을 허용')
     parser.add_argument('--allow-operational-database', action='store_true', help='apply: 설정된 운영 DB로의 복구 허용(G-OPS 승인 후)')
+    parser.add_argument('--isolated-database', metavar='PATH',
+                        help='--target-load·--recovery·--writer-handover·--legacy-resume-check가 DATABASE_PATH 대신 쓸 격리 사본'
+                             '(--isolate-database로 만든 파일만, 운영 DB는 거부; --allow-operational-database 불필요)')
     parser.add_argument('--target-sqlite', metavar='PATH', help='SQLite 대역 대상 DB 경로(운영 DB 경로 사용 불가)')
     parser.add_argument('--shadow', choices=('status', 'enable', 'disable', 'deliver', 'compare', 'repair'),
                         help='B7 Shadow: SQLite 확정 변경을 대상에 멱등 반영; API 호출 없음. enable은 운영 승인 후 사용')
@@ -281,10 +288,10 @@ def main():
     parser.add_argument('--writer-status', action='store_true',
                         help='--backend oracle-test: 수집원별 Writer 상태·이전/철회 이력·열린 작업·인계할 사용량(읽기 전용)')
     parser.add_argument('--writer-handover', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
-                        help='철회한 수집원의 Oracle 기간 API 사용량을 설정된 SQLite DB의 레거시 호출 기록으로 인계(--recovery-target 필요, '
-                             '운영 DB는 --allow-operational-database)')
+                        help='철회한 수집원의 Oracle 기간 API 사용량을 설정된 SQLite DB(또는 --isolated-database)의 레거시 호출 기록으로 인계'
+                             '(--recovery-target 필요, 운영 DB는 --allow-operational-database)')
     parser.add_argument('--legacy-resume-check', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
-                        help='기존 SQLite 수집기를 다시 켜도 되는지 판정(읽기 전용, --recovery-target 필요)')
+                        help='기존 SQLite 수집기를 다시 켜도 되는지 판정(읽기 전용, --recovery-target 필요, 격리 사본은 --isolated-database)')
     parser.add_argument('--runtime-status', choices=('sqlite', 'oracle-test', 'oracle-production'),
                         help='실행 저장소 선택 점검(읽기 전용). oracle-test는 ORACLE_TEST_* 필요, oracle-production은 승인 전 비활성')
     parser.add_argument('--execution-readiness', metavar='REGISTRY',
@@ -312,6 +319,21 @@ def main():
         parser.error('--rss-mock-file, --writer-transfer, --writer-release, --writer-status는 --backend oracle-test와 함께만 사용합니다')
     from .paths import database_path as resolve_database
     database_path = str(resolve_database())
+    if args.isolated_database and not (args.target_load or args.recovery or args.writer_handover or args.legacy_resume_check):
+        parser.error('--isolated-database는 --target-load·--recovery·--writer-handover·--legacy-resume-check와 함께만 사용합니다')
+    if args.isolated_database and args.allow_operational_database:
+        parser.error('--isolated-database(격리 사본)에는 --allow-operational-database를 쓰지 않습니다')
+    if args.isolate_database:
+        import json
+        from .cutover import isolate
+        try:
+            result = isolate(database_path, args.isolate_database)
+        except FileNotFoundError:
+            parser.exit(2, 'isolation error: source_database_missing\n')
+        except Exception as exc:  # error codes only
+            parser.exit(2, 'isolation error: %s\n' % getattr(exc, 'code', type(exc).__name__))
+        print(json.dumps(result, ensure_ascii=False, default=str))
+        return
     if args.runtime_status:
         import json
         from .runtime_storage import status as runtime_status
@@ -330,6 +352,9 @@ def main():
         try:
             if not args.target_load and not args.recovery_target:
                 raise ValueError('--recovery-target이 필요합니다.')
+            if args.isolated_database:
+                from .cutover import isolated
+                database_path = str(isolated(args.isolated_database))  # a marked copy, never the operational file
             repository = target_repository(args.target_load or args.recovery_target, args.target_sqlite, database_path)
             if args.target_load:
                 result = target_load(repository, database_path)

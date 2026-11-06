@@ -4,6 +4,9 @@ The operational database is opened only read-only (mode=ro, query_only) and copi
 API; schema migration, local staging, retention, loading into the target and comparison all run on the copy.
 Nothing here calls a provider API, approves a food, assigns a FOOD_ID, starts a collector or writes the
 operational database. Results carry counts, reason codes, hashes and timings, never provider content.
+isolate() makes such a copy for rehearsals and marks it (the header's application_id), and isolated() accepts only a marked
+copy that is not an operational database: the CLI's --isolated-database writes there (usage handover, reverse recovery)
+without the operational switch, and never into the operational file.
 """
 import hashlib
 import json
@@ -16,6 +19,8 @@ from .contracts import SOURCES
 from .ingestion import item_key
 from .target_schema import TABLES
 
+ISOLATION_MARK = 0x4D5A4953  # 'MZIS' as the header's application_id: an isolated rehearsal copy (the operational file keeps 0)
+COPY_SUFFIXES = ('.sqlite3', '.sqlite', '.db')  # names the repository's .gitignore keeps out of Git, with their -wal/-shm files
 CAPTION_DAYS = SOURCES['instagram_graph']['policy']['retention_days']
 YOUTUBE_MATCH_DAYS = 29  # YouTubeStore.purge: match provenance is API data with the videos' retention
 # Source stores B7 reads into source_contents (Plan._contents) rather than through a target table's source_table.
@@ -113,6 +118,55 @@ def backup(source, destination):
     with closing(readonly(source)) as src, closing(sqlite3.connect(destination)) as dst:
         src.backup(dst)
     return inspect(destination)
+
+
+def isolate(source, destination, now=None):
+    """An isolated v11 copy of the operational database for rehearsals (ORACLE-LIVE-VERIFICATION-READY-1): backup() of the
+    read-only source, the copy marked as isolated (ISOLATION_MARK), then prepare() on the copy alone. Refused before anything
+    is copied for an operational destination (by name, path, DATABASE_PATH or the same file), an existing one (never
+    overwritten) or a name the repository does not keep out of Git. Counts, codes and hashes only."""
+    from .reverse_recovery import RecoveryRefused, _operational
+    destination = Path(destination).resolve()
+    if _operational(destination):
+        raise RecoveryRefused('isolated_copy_is_operational')
+    if destination.suffix.lower() not in COPY_SUFFIXES:
+        raise RecoveryRefused('isolated_copy_name_not_ignored')
+    if any(Path(str(destination) + suffix).exists() for suffix in ('', '-wal', '-shm', '-journal')):
+        raise RecoveryRefused('isolated_copy_exists')
+    now = now or datetime.now(timezone.utc).replace(microsecond=0)
+    before = inspect(source)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    copied = backup(source, destination)
+    with closing(sqlite3.connect(destination)) as db:
+        db.execute('PRAGMA application_id=%d' % ISOLATION_MARK)
+    prepared = prepare(destination, now)
+    after, facts = inspect(source), inspect(destination)
+    keys = ('sha256', 'bytes', 'modified_at', 'wal_bytes', 'schema_version', 'integrity', 'tables')
+    return {'source': Path(source).name, 'destination': destination.name, 'prepared_at': now.isoformat(), 'isolated': isolated(destination) == destination,
+            'source_facts': {k: before[k] for k in ('sha256', 'schema_version', 'integrity', 'wal_bytes', 'modified_at')},
+            'source_tables': len(before['tables']), 'source_rows': sum(before['tables'].values()),
+            'source_unchanged': {k: before[k] == after[k] for k in keys},
+            'copy_equal_source_before_migration': copied['tables'] == before['tables'],
+            'copy': {'sha256': facts['sha256'], 'schema_version': facts['schema_version'], 'integrity': facts['integrity'],
+                     'foreign_key_errors': facts['foreign_key_errors'], 'tables': len(facts['tables']), 'rows': sum(facts['tables'].values()),
+                     'food_entities': facts['tables'].get('food_entities', 0), 'wal_bytes': facts['wal_bytes']},
+            'prepare': prepared, 'http_requests': 0}
+
+
+def isolated(path):
+    """The copy --isolated-database names: an existing file isolate() marked, never an operational database (as
+    reverse_recovery decides it: the operational name, path or DATABASE_PATH, or the same file under another name)."""
+    from .reverse_recovery import RecoveryRefused, _operational
+    path = Path(path).resolve()
+    if _operational(path):
+        raise RecoveryRefused('isolated_database_is_operational')
+    if not path.is_file():
+        raise RecoveryRefused('isolated_database_missing')
+    with closing(readonly(path)) as db:
+        mark = db.execute('PRAGMA application_id').fetchone()[0]
+    if mark != ISOLATION_MARK:
+        raise RecoveryRefused('isolated_database_not_marked')
+    return path
 
 
 def digests(path, columns=None):
