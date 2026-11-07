@@ -56,7 +56,12 @@ def target_repository(dialect, sqlite_path, database_path, environ=None):
     from .target_db import OracleSettings, OracleTarget, SQLiteTarget
     from .target_repository import TargetRepository
     if dialect == 'oracle':
-        return TargetRepository(OracleTarget(OracleSettings.from_env(environ)))
+        repository = TargetRepository(OracleTarget(OracleSettings.from_env(environ)))
+        if repository.db.settings.environment == 'production':
+            from .production_access import verify
+            verify(repository.db, environ)  # the declared production schema and its approval record, before any DDL or load
+            repository.db._production_verified = True
+        return repository
     if not sqlite_path or Path(sqlite_path).resolve() == Path(database_path).resolve():
         raise ValueError('--target-sqlite에 운영 DB와 다른 경로가 필요합니다.')
     return TargetRepository(SQLiteTarget(sqlite_path))
