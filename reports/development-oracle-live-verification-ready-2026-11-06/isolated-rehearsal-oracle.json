@@ -1,0 +1,2509 @@
+{
+  "task": "ORACLE-LIVE-VERIFICATION-READY-1 phases A, C, D-3",
+  "rehearsed_at": "2026-11-07T04:28:44+00:00",
+  "source": "trends.sqlite3",
+  "target": "oracle MZ_TEST (ORACLE_TEST_*)",
+  "credentials": "synthetic; .env not read",
+  "pilot_caps": {
+    "INSTAGRAM_MAX_PAGES": "1",
+    "INSTAGRAM_SEARCH_SOFT_LIMIT": "1",
+    "YOUTUBE_DAILY_SEARCH_LIMIT": "1",
+    "YOUTUBE_DAILY_VIDEO_LIMIT": "1",
+    "YOUTUBE_MAX_PAGES": "1",
+    "NAVER_DATALAB_DAILY_LIMIT": "1"
+  },
+  "planned_requests": {
+    "google_trends_rss": 1,
+    "instagram_graph": 5,
+    "youtube": 2,
+    "naver_datalab": 1
+  },
+  "A": {
+    "isolate": {
+      "argv": "--isolate-database <isolated>/rehearsal.sqlite3",
+      "exit": 0,
+      "result": {
+        "source": "trends.sqlite3",
+        "destination": "rehearsal.sqlite3",
+        "prepared_at": "2026-11-07T04:28:44+00:00",
+        "isolated": true,
+        "source_facts": {
+          "sha256": "38b880f535dded56e84a11570a1f7793bed1668580950172a417687b689548c0",
+          "schema_version": 0,
+          "integrity": "ok",
+          "wal_bytes": 0,
+          "modified_at": "2026-10-28T05:20:01.988661+00:00"
+        },
+        "source_tables": 30,
+        "source_rows": 7701,
+        "source_unchanged": {
+          "sha256": true,
+          "bytes": true,
+          "modified_at": true,
+          "wal_bytes": true,
+          "schema_version": true,
+          "integrity": true,
+          "tables": true
+        },
+        "copy_equal_source_before_migration": true,
+        "copy": {
+          "sha256": "6c9e3c37fad90be264f2abbfd5efd20776aede6c1ae882c0c7e575062779e9d0",
+          "schema_version": 11,
+          "integrity": "ok",
+          "foreign_key_errors": 0,
+          "tables": 72,
+          "rows": 21777,
+          "food_entities": 0,
+          "wal_bytes": null
+        },
+        "prepare": {
+          "migration": {
+            "version": 11,
+            "applied": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "original_tables": 30,
+          "original_rows_and_columns_preserved": true,
+          "changed_original_tables": [],
+          "staged_runs": 95,
+          "legacy_backfill": {
+            "youtube": {
+              "staged_items": 0,
+              "rejected_items": 0,
+              "expired_items": 0,
+              "source_absent_items": 0
+            },
+            "instagram_graph": {
+              "staged_items": 185,
+              "rejected_items": 0,
+              "expired_items": 0,
+              "source_absent_items": 0
+            }
+          },
+          "linked_runs": 97,
+          "retention": {
+            "purged_captions": 0,
+            "purged_videos": 0,
+            "purged_youtube_matches": 0,
+            "execution": {
+              "expired_item_receipts": 0,
+              "expired_checkpoints": 0,
+              "http_requests": 0
+            },
+            "staging": {
+              "expired_items": 0,
+              "deleted_items": 0,
+              "purged_snapshots": 0,
+              "http_requests": 0
+            },
+            "links": {
+              "expired_matches": 0,
+              "expired_mentions": 0,
+              "expired_metrics": 0,
+              "http_requests": 0
+            }
+          },
+          "entity_changes_reprocessed": 0,
+          "foods_approved": 0,
+          "http_requests": 0
+        },
+        "http_requests": 0
+      },
+      "error": null
+    },
+    "isolate_again": {
+      "exit": 2,
+      "error": "isolation error: isolated_copy_exists"
+    },
+    "lineage_mismatches": {
+      "rss_runs": {},
+      "rss_items": {},
+      "rss_observations": {},
+      "youtube_videos": {},
+      "instagram_media": {},
+      "search_evidence": {}
+    },
+    "lineage": {
+      "rss_runs": {
+        "expected": 95,
+        "staged": 95,
+        "mismatches": {}
+      },
+      "rss_items": {
+        "expected": 370,
+        "staged": 370,
+        "mismatches": {}
+      },
+      "rss_observations": {
+        "expected": 900,
+        "run_items": 900,
+        "traffic_metrics": 900
+      },
+      "youtube_videos": {
+        "expected": 431,
+        "staged": 0,
+        "unstaged": {
+          "no_staging_path_for_origin_live_api": 431
+        },
+        "mismatches": {}
+      },
+      "instagram_media": {
+        "expected": 185,
+        "staged": 185,
+        "mismatches": {}
+      },
+      "search_evidence": {
+        "youtube_matches": 473,
+        "youtube_matches_of_staged_videos": 0,
+        "instagram_hashtag_media": 185,
+        "item_query_matches_by_ref": {
+          "instagram_hashtag": 185
+        }
+      }
+    },
+    "unclassified_tables": [],
+    "dispositions": {
+      "MIGRATED": 31,
+      "RUNTIME": 9,
+      "EXCLUDED": 24,
+      "EMBEDDED": 2,
+      "STAGED": 4,
+      "LEDGER": 3
+    },
+    "copy_after_prepare": {
+      "captions_past_window": 0,
+      "youtube_videos_past_expiry": 0,
+      "food_entities": 0,
+      "food_aliases": 0,
+      "origins": {
+        "legacy_unknown": 555
+      },
+      "application_id": 1297762643
+    }
+  },
+  "C": {
+    "target_migrate": {
+      "argv": "--target-migrate oracle",
+      "exit": 0,
+      "result": {
+        "version": 10,
+        "applied": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "created_objects": 107
+      },
+      "error": null
+    },
+    "target_status": {
+      "argv": "--target-status oracle",
+      "exit": 0,
+      "result": {
+        "version": 10
+      },
+      "error": null
+    },
+    "target_load": {
+      "argv": "--target-load oracle --isolated-database <isolated>/rehearsal.sqlite3",
+      "exit": 0,
+      "result": {
+        "batch_key": "B7_6c9e3c37fad90be264f2abbf",
+        "loaded_rows": 15671,
+        "excluded_rows": 0,
+        "rejected_rows": 0,
+        "tombstones": 0,
+        "dispositions": {},
+        "legacy_usage_rows": 0,
+        "legacy_usage_accounts": [
+          "instagram_graph/ig:17841400000000001",
+          "naver_datalab/local-default",
+          "youtube/local-default"
+        ],
+        "consistent": true,
+        "summary": {
+          "missing": 0,
+          "extra": 0,
+          "changed": 0,
+          "hash_mismatch_tables": [],
+          "null_mismatch_tables": []
+        },
+        "checks": {
+          "foreign_key_errors": 0,
+          "foreign_keys_not_enabled_validated": 0,
+          "unresolved_payload_refs": 0,
+          "blocked_policy_rows": 0,
+          "distinct_items_by_source": {
+            "google_trends_rss": 370,
+            "instagram_graph": 185
+          },
+          "legacy_unknown_items": 555,
+          "not_observed_metrics_with_null_value": 0,
+          "expired_rows_in_target": 0,
+          "expired_tombstones_in_target": 0,
+          "food_views_compared": 0
+        },
+        "http_requests": 0
+      },
+      "error": null
+    },
+    "readiness_before_transfer": {
+      "exit": 2,
+      "ready": false,
+      "blockers": [],
+      "sources": {
+        "instagram_graph": [
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ],
+        "youtube": [
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ],
+        "naver_datalab": [
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ],
+        "google_trends_rss": [
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ]
+      }
+    },
+    "readiness_legacy_scheduler_on": {
+      "exit": 2,
+      "ready": false,
+      "blockers": [],
+      "sources": {
+        "instagram_graph": [
+          "LEGACY_SCHEDULER_ENABLED",
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ],
+        "youtube": [
+          "LEGACY_SCHEDULER_ENABLED",
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ],
+        "naver_datalab": [
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ],
+        "google_trends_rss": [
+          "LEGACY_WRITER_OWNERSHIP_NOT_TRANSFERRED"
+        ]
+      }
+    },
+    "transfer": {
+      "google_trends_rss": {
+        "argv": "--backend oracle-test --writer-transfer google_trends_rss --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "usage_status": "EXCLUSIVE",
+          "cycle": 1,
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "instagram_graph": {
+        "argv": "--backend oracle-test --writer-transfer instagram_graph --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "usage_status": "EXCLUSIVE",
+          "cycle": 1,
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "youtube": {
+        "argv": "--backend oracle-test --writer-transfer youtube --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "youtube",
+          "account_scope": "local-default",
+          "usage_status": "EXCLUSIVE",
+          "cycle": 1,
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--backend oracle-test --writer-transfer naver_datalab --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "usage_status": "EXCLUSIVE",
+          "cycle": 1,
+          "http_requests": 0
+        },
+        "error": null
+      }
+    },
+    "transfer_again": {
+      "argv": "--backend oracle-test --writer-transfer youtube --execution-registry <registry>",
+      "exit": 0,
+      "result": {
+        "source_id": "youtube",
+        "account_scope": "local-default",
+        "usage_status": "EXCLUSIVE",
+        "cycle": 1,
+        "unchanged": true,
+        "http_requests": 0
+      },
+      "error": null
+    },
+    "status_after_transfer": {
+      "exit": 0,
+      "writers": {
+        "instagram_graph": "ORACLE",
+        "youtube": "ORACLE",
+        "naver_datalab": "ORACLE",
+        "google_trends_rss": "ORACLE"
+      },
+      "active_live_jobs": {
+        "instagram_graph": {},
+        "youtube": {},
+        "naver_datalab": {},
+        "google_trends_rss": {}
+      },
+      "live_leases": {
+        "instagram_graph": 0,
+        "youtube": 0,
+        "naver_datalab": 0,
+        "google_trends_rss": 0
+      },
+      "cycles": {
+        "instagram_graph": 1,
+        "youtube": 1,
+        "naver_datalab": 1,
+        "google_trends_rss": 1
+      },
+      "raw": {
+        "sources": {
+          "instagram_graph": {
+            "account_scope": "ig:17841400000000001",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:34.466684+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            }
+          },
+          "youtube": {
+            "account_scope": "local-default",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:36.616297+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            }
+          },
+          "naver_datalab": {
+            "account_scope": "local-default",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:38.726737+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            }
+          },
+          "google_trends_rss": {
+            "account_scope": "public-feed",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:32.330589+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            },
+            "unfinished_rss_runs": []
+          }
+        },
+        "storage": "oracle_test",
+        "checked_at": "2026-11-07T04:29:43.124504+00:00",
+        "http_requests": 0,
+        "database_writes": 0
+      }
+    },
+    "readiness_after_transfer": {
+      "exit": 0,
+      "ready": true,
+      "blockers": [],
+      "sources": {
+        "instagram_graph": [],
+        "youtube": [],
+        "naver_datalab": [],
+        "google_trends_rss": []
+      }
+    },
+    "known_rss_item_reobserved": true,
+    "pilot_round": {
+      "rss": {
+        "success": true,
+        "item_count": 3,
+        "new_count": 2,
+        "candidates": 2
+      },
+      "jobs_scheduled": {
+        "instagram_graph": 2,
+        "naver_datalab": 1,
+        "youtube": 3
+      },
+      "job_results": {
+        "instagram_graph:SUCCEEDED:None": 1,
+        "instagram_graph:RETRY_WAIT:budget": 1,
+        "naver_datalab:SUCCEEDED:None": 1,
+        "youtube:SUCCEEDED:None": 1,
+        "youtube:CANCELLED:WRITER_RELEASED": 2
+      },
+      "requests_by_source": {
+        "google_trends_rss": 1,
+        "instagram_graph": 3,
+        "youtube": 2,
+        "naver_datalab": 1,
+        "other": 0
+      },
+      "requests_total": 7,
+      "endpoints": {
+        "rss": 1,
+        "recently_searched_hashtags": 1,
+        "ig_hashtag_search": 1,
+        "recent_media": 1,
+        "search": 2,
+        "videos": 1
+      },
+      "second_tick": {
+        "results": {},
+        "requests_total": 7
+      },
+      "admin_status_counts": {
+        "SUCCEEDED": 3,
+        "RETRY_WAIT": 1,
+        "CANCELLED": 2
+      },
+      "recorded_requests": {
+        "requests_by_source": {
+          "google_trends_rss": 1,
+          "instagram_graph": 3,
+          "youtube": 2,
+          "naver_datalab": 1
+        },
+        "calls_by_status": {
+          "instagram_graph:SUCCEEDED": 3,
+          "naver_datalab:SUCCEEDED": 1,
+          "youtube:SUCCEEDED": 2
+        },
+        "origins": [
+          "live_api"
+        ]
+      },
+      "within_caps": true,
+      "drained": {
+        "release": {
+          "argv": "--backend oracle-test --writer-release youtube --execution-registry <registry>",
+          "exit": 2,
+          "result": {
+            "source_id": "youtube",
+            "account_scope": "local-default",
+            "status": "DRAINING",
+            "in_flight": {
+              "jobs": [
+                {
+                  "job_id": "JOB_f24231a7dd60457fa76dc3b09112d724",
+                  "lease_expires_at": "2026-11-07T04:31:51.878197+00:00"
+                }
+              ]
+            },
+            "http_requests": 0
+          },
+          "error": null
+        },
+        "transfer_while_draining": {
+          "argv": "--backend oracle-test --writer-transfer youtube --execution-registry <registry>",
+          "exit": 2,
+          "result": null,
+          "error": "이 수집원의 Writer 철회가 끝나지 않았습니다. --writer-release로 철회를 마친 뒤 이전하세요."
+        },
+        "handover_while_draining": {
+          "argv": "--writer-handover youtube --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+          "exit": 2,
+          "result": null,
+          "error": "Oracle Writer 철회를 먼저 끝내세요(ORACLE_WRITER_NOT_RELEASED)."
+        },
+        "resume_check_while_draining": {
+          "argv": "--legacy-resume-check youtube --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+          "exit": 2,
+          "result": {
+            "source_id": "youtube",
+            "account_scope": "local-default",
+            "ready": false,
+            "blockers": [
+              "ORACLE_WRITER_NOT_RELEASED",
+              "ORACLE_LIVE_JOBS_ACTIVE",
+              "ORACLE_USAGE_NOT_HANDED_OVER"
+            ],
+            "resume_not_before": "2026-11-07T08:00:00.000000+00:00",
+            "writer": "RELEASING",
+            "oracle_usage": {
+              "open": 2,
+              "not_in_sqlite": 2
+            },
+            "legacy_switch": "YOUTUBE_COLLECTION_ENABLED",
+            "checked_at": "2026-11-07T04:29:58.384854+00:00",
+            "http_requests": 0,
+            "database_writes": 0
+          },
+          "error": null
+        },
+        "status_while_draining": {
+          "exit": 0,
+          "writers": {
+            "instagram_graph": "ORACLE",
+            "youtube": "RELEASING",
+            "naver_datalab": "ORACLE",
+            "google_trends_rss": "ORACLE"
+          },
+          "active_live_jobs": {
+            "instagram_graph": {
+              "RETRY_WAIT": 1
+            },
+            "youtube": {
+              "RUNNING": 1,
+              "READY": 2
+            },
+            "naver_datalab": {},
+            "google_trends_rss": {}
+          },
+          "live_leases": {
+            "instagram_graph": 0,
+            "youtube": 1,
+            "naver_datalab": 0,
+            "google_trends_rss": 0
+          },
+          "cycles": {
+            "instagram_graph": 1,
+            "youtube": 1,
+            "naver_datalab": 1,
+            "google_trends_rss": 1
+          },
+          "raw": {
+            "sources": {
+              "instagram_graph": {
+                "account_scope": "ig:17841400000000001",
+                "writer": "ORACLE",
+                "cycle": 1,
+                "usage_status": "EXCLUSIVE",
+                "release_requested_at": null,
+                "events": [
+                  {
+                    "cycle": 1,
+                    "action": "TRANSFER",
+                    "occurred_at": "2026-11-07T04:29:34.466684+00:00",
+                    "approved_by": "rehearsal-operator"
+                  }
+                ],
+                "active_live_jobs": {
+                  "RETRY_WAIT": 1
+                },
+                "live_leases": 0,
+                "unfinished_calls": 0,
+                "open_usage": {
+                  "rows": 1,
+                  "by_quota_type": {
+                    "instagram.unique_tags": 1
+                  },
+                  "uncertain": 0,
+                  "open_until": "2026-11-14T04:29:51.256672+00:00"
+                }
+              },
+              "youtube": {
+                "account_scope": "local-default",
+                "writer": "RELEASING",
+                "cycle": 1,
+                "usage_status": "EXCLUSIVE",
+                "release_requested_at": "2026-11-07T04:29:53.947386+00:00",
+                "events": [
+                  {
+                    "cycle": 1,
+                    "action": "TRANSFER",
+                    "occurred_at": "2026-11-07T04:29:36.616297+00:00",
+                    "approved_by": "rehearsal-operator"
+                  },
+                  {
+                    "cycle": 1,
+                    "action": "RELEASE_REQUESTED",
+                    "occurred_at": "2026-11-07T04:29:53.947386+00:00",
+                    "approved_by": "rehearsal-operator"
+                  }
+                ],
+                "active_live_jobs": {
+                  "RUNNING": 1,
+                  "READY": 2
+                },
+                "live_leases": 1,
+                "unfinished_calls": 1,
+                "open_usage": {
+                  "rows": 2,
+                  "by_quota_type": {
+                    "youtube.search_calls": 1,
+                    "youtube.video_calls": 1
+                  },
+                  "uncertain": 1,
+                  "open_until": "2026-11-07T08:00:00.000000+00:00"
+                }
+              },
+              "naver_datalab": {
+                "account_scope": "local-default",
+                "writer": "ORACLE",
+                "cycle": 1,
+                "usage_status": "EXCLUSIVE",
+                "release_requested_at": null,
+                "events": [
+                  {
+                    "cycle": 1,
+                    "action": "TRANSFER",
+                    "occurred_at": "2026-11-07T04:29:38.726737+00:00",
+                    "approved_by": "rehearsal-operator"
+                  }
+                ],
+                "active_live_jobs": {},
+                "live_leases": 0,
+                "unfinished_calls": 0,
+                "open_usage": {
+                  "rows": 1,
+                  "by_quota_type": {
+                    "naver.calls": 1
+                  },
+                  "uncertain": 0,
+                  "open_until": "2026-11-07T15:00:00.000000+00:00"
+                }
+              },
+              "google_trends_rss": {
+                "account_scope": "public-feed",
+                "writer": "ORACLE",
+                "cycle": 1,
+                "usage_status": "EXCLUSIVE",
+                "release_requested_at": null,
+                "events": [
+                  {
+                    "cycle": 1,
+                    "action": "TRANSFER",
+                    "occurred_at": "2026-11-07T04:29:32.330589+00:00",
+                    "approved_by": "rehearsal-operator"
+                  }
+                ],
+                "active_live_jobs": {},
+                "live_leases": 0,
+                "unfinished_calls": 0,
+                "open_usage": {
+                  "rows": 0,
+                  "by_quota_type": {},
+                  "uncertain": 0,
+                  "open_until": null
+                },
+                "unfinished_rss_runs": []
+              }
+            },
+            "storage": "oracle_test",
+            "checked_at": "2026-11-07T04:30:00.476222+00:00",
+            "http_requests": 0,
+            "database_writes": 0
+          }
+        }
+      },
+      "food_id_assigned": true
+    },
+    "release_youtube_after_round": {
+      "argv": "--backend oracle-test --writer-release youtube --execution-registry <registry>",
+      "exit": 0,
+      "result": {
+        "source_id": "youtube",
+        "account_scope": "local-default",
+        "status": "RELEASED",
+        "cycle": 1,
+        "unchanged": false,
+        "closed_jobs": 0,
+        "interrupted_calls": 0,
+        "open_usage": {
+          "by_quota_type": {
+            "youtube.search_calls": 1,
+            "youtube.video_calls": 1
+          },
+          "open_until": "2026-11-07T08:00:00.000000+00:00",
+          "rows": 2,
+          "uncertain": 0
+        },
+        "usage_handover": "REQUIRED",
+        "http_requests": 0
+      },
+      "error": null
+    },
+    "status_after_youtube_release": {
+      "exit": 0,
+      "writers": {
+        "instagram_graph": "ORACLE",
+        "youtube": "RELEASED",
+        "naver_datalab": "ORACLE",
+        "google_trends_rss": "ORACLE"
+      },
+      "active_live_jobs": {
+        "instagram_graph": {
+          "RETRY_WAIT": 1
+        },
+        "youtube": {},
+        "naver_datalab": {},
+        "google_trends_rss": {}
+      },
+      "live_leases": {
+        "instagram_graph": 0,
+        "youtube": 0,
+        "naver_datalab": 0,
+        "google_trends_rss": 0
+      },
+      "cycles": {
+        "instagram_graph": 1,
+        "youtube": 1,
+        "naver_datalab": 1,
+        "google_trends_rss": 1
+      },
+      "raw": {
+        "sources": {
+          "instagram_graph": {
+            "account_scope": "ig:17841400000000001",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:34.466684+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {
+              "RETRY_WAIT": 1
+            },
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 1,
+              "by_quota_type": {
+                "instagram.unique_tags": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-14T04:29:51.256672+00:00"
+            }
+          },
+          "youtube": {
+            "account_scope": "local-default",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:29:53.947386+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:36.616297+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:29:53.947386+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:05.834666+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 2,
+              "by_quota_type": {
+                "youtube.search_calls": 1,
+                "youtube.video_calls": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-07T08:00:00.000000+00:00"
+            }
+          },
+          "naver_datalab": {
+            "account_scope": "local-default",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:38.726737+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 1,
+              "by_quota_type": {
+                "naver.calls": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-07T15:00:00.000000+00:00"
+            }
+          },
+          "google_trends_rss": {
+            "account_scope": "public-feed",
+            "writer": "ORACLE",
+            "cycle": 1,
+            "usage_status": "EXCLUSIVE",
+            "release_requested_at": null,
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:32.330589+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            },
+            "unfinished_rss_runs": []
+          }
+        },
+        "storage": "oracle_test",
+        "checked_at": "2026-11-07T04:30:05.864396+00:00",
+        "http_requests": 0,
+        "database_writes": 0
+      }
+    },
+    "release": {
+      "instagram_graph": {
+        "argv": "--backend oracle-test --writer-release instagram_graph --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": false,
+          "closed_jobs": 1,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {
+              "instagram.unique_tags": 1
+            },
+            "open_until": "2026-11-14T04:29:51.256672+00:00",
+            "rows": 1,
+            "uncertain": 0
+          },
+          "usage_handover": "REQUIRED",
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--backend oracle-test --writer-release naver_datalab --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": false,
+          "closed_jobs": 0,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {
+              "naver.calls": 1
+            },
+            "open_until": "2026-11-07T15:00:00.000000+00:00",
+            "rows": 1,
+            "uncertain": 0
+          },
+          "usage_handover": "REQUIRED",
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "google_trends_rss": {
+        "argv": "--backend oracle-test --writer-release google_trends_rss --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": false,
+          "closed_jobs": 0,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {},
+            "open_until": null,
+            "rows": 0,
+            "uncertain": 0
+          },
+          "usage_handover": "NOT_NEEDED",
+          "http_requests": 0
+        },
+        "error": null
+      }
+    },
+    "release_again": {
+      "google_trends_rss": {
+        "argv": "--backend oracle-test --writer-release google_trends_rss --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": true,
+          "closed_jobs": 0,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {},
+            "open_until": null,
+            "rows": 0,
+            "uncertain": 0
+          },
+          "usage_handover": "NOT_NEEDED",
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "instagram_graph": {
+        "argv": "--backend oracle-test --writer-release instagram_graph --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": true,
+          "closed_jobs": 1,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {
+              "instagram.unique_tags": 1
+            },
+            "open_until": "2026-11-14T04:29:51.256672+00:00",
+            "rows": 1,
+            "uncertain": 0
+          },
+          "usage_handover": "REQUIRED",
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "youtube": {
+        "argv": "--backend oracle-test --writer-release youtube --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "youtube",
+          "account_scope": "local-default",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": true,
+          "closed_jobs": 0,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {
+              "youtube.search_calls": 1,
+              "youtube.video_calls": 1
+            },
+            "open_until": "2026-11-07T08:00:00.000000+00:00",
+            "rows": 2,
+            "uncertain": 0
+          },
+          "usage_handover": "REQUIRED",
+          "http_requests": 0
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--backend oracle-test --writer-release naver_datalab --execution-registry <registry>",
+        "exit": 0,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "status": "RELEASED",
+          "cycle": 1,
+          "unchanged": true,
+          "closed_jobs": 0,
+          "interrupted_calls": 0,
+          "open_usage": {
+            "by_quota_type": {
+              "naver.calls": 1
+            },
+            "open_until": "2026-11-07T15:00:00.000000+00:00",
+            "rows": 1,
+            "uncertain": 0
+          },
+          "usage_handover": "REQUIRED",
+          "http_requests": 0
+        },
+        "error": null
+      }
+    },
+    "status_after_release": {
+      "exit": 0,
+      "writers": {
+        "instagram_graph": "RELEASED",
+        "youtube": "RELEASED",
+        "naver_datalab": "RELEASED",
+        "google_trends_rss": "RELEASED"
+      },
+      "active_live_jobs": {
+        "instagram_graph": {},
+        "youtube": {},
+        "naver_datalab": {},
+        "google_trends_rss": {}
+      },
+      "live_leases": {
+        "instagram_graph": 0,
+        "youtube": 0,
+        "naver_datalab": 0,
+        "google_trends_rss": 0
+      },
+      "cycles": {
+        "instagram_graph": 1,
+        "youtube": 1,
+        "naver_datalab": 1,
+        "google_trends_rss": 1
+      },
+      "raw": {
+        "sources": {
+          "instagram_graph": {
+            "account_scope": "ig:17841400000000001",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:30:10.322053+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:34.466684+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:30:10.322053+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:10.345328+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 1,
+              "by_quota_type": {
+                "instagram.unique_tags": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-14T04:29:51.256672+00:00"
+            }
+          },
+          "youtube": {
+            "account_scope": "local-default",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:29:53.947386+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:36.616297+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:29:53.947386+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:05.834666+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 2,
+              "by_quota_type": {
+                "youtube.search_calls": 1,
+                "youtube.video_calls": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-07T08:00:00.000000+00:00"
+            }
+          },
+          "naver_datalab": {
+            "account_scope": "local-default",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:30:12.460174+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:38.726737+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:30:12.460174+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:12.482349+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 1,
+              "by_quota_type": {
+                "naver.calls": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-07T15:00:00.000000+00:00"
+            }
+          },
+          "google_trends_rss": {
+            "account_scope": "public-feed",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:30:14.607958+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:32.330589+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:30:14.607958+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:14.631747+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            },
+            "unfinished_rss_runs": []
+          }
+        },
+        "storage": "oracle_test",
+        "checked_at": "2026-11-07T04:30:23.492078+00:00",
+        "http_requests": 0,
+        "database_writes": 0
+      }
+    },
+    "resume_before_handover": {
+      "google_trends_rss": {
+        "argv": "--legacy-resume-check google_trends_rss --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 2,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "ready": false,
+          "blockers": [
+            "ORACLE_RSS_NOT_RECOVERED"
+          ],
+          "resume_not_before": null,
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 0,
+            "not_in_sqlite": 0
+          },
+          "legacy_switch": "sqlite_server_rss_scheduler",
+          "checked_at": "2026-11-07T04:30:25.604723+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      },
+      "instagram_graph": {
+        "argv": "--legacy-resume-check instagram_graph --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 2,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "ready": false,
+          "blockers": [
+            "ORACLE_USAGE_NOT_HANDED_OVER"
+          ],
+          "resume_not_before": "2026-11-14T04:29:51.256672+00:00",
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 1,
+            "not_in_sqlite": 1
+          },
+          "legacy_switch": "INSTAGRAM_COLLECTION_ENABLED",
+          "checked_at": "2026-11-07T04:30:27.701523+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      },
+      "youtube": {
+        "argv": "--legacy-resume-check youtube --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 2,
+        "result": {
+          "source_id": "youtube",
+          "account_scope": "local-default",
+          "ready": false,
+          "blockers": [
+            "ORACLE_USAGE_NOT_HANDED_OVER"
+          ],
+          "resume_not_before": "2026-11-07T08:00:00.000000+00:00",
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 2,
+            "not_in_sqlite": 2
+          },
+          "legacy_switch": "YOUTUBE_COLLECTION_ENABLED",
+          "checked_at": "2026-11-07T04:30:29.840861+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--legacy-resume-check naver_datalab --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 2,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "ready": false,
+          "blockers": [
+            "ORACLE_USAGE_NOT_HANDED_OVER"
+          ],
+          "resume_not_before": "2026-11-07T15:00:00.000000+00:00",
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 1,
+            "not_in_sqlite": 1
+          },
+          "legacy_switch": "NAVER_DATALAB_ENABLED",
+          "checked_at": "2026-11-07T04:30:31.962515+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      }
+    },
+    "handover": {
+      "google_trends_rss": {
+        "argv": "--writer-handover google_trends_rss --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 0,
+          "already_present": 0,
+          "open_usage": {
+            "rows": 0,
+            "by_quota_type": {},
+            "uncertain": 0,
+            "open_until": null
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      },
+      "instagram_graph": {
+        "argv": "--writer-handover instagram_graph --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 1,
+          "already_present": 0,
+          "open_usage": {
+            "rows": 1,
+            "by_quota_type": {
+              "instagram.unique_tags": 1
+            },
+            "uncertain": 0,
+            "open_until": "2026-11-14T04:29:51.256672+00:00"
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      },
+      "youtube": {
+        "argv": "--writer-handover youtube --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "youtube",
+          "account_scope": "local-default",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 2,
+          "already_present": 0,
+          "open_usage": {
+            "rows": 2,
+            "by_quota_type": {
+              "youtube.search_calls": 1,
+              "youtube.video_calls": 1
+            },
+            "uncertain": 0,
+            "open_until": "2026-11-07T08:00:00.000000+00:00"
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--writer-handover naver_datalab --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 1,
+          "already_present": 0,
+          "open_usage": {
+            "rows": 1,
+            "by_quota_type": {
+              "naver.calls": 1
+            },
+            "uncertain": 0,
+            "open_until": "2026-11-07T15:00:00.000000+00:00"
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      }
+    },
+    "handover_again": {
+      "google_trends_rss": {
+        "argv": "--writer-handover google_trends_rss --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 0,
+          "already_present": 0,
+          "open_usage": {
+            "rows": 0,
+            "by_quota_type": {},
+            "uncertain": 0,
+            "open_until": null
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      },
+      "instagram_graph": {
+        "argv": "--writer-handover instagram_graph --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 0,
+          "already_present": 1,
+          "open_usage": {
+            "rows": 1,
+            "by_quota_type": {
+              "instagram.unique_tags": 1
+            },
+            "uncertain": 0,
+            "open_until": "2026-11-14T04:29:51.256672+00:00"
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      },
+      "youtube": {
+        "argv": "--writer-handover youtube --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "youtube",
+          "account_scope": "local-default",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 0,
+          "already_present": 2,
+          "open_usage": {
+            "rows": 2,
+            "by_quota_type": {
+              "youtube.search_calls": 1,
+              "youtube.video_calls": 1
+            },
+            "uncertain": 0,
+            "open_until": "2026-11-07T08:00:00.000000+00:00"
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--writer-handover naver_datalab --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "destination": "rehearsal.sqlite3",
+          "http_requests": 0,
+          "handed_over": 0,
+          "already_present": 1,
+          "open_usage": {
+            "rows": 1,
+            "by_quota_type": {
+              "naver.calls": 1
+            },
+            "uncertain": 0,
+            "open_until": "2026-11-07T15:00:00.000000+00:00"
+          },
+          "legacy_missing": 0,
+          "legacy_writes_during_oracle_period": 0,
+          "resume_not_before": null
+        },
+        "error": null
+      }
+    },
+    "recovery_plan": {
+      "argv": "--recovery plan --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+      "exit": 0,
+      "result": {
+        "tables": {
+          "rss_items": {
+            "target": 372,
+            "target_only": 2,
+            "same": 369,
+            "mutable_updates": 1,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "rss_runs": {
+            "target": 1,
+            "target_only": 1,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 95
+          },
+          "rss_observations": {
+            "target": 3,
+            "target_only": 3,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 900
+          },
+          "rss_classifications": {
+            "target": 372,
+            "target_only": 2,
+            "same": 369,
+            "mutable_updates": 1,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "rss_classification_history": {
+            "target": 251,
+            "target_only": 0,
+            "same": 251,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_commands": {
+            "target": 4,
+            "target_only": 4,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_entities": {
+            "target": 1,
+            "target_only": 1,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_aliases": {
+            "target": 3,
+            "target_only": 3,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_relations": {
+            "target": 0,
+            "target_only": 0,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_candidates": {
+            "target": 2,
+            "target_only": 2,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_events": {
+            "target": 9,
+            "target_only": 9,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "tracking_targets": {
+            "target": 3,
+            "target_only": 3,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "tracking_commands": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "tracking_events": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "planner_queries": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "planner_plans": {
+            "target": 12,
+            "target_only": 12,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "planner_query_targets": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "planner_plan_targets": {
+            "target": 12,
+            "target_only": 12,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "planner_commands": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "quota_reservations": {
+            "target": 3,
+            "target_only": 3,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "quota_charges": {
+            "target": 7,
+            "target_only": 7,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_jobs": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_runs": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_calls": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_outbox": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_results": {
+            "target": 3,
+            "target_only": 3,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_mappings": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_leases": {
+            "target": 6,
+            "target_only": 6,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_checkpoints": {
+            "target": 4,
+            "target_only": 4,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_item_receipts": {
+            "target": 2,
+            "target_only": 2,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "execution_blocks": {
+            "target": 0,
+            "target_only": 0,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "tracking_slots": {
+            "target": 3,
+            "target_only": 3,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "source_contents": {
+            "target": 618,
+            "target_only": 2,
+            "same": 616,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "ingest_runs": {
+            "target": 103,
+            "target_only": 6,
+            "same": 97,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "source_items": {
+            "target": 559,
+            "target_only": 4,
+            "same": 554,
+            "mutable_updates": 1,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "item_snapshots": {
+            "target": 844,
+            "target_only": 4,
+            "same": 840,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "run_items": {
+            "target": 1090,
+            "target_only": 5,
+            "same": 1085,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "quality_results": {
+            "target": 10465,
+            "target_only": 63,
+            "same": 10402,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "item_query_matches": {
+            "target": 187,
+            "target_only": 2,
+            "same": 185,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "food_mentions": {
+            "target": 2,
+            "target_only": 2,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "metric_observations": {
+            "target": 904,
+            "target_only": 4,
+            "same": 900,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "entity_change_effects": {
+            "target": 0,
+            "target_only": 0,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          },
+          "aggregate_invalidations": {
+            "target": 0,
+            "target_only": 0,
+            "same": 0,
+            "mutable_updates": 0,
+            "conflicts": 0,
+            "sqlite_only": 0
+          }
+        },
+        "conflicts": {},
+        "losses": {
+          "tracking_slots": {
+            "rows": 3,
+            "reason": "slot lifecycle (status, claim/completion times, cancellation reason, plan and job) has no SQLite column"
+          },
+          "instagram_caption_tags": {
+            "rows": 1,
+            "reason": "original hashtag spellings: the target keeps normalized names only"
+          },
+          "instagram_caption_captured_at": {
+            "rows": 1,
+            "reason": "derived from the caption window end, so the expiry instant is unchanged"
+          },
+          "youtube_payload_text": {
+            "rows": 1,
+            "reason": "payload re-serialized canonically; its original SHA-256 stays in item_snapshots.payload_hash"
+          },
+          "rss_raw_response": {
+            "rows": 1,
+            "reason": "the raw RSS feed body is not kept on the target: recovered runs carry raw_response NULL"
+          }
+        },
+        "not_recovered": {
+          "runtime_ownership": {
+            "rows": 1,
+            "reason": "write ownership of the target itself (bookkeeping without a SQLite counterpart)"
+          },
+          "runtime_participants": {
+            "rows": 27,
+            "reason": "process leases of the target writers (bookkeeping without a SQLite counterpart)"
+          },
+          "quota_usage_ledger": {
+            "rows": 0,
+            "reason": "a copy of SQLite's own legacy call tables; the Oracle period's usage returns as quota_reservations/quota_charges"
+          },
+          "quota_accounts": {
+            "rows": 4,
+            "reason": "usage verification stamps of the Oracle runtime (no SQLite counterpart)"
+          },
+          "writer_transfer_events": {
+            "rows": 15,
+            "reason": "writer transfer and release history of the target; the usage itself goes to SQLite by usage_handover"
+          },
+          "legacy_key_map": {
+            "rows": 991,
+            "reason": "target-only load bookkeeping"
+          },
+          "migration_batches": {
+            "rows": 29,
+            "reason": "target-only load bookkeeping"
+          },
+          "migration_rejections": {
+            "rows": 0,
+            "reason": "target-only load bookkeeping"
+          },
+          "shadow_applied": {
+            "rows": 0,
+            "reason": "target-only Shadow bookkeeping"
+          }
+        },
+        "contents_not_recovered": {},
+        "summary": {
+          "target_only": 234,
+          "mutable_updates": 3,
+          "conflicts": 0,
+          "sqlite_only": 995
+        },
+        "preconditions": {
+          "mode": "IDLE",
+          "runtime_jobs_in_flight": 0,
+          "ready": true,
+          "reasons": []
+        },
+        "baseline": {
+          "fingerprint": "830f67b60fcefe34b62e82e7414334ae05313459de1454c64841e561e6be24aa",
+          "wal_empty": true,
+          "matches_completed_load": false,
+          "matches_recorded_handover": true,
+          "resumes_recovery": false,
+          "verified": true
+        }
+      },
+      "error": null
+    },
+    "recovery_apply": {
+      "argv": "--recovery apply --recovery-target oracle --apply-updates --isolated-database <isolated>/rehearsal.sqlite3",
+      "exit": 0,
+      "result": {
+        "preconditions": {
+          "mode": "IDLE",
+          "runtime_jobs_in_flight": 0,
+          "ready": true,
+          "reasons": []
+        },
+        "baseline": {
+          "fingerprint": "830f67b60fcefe34b62e82e7414334ae05313459de1454c64841e561e6be24aa",
+          "wal_empty": true,
+          "matches_completed_load": false,
+          "matches_recorded_handover": true,
+          "resumes_recovery": false,
+          "verified": true
+        },
+        "updates_requested": true,
+        "updates_applied": true,
+        "writes": {
+          "inserted": 232,
+          "content_rows": 2,
+          "updated": 3,
+          "ignored": 0
+        },
+        "converged": true,
+        "remaining": {
+          "target_only": 0,
+          "mutable_updates": 0,
+          "conflicts": 0,
+          "sqlite_only": 995
+        },
+        "losses": {},
+        "conflicts": {}
+      },
+      "error": null
+    },
+    "recovery_again": {
+      "argv": "--recovery apply --recovery-target oracle --apply-updates --isolated-database <isolated>/rehearsal.sqlite3",
+      "exit": 0,
+      "result": {
+        "preconditions": {
+          "mode": "IDLE",
+          "runtime_jobs_in_flight": 0,
+          "ready": true,
+          "reasons": []
+        },
+        "baseline": {
+          "fingerprint": "4e9f5000b547c54055722b82296588e767593da0c5f305eb5e601344eba25898",
+          "wal_empty": true,
+          "matches_completed_load": false,
+          "matches_recorded_handover": false,
+          "resumes_recovery": false,
+          "verified": false
+        },
+        "updates_requested": true,
+        "updates_applied": false,
+        "writes": {
+          "inserted": 0,
+          "content_rows": 0,
+          "updated": 0,
+          "ignored": 0
+        },
+        "converged": true,
+        "remaining": {
+          "target_only": 0,
+          "mutable_updates": 0,
+          "conflicts": 0,
+          "sqlite_only": 995
+        },
+        "losses": {},
+        "conflicts": {}
+      },
+      "error": null
+    },
+    "legacy_budgets": {
+      "youtube_search": "refused:budget",
+      "naver_daily_requests": 1,
+      "instagram_local_unique_7d": 1,
+      "instagram_new_tag": "refused:budget"
+    },
+    "resume_check": {
+      "google_trends_rss": {
+        "argv": "--legacy-resume-check google_trends_rss --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "google_trends_rss",
+          "account_scope": "public-feed",
+          "ready": true,
+          "blockers": [],
+          "resume_not_before": null,
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 0,
+            "not_in_sqlite": 0
+          },
+          "legacy_switch": "sqlite_server_rss_scheduler",
+          "checked_at": "2026-11-07T04:31:24.428323+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      },
+      "instagram_graph": {
+        "argv": "--legacy-resume-check instagram_graph --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "instagram_graph",
+          "account_scope": "ig:17841400000000001",
+          "ready": true,
+          "blockers": [],
+          "resume_not_before": null,
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 1,
+            "not_in_sqlite": 0
+          },
+          "legacy_switch": "INSTAGRAM_COLLECTION_ENABLED",
+          "checked_at": "2026-11-07T04:31:26.520914+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      },
+      "youtube": {
+        "argv": "--legacy-resume-check youtube --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "youtube",
+          "account_scope": "local-default",
+          "ready": true,
+          "blockers": [],
+          "resume_not_before": null,
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 2,
+            "not_in_sqlite": 0
+          },
+          "legacy_switch": "YOUTUBE_COLLECTION_ENABLED",
+          "checked_at": "2026-11-07T04:31:28.639599+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      },
+      "naver_datalab": {
+        "argv": "--legacy-resume-check naver_datalab --recovery-target oracle --isolated-database <isolated>/rehearsal.sqlite3",
+        "exit": 0,
+        "result": {
+          "source_id": "naver_datalab",
+          "account_scope": "local-default",
+          "ready": true,
+          "blockers": [],
+          "resume_not_before": null,
+          "writer": "RELEASED",
+          "oracle_usage": {
+            "open": 1,
+            "not_in_sqlite": 0
+          },
+          "legacy_switch": "NAVER_DATALAB_ENABLED",
+          "checked_at": "2026-11-07T04:31:30.769782+00:00",
+          "http_requests": 0,
+          "database_writes": 0
+        },
+        "error": null
+      }
+    },
+    "status_final": {
+      "exit": 0,
+      "writers": {
+        "instagram_graph": "RELEASED",
+        "youtube": "RELEASED",
+        "naver_datalab": "RELEASED",
+        "google_trends_rss": "RELEASED"
+      },
+      "active_live_jobs": {
+        "instagram_graph": {},
+        "youtube": {},
+        "naver_datalab": {},
+        "google_trends_rss": {}
+      },
+      "live_leases": {
+        "instagram_graph": 0,
+        "youtube": 0,
+        "naver_datalab": 0,
+        "google_trends_rss": 0
+      },
+      "cycles": {
+        "instagram_graph": 1,
+        "youtube": 1,
+        "naver_datalab": 1,
+        "google_trends_rss": 1
+      },
+      "raw": {
+        "sources": {
+          "instagram_graph": {
+            "account_scope": "ig:17841400000000001",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:30:10.322053+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:34.466684+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:30:10.322053+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:10.345328+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "USAGE_HANDOVER",
+                "occurred_at": "2026-11-07T04:30:36.200659+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 1,
+              "by_quota_type": {
+                "instagram.unique_tags": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-14T04:29:51.256672+00:00"
+            }
+          },
+          "youtube": {
+            "account_scope": "local-default",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:29:53.947386+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:36.616297+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:29:53.947386+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:05.834666+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "USAGE_HANDOVER",
+                "occurred_at": "2026-11-07T04:30:38.375543+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 2,
+              "by_quota_type": {
+                "youtube.search_calls": 1,
+                "youtube.video_calls": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-07T08:00:00.000000+00:00"
+            }
+          },
+          "naver_datalab": {
+            "account_scope": "local-default",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:30:12.460174+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:38.726737+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:30:12.460174+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:12.482349+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "USAGE_HANDOVER",
+                "occurred_at": "2026-11-07T04:30:40.576889+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 1,
+              "by_quota_type": {
+                "naver.calls": 1
+              },
+              "uncertain": 0,
+              "open_until": "2026-11-07T15:00:00.000000+00:00"
+            }
+          },
+          "google_trends_rss": {
+            "account_scope": "public-feed",
+            "writer": "RELEASED",
+            "cycle": 1,
+            "usage_status": "IMPORTED",
+            "release_requested_at": "2026-11-07T04:30:14.607958+00:00",
+            "events": [
+              {
+                "cycle": 1,
+                "action": "TRANSFER",
+                "occurred_at": "2026-11-07T04:29:32.330589+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASE_REQUESTED",
+                "occurred_at": "2026-11-07T04:30:14.607958+00:00",
+                "approved_by": "rehearsal-operator"
+              },
+              {
+                "cycle": 1,
+                "action": "RELEASED",
+                "occurred_at": "2026-11-07T04:30:14.631747+00:00",
+                "approved_by": "rehearsal-operator"
+              }
+            ],
+            "active_live_jobs": {},
+            "live_leases": 0,
+            "unfinished_calls": 0,
+            "open_usage": {
+              "rows": 0,
+              "by_quota_type": {},
+              "uncertain": 0,
+              "open_until": null
+            },
+            "unfinished_rss_runs": []
+          }
+        },
+        "storage": "oracle_test",
+        "checked_at": "2026-11-07T04:31:32.881382+00:00",
+        "http_requests": 0,
+        "database_writes": 0
+      }
+    },
+    "copy_final": {
+      "schema_version": 11,
+      "integrity": "ok",
+      "foreign_key_errors": 0
+    },
+    "target_integrity": {
+      "foreign_key_errors": 0,
+      "unresolved_payload_refs": 0,
+      "blocked_policy_rows": 0,
+      "expired_rows_in_target": 0
+    }
+  },
+  "target_objects_after_reset": 0,
+  "temporary_copy_deleted": true,
+  "sqlite_connections": {
+    "A_isolate": {
+      "operational_read_only": 5,
+      "isolated_copy": 311
+    },
+    "A_checks": {
+      "isolated_copy": 3
+    },
+    "C_target_load": {
+      "isolated_copy": 5
+    },
+    "setup": {
+      "isolated_copy": 31
+    },
+    "C_operator_commands_while_draining": {
+      "isolated_copy": 5
+    },
+    "C_handover": {
+      "isolated_copy": 11
+    },
+    "C_recovery": {
+      "isolated_copy": 49
+    },
+    "C_legacy_budgets": {
+      "isolated_copy": 15
+    },
+    "C_resume_check": {
+      "isolated_copy": 12
+    }
+  },
+  "operational_unchanged": {
+    "sha256": true,
+    "bytes": true,
+    "modified_at": true,
+    "wal_bytes": true,
+    "schema_version": true,
+    "integrity": true,
+    "tables": true
+  },
+  "guard_attempts": [],
+  "seconds": 178.595,
+  "checks": {
+    "A_source_unchanged": true,
+    "A_copy_v11_integrity_fk": true,
+    "A_original_rows_and_columns_preserved": true,
+    "A_no_lineage_mismatch": true,
+    "A_no_expired_content_or_new_food": true,
+    "A_rerun_refused_existing_copy": true,
+    "C_load_consistent": true,
+    "C_not_ready_before_transfer": true,
+    "C_legacy_scheduler_blocks_live": true,
+    "C_transferred_and_ready": true,
+    "C_pilot_within_caps": true,
+    "C_requests_recorded": true,
+    "C_draining_while_in_flight": true,
+    "C_other_writers_kept": true,
+    "C_released": true,
+    "C_no_live_job_or_lease_left": true,
+    "C_resume_refused_before_handover": true,
+    "C_handover_rerun_changes_nothing": true,
+    "C_recovery_applied_every_update": true,
+    "C_recovery_converged_rerun_writes_nothing": true,
+    "C_legacy_budget_code_counts_handover": true,
+    "C_resume_ready_after_handover_and_recovery": true,
+    "C_release_rerun_unchanged": true,
+    "D_live_round_opened_no_sqlite": true,
+    "G_no_external_or_write_attempt": true,
+    "G_operational_unchanged": true,
+    "G_temporary_copy_deleted": true,
+    "G_target_reset": true
+  },
+  "passed": true
+}
