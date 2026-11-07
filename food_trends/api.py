@@ -1,4 +1,5 @@
 import hmac
+import io
 import json
 import os
 import secrets
@@ -143,7 +144,18 @@ def make_server(service, host='127.0.0.1', port=8000, instagram=None, naver=None
             except Exception:
                 self.send(500, {'error': '저장 데이터 조회 실패. 서버 로그를 확인하세요.'})
 
+        def _read_body(self):
+            """Read the request body before any answer (bounded; the handlers still check their own sizes). An answer sent over
+            unread request bytes makes Windows reset the connection, so the client could lose even a refusal (WinError 10053)."""
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+            except ValueError:
+                return
+            if 0 < size <= 1 << 20:
+                self.rfile = io.BytesIO(self.rfile.read(size))  # HTTP/1.0: one request per connection
+
         def do_POST(self):
+            self._read_body()
             if self.path != '/api/collect' and not self.path.startswith(('/api/instagram/', '/api/naver/', '/api/youtube/', '/api/foods/', '/api/tracking/', '/api/planner/', '/api/execution/')):
                 return self.send(404, {'error': '경로 없음'})
             if not self.local_host():

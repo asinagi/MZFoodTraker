@@ -219,6 +219,11 @@ class AdminOracleStandInTests(unittest.TestCase):
         self.assertEqual(opened, [])
         self.assertEqual((self.repo.count('food_entities'), self.repo.count('rss_runs'), self.repo.count('execution_jobs')), (4, 1, len(jobs)))
 
+    def test_a_refusal_reaches_the_client_even_over_a_large_body(self):
+        """The server reads a POST body before answering: an answer sent over unread request bytes made Windows reset the
+        connection, so a refusal could be lost (WinError 10053, the intermittent error of the next test)."""
+        self.assertEqual([self.http.call('POST', '/api/foods/submit', token=None, raw=b'x' * 600000)[0] for _ in range(10)], [401] * 10)
+
     def test_state_changes_stay_guarded_and_errors_are_reported(self):
         submit = dict(request_key=uuid.uuid4().hex, name='마라탕', aliases=[])
         before = self.repo.count('food_commands')
