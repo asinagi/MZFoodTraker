@@ -63,22 +63,29 @@ def target_repository(dialect, sqlite_path, database_path, environ=None):
 
 
 def target_load(repository, database_path):
-    """B7 load of the configured SQLite file (opened read-only) into a migrated target, legacy usage import, reconciliation."""
+    """B7 load of the configured SQLite file (opened read-only) into a migrated target, legacy usage import, reconciliation.
+    The import also covers the configured Instagram account: its usage rows exist only inside the 7-day window, so an account
+    whose last legacy search is older would otherwise stay unknown and its writer could never be transferred."""
+    from .oracle_live import account_scope
     from .quota_ledger import import_legacy_usage
     from .storage import Storage
     from .target_migration import migrate, reconcile
     from .target_schema import TARGET_SCHEMA_VERSION
     if repository.schema_version() != TARGET_SCHEMA_VERSION:
         raise ValueError('대상 스키마가 준비되지 않았습니다. --target-migrate를 먼저 실행하세요.')
+    try:
+        scopes = [('instagram_graph', account_scope('instagram_graph'))]
+    except (ValueError, OverflowError):  # a malformed Instagram setting: the live readiness check refuses that account anyway
+        scopes = []
     load = migrate(database_path, repository)
-    usage = import_legacy_usage(database_path, repository)
+    usage = import_legacy_usage(database_path, repository, scopes=scopes)
     check = reconcile(database_path, repository, source_storage=Storage(database_path))
     return {'batch_key': load['batch_key'], 'loaded_rows': sum(t['loaded_rows'] for t in load['tables'].values()),
             'excluded_rows': sum(t['excluded_rows'] for t in load['tables'].values()),
             'rejected_rows': sum(t['rejected_rows'] for t in load['tables'].values()),
             'tombstones': sum(t['tombstones'] for t in load['tables'].values()),
             'dispositions': {t: v['dispositions'] for t, v in load['tables'].items() if v['dispositions']},
-            'legacy_usage_rows': usage['rows'], 'consistent': check['consistent'], 'summary': check['summary'],
+            'legacy_usage_rows': usage['rows'], 'legacy_usage_accounts': usage['scopes'], 'consistent': check['consistent'], 'summary': check['summary'],
             'checks': {k: v for k, v in check['checks'].items() if k != 'food_view_mismatches'}, 'http_requests': 0}
 
 

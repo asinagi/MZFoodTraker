@@ -9,8 +9,9 @@ restored backup or the frozen pre-cut-over file), so the SQLite system can resum
 - Compares by the keys both stores share (FOOD_ID, alias, candidate, event, target and slot ids; ITEM_/SNAP_/INGEST_/
   METRIC_/MATCH_ keys, mention keys, plan and query ids, request keys). Target-only rows are inserted parent-first. A
   row already in SQLite is never overwritten unless its difference is confined to columns the target specification
-  declares mutable, the destination is still the file a completed B7 load read (or the run resumes a recovery that
-  started from such a file), and the operator asked for updates. Every other difference is a reported conflict,
+  declares mutable, the destination is still the file a completed B7 load read or that file as recorded usage handovers
+  changed it (usage_handover; or the run resumes a recovery that started from such a file), and the operator asked for
+  updates. Every other difference is a reported conflict,
   left alone; SQLite-only rows are never deleted.
 - Retention holds: YouTube content past its expiry and Instagram captions past their window do not come back; NAVER
   has nothing stored. Links keep the target's state, so EXPIRED tombstones stay tombstones.
@@ -123,15 +124,27 @@ class Recovery:
         return {'mode': status['mode'], 'runtime_jobs_in_flight': status['runtime_jobs_in_flight'], 'ready': not reasons, 'reasons': reasons}
 
     def baseline(self):
-        """Updates are authorized only on the file a completed B7 load read, or when resuming a recovery that started from one."""
+        """Updates are authorized only on the file a completed B7 load read, on that file as recorded usage handovers changed it
+        afterwards (each USAGE_HANDOVER event holds the file's fingerprint before and after its legacy call rows, tables recovery
+        never writes), or when resuming a recovery that started from one of these."""
         wal = Path(str(self.destination) + '-wal')
         current = fingerprint(self.destination)
         batches = self.repo.rows('migration_batches')
         loaded = {b['source_fingerprint'] for b in batches if b['status'] == 'COMPLETED' and b['batch_key'].startswith('B7_')}
+        steps = [(json.loads(e['details_json']) if isinstance(e['details_json'], str) else e['details_json'] or {}).get('destination_fingerprint') or {}
+                 for e in self.repo.rows('writer_transfer_events') if e['action'] == 'USAGE_HANDOVER']
+        accepted, grown = set(loaded), True
+        while grown:
+            grown = False
+            for step in steps:
+                if step.get('before') in accepted and step.get('after') and step['after'] not in accepted:
+                    accepted.add(step['after'])
+                    grown = True
         resumed = [b for b in batches if b['batch_key'].startswith('R7_') and b['status'] == 'RUNNING']
         wal_empty = not wal.exists() or wal.stat().st_size == 0
         return {'fingerprint': current, 'wal_empty': wal_empty, 'matches_completed_load': current in loaded,
-                'resumes_recovery': bool(resumed), 'verified': wal_empty and (current in loaded or bool(resumed))}
+                'matches_recorded_handover': current in accepted - loaded, 'resumes_recovery': bool(resumed),
+                'verified': wal_empty and (current in accepted or bool(resumed))}
 
     # Classification shared by plan() and run()
 

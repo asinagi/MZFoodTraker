@@ -11,7 +11,9 @@ window still open has to be there first, or the two writers together could pass 
   search), so a re-run inserts nothing. A call with an unknown outcome (a crashed worker) becomes 'unknown' and counts like the
   others: nothing is under-counted, nothing is made PROVIDER_CONFIRMED, and no request body, keyword or value is copied. Only
   the account's own rows are added; other sources and accounts keep their state. Each handover that added rows is recorded as
-  a USAGE_HANDOVER event on the target. RSS has no provider budget; its discovery returns with reverse recovery.
+  a USAGE_HANDOVER event on the target, with the SQLite file's fingerprint before and after its rows: reverse recovery accepts a
+  file a recorded handover produced from the file a B7 load read, so its mutable updates stay authorized after the handover.
+  RSS has no provider budget; its discovery returns with reverse recovery.
 - resume_readiness() decides, reading both stores only, whether the legacy collector of a source may be switched on again: the
   Oracle writer released with no live job left, every open-window Oracle usage present in SQLite, the legacy usage the target
   imported before the transfer still present there, no active provider limit or credential block, the target's RSS runs
@@ -166,6 +168,13 @@ def _legacy_during(db, source, scope, period, handed):
     return sum(period[0] <= instant(v) <= period[1] for v in times if v)
 
 
+def _file_state(path):
+    """The file's fingerprint as reverse recovery takes it (target_migration.fingerprint), or None while its WAL holds frames."""
+    from .target_migration import fingerprint
+    wal = Path(str(path) + '-wal')
+    return fingerprint(path) if not wal.exists() or wal.stat().st_size == 0 else None
+
+
 def _destination(destination, allow_operational):
     from .migrations import LATEST_VERSION, schema_version
     from .reverse_recovery import RecoveryRefused, _operational
@@ -202,7 +211,9 @@ def handover(repo, source, destination, now=None, allow_operational=False):
                         legacy_writes_during_oracle_period=0, resume_not_before=None)
         handed = {(r['name'], r['searched_at']) for r in usage} if source == 'instagram_graph' else set()
         with closing(sqlite3.connect(str(destination), timeout=30)) as db:
+            db.execute('PRAGMA wal_checkpoint(TRUNCATE)')  # committed frames into the file, so its fingerprint is the database's state
             db.execute('BEGIN IMMEDIATE')
+            before = _file_state(destination)
             missing = [row for row in legacy if not _legacy_present(db, row)]
             fresh = [row for row in usage if not _present(db, source, row)]
             for row in fresh:
@@ -210,13 +221,18 @@ def handover(repo, source, destination, now=None, allow_operational=False):
             period = _period(state)
             during = _legacy_during(db, source, scope, period, handed) if period else 0
             db.commit()
+            after = before
+            if fresh:
+                db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+                after = _file_state(destination)
         recorded = any(e['cycle_no'] == state['cycle'] and e['action'] == 'USAGE_HANDOVER' for e in state['history'])
         if usage and (fresh or not recorded):
             status = state['account']['usage_status'] if state['account'] else 'NONE'
             approved_by = state['released']['approved_by'] if state['released'] else 'operator'
             with writer() as tx:
                 _event(_Tx(tx), source, scope, state['cycle'], 'USAGE_HANDOVER', now, approved_by, status, status,
-                       dict(summary(usage), handed_over=len(fresh), destination=destination.name),
+                       dict(summary(usage), handed_over=len(fresh), destination=destination.name,
+                            destination_fingerprint={'before': before, 'after': after}),
                        salt=sorted(r['key'] for r in fresh or usage))
     return dict(result, handed_over=len(fresh), already_present=len(usage) - len(fresh), open_usage=summary(usage),
                 legacy_missing=len(missing), legacy_writes_during_oracle_period=during,

@@ -6,7 +6,8 @@ prepares only the copy to v11 as G-OPS-3 would; the source stays byte-identical 
 twice. Every write path refuses the operational file: an operational (by name, path, DATABASE_PATH or a hard link),
 existing or Git-tracked destination is refused before anything is copied, and --isolated-database accepts only a marked
 copy that is not an operational database, so the B7 load, usage handover, reverse recovery and the resume check run on
-the copy without the operational switch, and never on the operational file.
+the copy without the operational switch, and never on the operational file. The load's legacy usage import also marks the
+configured Instagram account, so its writer can be transferred when its last legacy search is older than the 7-day window.
 """
 import contextlib
 import io
@@ -18,9 +19,13 @@ from pathlib import Path
 from unittest.mock import patch
 from food_trends import cutover
 from food_trends.__main__ import main
+from food_trends.oracle_live import transfer_writer
 from food_trends.reverse_recovery import RecoveryRefused
 from food_trends.storage import Storage
+from food_trends.target_db import SQLiteTarget
+from food_trends.target_repository import TargetRepository
 from test_cutover import NOW, build_v0
+from test_oracle_live import LIVE_ENV, SCOPES
 
 FACTS = ('sha256', 'bytes', 'modified_at', 'wal_bytes', 'schema_version', 'integrity', 'tables')
 
@@ -151,6 +156,25 @@ class IsolatedCopyTests(unittest.TestCase):
             code, _, err = self.cli(*argv)
             self.assertEqual((code, message in err), (2, True), (argv, err))
         self.assertFalse((self.dir / 'other.sqlite3').exists())
+        self.assertOperationalUnchanged()
+
+    def test_the_documented_load_lets_each_configured_account_be_transferred(self):
+        """The legacy usage import of --target-load also marks the configured Instagram account: a copy whose last Instagram search
+        is older than the 7-day window (the operational database's case) has no usage row for it, and without the mark
+        --writer-transfer would refuse that writer for ever (found by the isolated rehearsal of the operational database)."""
+        copy, target, registry = self.dir / 'copy.sqlite3', self.dir / 'target.sqlite3', self.dir / 'registry.json'
+        registry.write_text(json.dumps([dict(source_id=s, account_scope=SCOPES[s], permission_verified=True, policy_allowed=True,
+                                             approved_by='fixture-operator', evidence='synthetic test grant, not a real approval')
+                                        for s in SCOPES]), encoding='utf-8')
+        with patch.dict(os.environ, LIVE_ENV):
+            self.assertEqual(self.cli('--isolate-database', str(copy))[0], 0)
+            self.assertEqual(self.cli('--target-migrate', 'sqlite', '--target-sqlite', str(target))[0], 0)
+            code, out, err = self.cli('--target-load', 'sqlite', '--target-sqlite', str(target), '--isolated-database', str(copy))
+            self.assertEqual(code, 0, err)
+            self.assertIn('instagram_graph/' + SCOPES['instagram_graph'], json.loads(out)['legacy_usage_accounts'])
+            repo = TargetRepository(SQLiteTarget(target))
+            transferred = {s: transfer_writer(repo, s, str(registry))['usage_status'] for s in SCOPES}
+        self.assertEqual(transferred, dict.fromkeys(SCOPES, 'EXCLUSIVE'))
         self.assertOperationalUnchanged()
 
 

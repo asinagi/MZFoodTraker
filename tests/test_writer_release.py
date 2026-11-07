@@ -4,10 +4,12 @@ The live path of ORACLE-LIVE-INTEGRATION-1 runs over a recording wire (LiveWire)
 new requests of the account at once, waits while one is in flight (DRAINING), then closes what is left with WRITER_RELEASED and
 returns the account to IMPORTED; its history is append-only and a re-run changes nothing. The Oracle period's usage goes to the
 legacy SQLite call tables (usage_handover), where the unchanged legacy budget code counts it, and a legacy collector may run
-again only once resume_readiness says so. The stand-in runs by default; the Oracle subclass repeats every case on MZ_TEST.
+again only once resume_readiness says so; a recovery after the handover still applies the Oracle period's updates. The stand-in
+runs by default; the Oracle subclass repeats every case on MZ_TEST.
 """
 import contextlib
 import io
+import json
 import os
 import shutil
 import sqlite3
@@ -15,7 +17,7 @@ import tempfile
 import threading
 import unittest
 from contextlib import closing
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlsplit
@@ -31,10 +33,12 @@ from food_trends.oracle_live import ACTIONS, oracle_live_readiness, release_writ
 from food_trends.oracle_rss import Blocked
 from food_trends.quota import daily_window
 from food_trends.quota_ledger import import_legacy_usage
-from food_trends.reverse_recovery import RecoveryRefused, recover
+from food_trends.reverse_recovery import Recovery, RecoveryRefused, recover
 from food_trends.runtime_ownership import OwnershipRefused, RuntimeOwnership
+from food_trends.service import CollectionService
 from food_trends.storage import Storage
 from food_trends.target_db import SQLiteTarget
+from food_trends.target_migration import migrate
 from food_trends.target_repository import TargetRepository
 from food_trends.tracking_service import instant, stamp
 from food_trends.usage_handover import handover, resume_readiness
@@ -43,6 +47,7 @@ from food_trends.youtube_storage import YouTubeStore
 from oracle_support import ORACLE_READY, SKIP_REASON, oracle_target, reset_target_schema
 import test_oracle_live as live_tests
 from test_oracle_live import KST, LIVE_ENV, NOW, SCOPES, LiveWire
+from test_oracle_rss import COOKIE, feed
 
 API_SOURCES = ('instagram_graph', 'youtube', 'naver_datalab')
 
@@ -447,6 +452,40 @@ class WriterReleaseStandInTests(unittest.TestCase):
         again = recover(self.legacy.path, self.repo, now=self.now)
         self.assertEqual(again['writes'], {'inserted': 0, 'content_rows': 0, 'updated': 0, 'ignored': 0})
         self.assertEqual({s: handover(self.repo, s, self.legacy.path, now=self.now)['handed_over'] for s in API_SOURCES}, dict.fromkeys(API_SOURCES, 0))
+
+    def test_recovery_after_the_handover_still_applies_the_oracle_periods_updates(self):
+        """The documented order (release, handover, recovery) on the file a B7 load read: the handover changes the file, yet the
+        recovery may still apply the Oracle period's mutable updates, because each handover records the file before and after its
+        rows. An RSS item the legacy collector stored, loaded and the runtime observed again comes back updated (found by the
+        isolated rehearsal of the operational database); a file anyone else changed stays unauthorized."""
+        self.now = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(hours=1)  # after the legacy collection below
+        CollectionService(self.legacy, fetcher=lambda _: (feed(COOKIE), 200)).collect()
+        with closing(sqlite3.connect(self.legacy.path)) as db:
+            db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+        migrate(self.legacy.path, self.repo, now=self.now)  # the B7 load records the file it read
+        self.transfer()
+        backend = self.live()
+        self.assertTrue(backend.rss.collect()['success'])  # the wire's feed carries the same item again
+        self.collect(backend, 'youtube')
+        backend.execution.release()
+        for source in SCOPES:
+            self.assertEqual(release_writer(self.repo, source, self.registry)['status'], 'RELEASED')
+        self.assertEqual(handover(self.repo, 'youtube', self.legacy.path, now=self.now)['handed_over'], 2)  # the file changes here
+        [event] = [e for e in self.rows('writer_transfer_events', source_id='youtube') if e['action'] == 'USAGE_HANDOVER']
+        step = json.loads(event['details_json'])['destination_fingerprint']
+        self.assertTrue(step['before'] and step['after'] and step['before'] != step['after'])
+        elsewhere = Path(self.temp.name) / 'changed-elsewhere.sqlite3'  # the same file after another writer's change
+        shutil.copyfile(self.legacy.path, elsewhere)
+        with closing(sqlite3.connect(elsewhere)) as db:
+            db.execute("UPDATE items SET last_seen=? WHERE id=1", (stamp(self.now),))
+            db.commit()
+        self.assertFalse(Recovery(elsewhere, self.repo, self.now).baseline()['verified'])
+        base = Recovery(self.legacy.path, self.repo, self.now).baseline()
+        self.assertEqual((base['verified'], base['matches_completed_load'], base['matches_recorded_handover']), (True, False, True))
+        result = recover(self.legacy.path, self.repo, now=self.now, apply_updates=True)
+        self.assertGreater(result['plan_before']['summary']['mutable_updates'], 0)
+        self.assertEqual((result['updates_applied'], result['converged'], result['plan_after']['summary']['mutable_updates']), (True, True, 0))
+        self.assertTrue(resume_readiness(self.repo, 'youtube', self.legacy.path, now=self.now)['ready'])
 
     # Unapproved and production access
 
