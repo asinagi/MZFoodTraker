@@ -1,0 +1,283 @@
+{
+  "checked_at": "2026-11-07T04:33:15+00:00",
+  "http_requests": 0,
+  "database_writes": 0,
+  "environment_precedence": "process variables over .env",
+  "env_file_present": true,
+  "registry_file": "ABSENT",
+  "operational_database": {
+    "schema_version": 0,
+    "tables": 30,
+    "rows": 7701,
+    "integrity": "ok",
+    "wal_bytes": 0,
+    "sha256": "38b880f535dded56e84a11570a1f7793bed1668580950172a417687b689548c0",
+    "legacy_server_can_start": false,
+    "why": "MigrationRequired: v0, G-OPS-3 not approved"
+  },
+  "listening_ports": {
+    "8000": false,
+    "8002": false,
+    "8010": false,
+    "8020": false,
+    "8030": false,
+    "8031": false,
+    "1521": true
+  },
+  "oracle_test_schema": {
+    "schema_version": 0,
+    "required_version": 10
+  },
+  "sources": {
+    "google_trends_rss": {
+      "source": "google_trends_rss",
+      "credentials_present": "NOT_REQUIRED",
+      "credential_origin": null,
+      "credential_validity_verified": "NOT_REQUIRED",
+      "last_local_verification": null,
+      "token_days_left_by_record": null,
+      "registry_status": "ABSENT",
+      "policy_status": {
+        "response_storage": true,
+        "retention_days": null,
+        "derived_operations": [
+          "existing_food_rules"
+        ],
+        "human_review": "registry policy_allowed"
+      },
+      "writer_state": {
+        "operational_sqlite": "legacy collectors own it, but none can start (v0)",
+        "oracle_test": "NOT_CHECKED"
+      },
+      "legacy_collector_state": {
+        "switch": "sqlite_server_rss_scheduler",
+        "switch_value": null,
+        "server_can_start": false,
+        "server_listening": false
+      },
+      "quota_coverage": {
+        "legacy_records": {
+          "runs": 95,
+          "last_run_at": "2026-10-28T04:49:48.739836+00:00"
+        },
+        "provider_usage": "NONE (public feed)"
+      },
+      "estimated_remaining_budget": null,
+      "local_limits": {
+        "provider": "none (public feed)"
+      },
+      "pilot_requests_planned": 1,
+      "pilot_settings_mismatch": [
+        "B3_LIVE_ENABLED"
+      ],
+      "blockers": [],
+      "required_approval": [
+        "G-OPS-4/5 writer transfer and live pilot of this source",
+        "reviewed registry entry (permission_verified, policy_allowed, approved_by, evidence)"
+      ],
+      "decision": "REQUIRES_APPROVAL"
+    },
+    "instagram_graph": {
+      "source": "instagram_graph",
+      "credentials_present": {
+        "INSTAGRAM_ACCESS_TOKEN": true,
+        "INSTAGRAM_USER_ID": true,
+        "FACEBOOK_PAGE_ID": true,
+        "META_APP_ID": true,
+        "META_APP_SECRET": true
+      },
+      "credential_origin": {
+        "INSTAGRAM_ACCESS_TOKEN": ".env",
+        "INSTAGRAM_USER_ID": ".env",
+        "FACEBOOK_PAGE_ID": ".env"
+      },
+      "credential_validity_verified": false,
+      "last_local_verification": {
+        "last_verified_at": "2026-10-26T06:28:07.628640+00:00",
+        "token_status_then": "valid",
+        "permissions_then": {
+          "instagram_basic": true,
+          "pages_show_list": true,
+          "pages_read_engagement": true
+        },
+        "hashtag_lookup_then": true,
+        "recorded_expiry": "2026-12-25T00:55:03+00:00",
+        "env_token_matches_record": "UNVERIFIABLE_WITHOUT_PROVIDER_CALL"
+      },
+      "token_days_left_by_record": 47,
+      "registry_status": "ABSENT",
+      "policy_status": {
+        "response_storage": false,
+        "retention_days": 30,
+        "derived_operations": [
+          "existing_caption_hashtags"
+        ],
+        "human_review": "registry policy_allowed"
+      },
+      "writer_state": {
+        "operational_sqlite": "legacy collectors own it, but none can start (v0)",
+        "oracle_test": "NOT_CHECKED"
+      },
+      "legacy_collector_state": {
+        "switch": "INSTAGRAM_COLLECTION_ENABLED",
+        "switch_value": "true",
+        "server_can_start": false,
+        "server_listening": false
+      },
+      "quota_coverage": {
+        "legacy_records": {
+          "searches": 1,
+          "last_search_at": "2026-10-26T05:25:21.411232+00:00",
+          "open_window_unique_tags": 0,
+          "accounts_in_history": 1,
+          "history_account_is_configured_account": true
+        },
+        "provider_usage": "UNKNOWN (no provider call)"
+      },
+      "estimated_remaining_budget": 28,
+      "local_limits": {
+        "local_unique_tags_7d": 28,
+        "provider_unique_tags_7d": 30
+      },
+      "pilot_requests_planned": 5,
+      "pilot_settings_mismatch": [
+        "B3_LIVE_ENABLED",
+        "INSTAGRAM_COLLECTION_ENABLED",
+        "INSTAGRAM_MAX_PAGES",
+        "INSTAGRAM_SEARCH_SOFT_LIMIT"
+      ],
+      "blockers": [],
+      "required_approval": [
+        "G-OPS-4/5 writer transfer and live pilot of this source",
+        "reviewed registry entry (permission_verified, policy_allowed, approved_by, evidence)",
+        "one approved provider request proves the credential (validity is not checked locally)"
+      ],
+      "decision": "REQUIRES_APPROVAL"
+    },
+    "youtube": {
+      "source": "youtube",
+      "credentials_present": {
+        "YOUTUBE_API_KEY|YOUTUBE_DATA_API_V3_KEY": true
+      },
+      "credential_origin": {
+        "YOUTUBE_API_KEY|YOUTUBE_DATA_API_V3_KEY": ".env"
+      },
+      "credential_validity_verified": false,
+      "last_local_verification": {
+        "last_verified_at": "2026-10-26T06:31:13.470618+00:00",
+        "passed_then": true
+      },
+      "token_days_left_by_record": null,
+      "registry_status": "ABSENT",
+      "policy_status": {
+        "response_storage": false,
+        "retention_days": 29,
+        "derived_operations": [],
+        "human_review": "registry policy_allowed"
+      },
+      "writer_state": {
+        "operational_sqlite": "legacy collectors own it, but none can start (v0)",
+        "oracle_test": "NOT_CHECKED"
+      },
+      "legacy_collector_state": {
+        "switch": "YOUTUBE_COLLECTION_ENABLED",
+        "switch_value": "true",
+        "server_can_start": false,
+        "server_listening": false
+      },
+      "quota_coverage": {
+        "legacy_records": {
+          "calls": 38,
+          "last_call_at": "2026-10-28T01:11:38.747546+00:00",
+          "open_window_searches": 0,
+          "open_window_video_calls": 0
+        },
+        "provider_usage": "UNKNOWN (no provider call)"
+      },
+      "estimated_remaining_budget": {
+        "searches": 40,
+        "video_calls": 1000
+      },
+      "local_limits": {
+        "local_searches_per_pacific_day": 40,
+        "local_video_calls_per_pacific_day": 1000,
+        "provider": "daily units of the Google Cloud project (search 100, videos 1)"
+      },
+      "pilot_requests_planned": 2,
+      "pilot_settings_mismatch": [
+        "B3_LIVE_ENABLED",
+        "YOUTUBE_COLLECTION_ENABLED",
+        "YOUTUBE_DAILY_SEARCH_LIMIT",
+        "YOUTUBE_DAILY_VIDEO_LIMIT"
+      ],
+      "blockers": [],
+      "required_approval": [
+        "G-OPS-4/5 writer transfer and live pilot of this source",
+        "reviewed registry entry (permission_verified, policy_allowed, approved_by, evidence)",
+        "one approved provider request proves the credential (validity is not checked locally)"
+      ],
+      "decision": "REQUIRES_APPROVAL"
+    },
+    "naver_datalab": {
+      "source": "naver_datalab",
+      "credentials_present": {
+        "NAVER_DATALAB_CLIENT_ID": true,
+        "NAVER_DATALAB_CLIENT_SECRET": true
+      },
+      "credential_origin": {
+        "NAVER_DATALAB_CLIENT_ID": ".env",
+        "NAVER_DATALAB_CLIENT_SECRET": ".env"
+      },
+      "credential_validity_verified": false,
+      "last_local_verification": {
+        "last_verified_on_kst": "2026-10-26",
+        "http_200_then": 5
+      },
+      "token_days_left_by_record": null,
+      "registry_status": "ABSENT",
+      "policy_status": {
+        "response_storage": false,
+        "retention_days": 0,
+        "derived_operations": [],
+        "human_review": "registry policy_allowed"
+      },
+      "writer_state": {
+        "operational_sqlite": "legacy collectors own it, but none can start (v0)",
+        "oracle_test": "NOT_CHECKED"
+      },
+      "legacy_collector_state": {
+        "switch": "NAVER_DATALAB_ENABLED",
+        "switch_value": "true",
+        "server_can_start": false,
+        "server_listening": false
+      },
+      "quota_coverage": {
+        "legacy_records": {
+          "calls": 10,
+          "last_call_at": "2026-10-26T05:54:59.085987+00:00",
+          "open_window_calls": 0
+        },
+        "provider_usage": "UNKNOWN (no provider call)"
+      },
+      "estimated_remaining_budget": 100,
+      "local_limits": {
+        "local_calls_per_kst_day": 100,
+        "provider": "daily calls of the NAVER application"
+      },
+      "pilot_requests_planned": 1,
+      "pilot_settings_mismatch": [
+        "B3_LIVE_ENABLED",
+        "NAVER_DATALAB_DAILY_LIMIT",
+        "NAVER_DATALAB_ENABLED"
+      ],
+      "blockers": [],
+      "required_approval": [
+        "G-OPS-4/5 writer transfer and live pilot of this source",
+        "reviewed registry entry (permission_verified, policy_allowed, approved_by, evidence)",
+        "one approved provider request proves the credential (validity is not checked locally)"
+      ],
+      "decision": "REQUIRES_APPROVAL"
+    }
+  },
+  "guard_attempts": []
+}
