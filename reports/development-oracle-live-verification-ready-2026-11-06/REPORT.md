@@ -180,3 +180,7 @@ D-1 흐름은 ORACLE-LIVE-INTEGRATION-1의 `tests/test_oracle_live_e2e.py`가 �
 | `707b484` | test: 격리 사본 + MZ_TEST 전 과정 리허설과 근거 |
 | `3cac9d7` | test: 수집원별 준비도 점검과 근거 |
 | 이 보고서 커밋 | docs: 보고서·절차서·판정·요청서·README |
+
+## 통합 기록
+
+통합 직전 다시 가져온 `origin/main`은 기준 `98a2e24` 그대로였다. `main`을 `98a2e24`에서 `bb0eaf9`(보고 커밋, 위 작업 커밋 4개 포함)로 fast-forward하고 `origin/main`에 push했다. 이 기록 커밋도 같은 방식으로 `main`에 fast-forward했다. 강제 push·reset hard·강제 worktree 삭제·기존 작업 삭제는 없었다.
