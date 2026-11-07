@@ -330,8 +330,8 @@ def open_store(mode, database=None, environ=None):
     """(analytics store, close) for a server storage mode, chosen explicitly and never inferred.
 
     sqlite reads the given SQLite database; oracle-test reads the isolated Oracle test schema (ORACLE_TEST_*,
-    environment test) through read-only transactions; oracle-production is refused before any connection
-    (G-OPS-6). Nothing here runs DDL or migrations: a store whose schema is not current is refused.
+    environment test) through read-only transactions; oracle-production reads the approved production schema the same way
+    (runtime_storage.oracle_production_repository) and is refused before any query without it. Nothing here runs DDL or migrations: a store whose schema is not current is refused.
     """
     if mode == 'sqlite':
         from .migrations import MigrationRequired
@@ -357,7 +357,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='읽기 전용 앱 데이터 API (/api/v1). DB를 읽기 전용으로 열고 외부 API를 호출하지 않습니다.')
     parser.add_argument('--store', choices=STORES, default='sqlite',
                         help='저장소. sqlite(기본, --database 필요) | oracle-test(ORACLE_TEST_* 격리 테스트 스키마, 읽기 전용 트랜잭션) | '
-                             'oracle-production(미승인, 시작 거부)')
+                             'oracle-production(승인된 운영 스키마만, 읽기 전용)')
     parser.add_argument('--database', help='sqlite 저장소에서 읽을 SQLite DB 경로 (스키마가 최신이어야 함, 변경하지 않음)')
     parser.add_argument('--port', type=int, default=8020)
     parser.add_argument('--observation-origin', choices=('live_api', 'mock'), default='live_api',

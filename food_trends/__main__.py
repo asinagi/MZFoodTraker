@@ -119,7 +119,7 @@ def oracle_command(args, parser):
     import json
     from .food_service import FoodError
     from .oracle_live import oracle_live_backend, oracle_live_readiness, release_writer, transfer_writer, writer_status
-    from .runtime_storage import oracle_backend, oracle_maintenance, select
+    from .runtime_storage import oracle_backend, oracle_maintenance, production_backend, select
     from .tracking_access import mock_accounts
     allowed = ('backend', 'rss_mock_file', 'no_schedulers', 'maintenance', 'execution_mode', 'execution_registry', 'execution_automatic',
                'execution_readiness', 'writer_transfer', 'writer_release', 'release_wait', 'writer_status')
@@ -138,6 +138,9 @@ def oracle_command(args, parser):
         parser.error('--execution-automatic은 --execution-mode live와 함께만 사용합니다')
     if args.rss_mock_file and live:
         parser.error('Live 모드에서는 --rss-mock-file을 쓰지 않습니다')
+    production = args.backend == 'oracle-production'
+    if args.rss_mock_file and production:
+        parser.error('운영 Oracle에는 Mock RSS 응답을 쓰지 않습니다(--rss-mock-file 거부)')
     port, repo, backend, server, result = int(os.getenv('PORT', '8000')), None, None, None, None
     try:
         repo = select(args.backend)  # oracle-production is refused before any connection
@@ -150,11 +153,13 @@ def oracle_command(args, parser):
         elif args.writer_status:
             result = writer_status(repo)
         elif args.maintenance:
-            backend = oracle_backend(repo, mock_accounts())
+            backend = production_backend(repo) if production else oracle_backend(repo, mock_accounts())
             result = oracle_maintenance(backend)
         else:
             if live:
                 backend = oracle_live_backend(repo, args.execution_registry)
+            elif production:
+                backend = production_backend(repo)  # management and observations on the real accounts, no collector
             server, backend = oracle_admin_server(repo, port, os.getenv('MZ_ADMIN_TOKEN') or None,
                                                   mock_file_fetcher(args.rss_mock_file) if args.rss_mock_file else None, backend=backend)
             if live and not args.no_schedulers and backend.rss.origin == 'live_api':
@@ -176,7 +181,8 @@ def oracle_command(args, parser):
         print(json.dumps(result, ensure_ascii=False, default=str))
         unfinished = args.execution_readiness and not result['ready'] or args.writer_release and result['status'] != 'RELEASED'
         return 2 if unfinished else 0  # a release still DRAINING is not done: run it again
-    print(f'Local ({args.backend}, {"Live 승인 수집원" if live else "Mock 수집만"}): http://127.0.0.1:{port}', flush=True)
+    mode = 'Live 승인 수집원' if live else '수집 없음(관리·관측)' if production else 'Mock 수집만'
+    print(f'Local ({args.backend}, {mode}): http://127.0.0.1:{port}', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -283,7 +289,7 @@ def main():
     parser.add_argument('--shadow-target', choices=('oracle', 'sqlite'), help='Shadow 대상(deliver/compare/repair에 필요)')
     parser.add_argument('--backend', choices=('sqlite', 'oracle-test', 'oracle-production'), default='sqlite',
                         help='관리 서버 저장소. sqlite(기본) | oracle-test(ORACLE_TEST_* 격리 스키마만 사용, Mock 수집만) | '
-                             'oracle-production(미승인, 시작 거부)')
+                             'oracle-production(승인된 운영 스키마만: ORACLE_*·ORACLE_PRODUCTION_SCHEMA·ORACLE_PRODUCTION_APPROVAL, Mock 수집 없음)')
     parser.add_argument('--rss-mock-file', metavar='PATH', help='--backend oracle-test: RSS 수집에 실제 HTTP 대신 쓸 로컬 RSS XML(Mock 응답)')
     parser.add_argument('--writer-transfer', choices=('instagram_graph', 'youtube', 'naver_datalab', 'google_trends_rss'),
                         help='--backend oracle-test: 기존 SQLite 수집기를 멈춘 수집원을 Oracle 런타임 단독 Writer로 기록(G-OPS 승인 후, --execution-registry 필요)')

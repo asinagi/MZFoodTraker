@@ -48,8 +48,9 @@ def reset_target_schema(db):
         user = tx.scalar('SELECT user FROM dual')
         roles = {r['granted_role'] for r in tx.rows('SELECT granted_role FROM user_role_privs')}
         tables = {r['table_name'] for r in tx.rows('SELECT table_name FROM user_tables')}
-        if user != expected or user in PROTECTED or 'DBA' in roles:
-            raise UnsafeSchema('connected account is not the disposable test schema')
+        production = os.environ.get('ORACLE_PRODUCTION_SCHEMA', '').strip().upper()
+        if user != expected or user in PROTECTED or 'DBA' in roles or not user.endswith('_TEST') or user == production:
+            raise UnsafeSchema('connected account is not the disposable test schema')  # never a production schema
         if tables - OWNED:
             raise UnsafeSchema('test schema owns objects outside the target specification')
         for name in sorted(tables, key=lambda n: n != 'TARGET_SCHEMA_MIGRATIONS'):

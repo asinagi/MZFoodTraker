@@ -13,7 +13,9 @@ deadlock with a claimer. No transaction is open while a provider request is in f
 Mock by default. Live settings are accepted only from the live assembly (oracle_live) with a passed readiness
 check, and a live job still needs, at enqueue and again before its first request, live enabled for its source,
 a live account, the source transferred to this runtime as its only writer (quota_accounts EXCLUSIVE, so its external
-usage is known) and no active block; an Oracle target labelled production is refused. A writer release of the account
+usage is known) and no active block. An Oracle target labelled production runs only with a verified production access
+(production_access: the declared schema and an approval record) under RUNTIME_PRODUCTION, and there every job must be live:
+mock responses never enter production data. A writer release of the account
 (quota_accounts.release_requested_at, oracle_live.release_writer) stops it at once: enqueue and every request read the gate
 under the account row lock that the release takes first, while a request already sent still lands its page. Construction
 checks the target schema version and never runs DDL. The legacy call tables (youtube_calls, naver_calls,
@@ -308,8 +310,11 @@ class OracleExecution:
         if self.settings.live_enabled and not (live_readiness or {}).get('ready'):
             raise ValueError('Oracle live execution needs the live assembly and a passed readiness check (oracle_live)')
         target_settings = getattr(self.db, 'settings', None)
-        if target_settings is not None and target_settings.environment == 'production':
-            raise OracleUnavailable('oracle_production_runtime_disabled')
+        self.production = target_settings is not None and target_settings.environment == 'production'
+        if self.production:
+            from .production_access import approved
+            if not approved(self.db):  # the declared production schema with an approval record (production_access)
+                raise OracleUnavailable('oracle_production_runtime_disabled')
         version = repo.schema_version()
         if version != TARGET_SCHEMA_VERSION:
             # Never migrates here: the operator runs --target-migrate explicitly.
@@ -318,7 +323,8 @@ class OracleExecution:
         self.planner = None  # an OracleQueryPlanner attaches itself (schedule() needs one)
         self.claim_locked = lambda job_id: None  # test hook: runs while the claim holds the job lock
         self.fault = lambda stage: None  # test hook: failure injection inside write transactions
-        # R3: every write transaction runs under this process's RUNTIME_TEST ownership lease (joined lazily).
+        # R3: every write transaction runs under this process's runtime ownership lease (RUNTIME_PRODUCTION on an approved
+        # production target, RUNTIME_TEST otherwise; joined lazily).
         self.ownership = ownership or RuntimeOwnership(repo)
         self.participant_id = identity('RUNTIME')
         self.lease, self._renew_at = None, None
@@ -331,7 +337,7 @@ class OracleExecution:
     def _owned(self):
         moment = self.ownership.now()
         if self.lease is None:
-            self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
+            self.lease = self.ownership.acquire(self.ownership.runtime_mode(), self.participant_id)
             self._renew_at = moment + self.ownership.ttl / 2
         elif moment >= self._renew_at:
             from .runtime_ownership import OwnershipRefused
@@ -343,7 +349,7 @@ class OracleExecution:
                 # The lease lapsed while this process was idle. It is never revived: the process joins again with a new
                 # lease, which is refused while another mode owns the target; job leases and fencing still guard every job.
                 self.participant_id = identity('RUNTIME')
-                self.lease = self.ownership.acquire('RUNTIME_TEST', self.participant_id)
+                self.lease = self.ownership.acquire(self.ownership.runtime_mode(), self.participant_id)
             self._renew_at = moment + self.ownership.ttl / 2
         return self.lease
 
@@ -460,6 +466,8 @@ class OracleExecution:
         reasons = list(account.blockers())
         if account.mode != mode:
             reasons.append('EXECUTION_MODE_MISMATCH')
+        if self.production and mode != 'live':
+            reasons.append('MOCK_EXECUTION_REFUSED_ON_PRODUCTION')  # mock responses never enter production data
         row = self.quota.account_row(t, plan['source_id'], plan['account_scope'])
         coverage = self.quota.coverage_of(row, self.now())
         if mode == 'live':

@@ -86,7 +86,7 @@ def legacy_rows(src, now):
 def import_legacy_usage(source_path, repo, now=None, scopes=None, ownership=None):
     """Copy open-window legacy usage and mark each covered account scope as known through `now`.
 
-    Part of the runtime's budget safety, so it writes as a RUNTIME_TEST participant (R3): it keeps running
+    Part of the runtime's budget safety, so it writes as a runtime participant (R3; RUNTIME_PRODUCTION on an approved production target): it keeps running
     beside runtime workers and is refused while Shadow owns the target. Account rows are written first, so
     an import and a reservation on the same account serialize on that row. Idempotent: deterministic keys;
     a re-import only refreshes evidence of the same rows. `scopes` adds account scopes the legacy
@@ -100,7 +100,7 @@ def import_legacy_usage(source_path, repo, now=None, scopes=None, ownership=None
     covered = set(LEGACY_SCOPES) | set(scopes or ()) | {(r['source_id'], r['account_scope']) for r in rows}
     ownership = ownership or RuntimeOwnership(repo)
     counts = {}
-    with ownership.held('RUNTIME_TEST') as lease, writer_for(repo, ownership, lease)() as tx:
+    with ownership.held(ownership.runtime_mode()) as lease, writer_for(repo, ownership, lease)() as tx:
         for source, scope in sorted(covered):
             repo.upsert(tx, 'quota_accounts', dict(source_id=source, account_scope=scope, usage_status='IMPORTED',
                                                    legacy_observed_through=iso(now), evidence_ref='legacy_call_tables', updated_at=iso(now)))

@@ -5,7 +5,8 @@ through oracle_backend).
 Three modes, never inferred:
   sqlite             the existing SQLite services on DATABASE_PATH (development and operations compatibility)
   oracle-test        the Oracle runtime on the isolated test schema (ORACLE_TEST_*, ORACLE_TEST_ENVIRONMENT=test)
-  oracle-production  refused until the separately approved Oracle cut-over (G-OPS-6)
+  oracle-production  the approved production schema (ORACLE_*, ORACLE_ENVIRONMENT=production, ORACLE_ALLOW_PRODUCTION=true,
+                     ORACLE_PRODUCTION_SCHEMA and an approval record: production_access.verify); refused otherwise
 
 Selecting a backend opens nothing on the other one: the Oracle services never touch the SQLite
 database and the SQLite services never open Oracle, so there is no implicit dual write (Shadow is the
@@ -22,7 +23,27 @@ def oracle_test_repository(environ=None):
     settings = OracleSettings.from_env(environ, prefix='ORACLE_TEST_')
     if settings.environment != 'test':
         raise OracleUnavailable('oracle_test_environment_required')
+    if not settings.user.strip().upper().endswith('_TEST'):
+        raise OracleUnavailable('oracle_test_schema_required')  # the test label never opens another schema (production)
     return TargetRepository(OracleTarget(settings))
+
+
+def oracle_production_repository(environ=None):
+    """The approved production schema: ORACLE_* labelled production with the operator switch, then the declared schema and
+    the approval record checked on the connection (production_access.verify) before anything else uses it."""
+    import os
+    from .production_access import verify
+    env = os.environ if environ is None else environ
+    if env.get('ORACLE_ENVIRONMENT', '').strip().lower() != 'production' or env.get('ORACLE_ALLOW_PRODUCTION', 'false').lower() != 'true':
+        raise OracleUnavailable('oracle_production_runtime_disabled')
+    repo = TargetRepository(OracleTarget(OracleSettings.from_env(env)))
+    try:
+        verify(repo.db, env)
+    except Exception:
+        repo.db.close()
+        raise
+    repo.db._production_verified = True
+    return repo
 
 
 def select(mode, environ=None):
@@ -30,7 +51,7 @@ def select(mode, environ=None):
     if mode not in MODES:
         raise ValueError('unknown runtime storage mode')
     if mode == 'oracle-production':
-        raise OracleUnavailable('oracle_production_runtime_disabled')
+        return oracle_production_repository(environ)
     if mode == 'oracle-test':
         return oracle_test_repository(environ)
     return None
@@ -61,6 +82,30 @@ def oracle_backend(repo, accounts, clock=None, transport=None, settings=None, rs
     controller.rss = OracleRssService(execution, foods, controller.observations, interval=rss_interval, fetcher=rss_fetcher)
     return SimpleNamespace(foods=foods, tracking=OracleTrackingService(execution), planner=execution.planner, rss=controller.rss,
                            execution=execution, ingestion=controller.ingestion, observations=controller.observations, controller=controller)
+
+
+def production_backend(repo, clock=None):
+    """oracle_backend's services over the approved production schema without any collector: food review, tracking on the
+    configured (live) accounts, planning, due slots, B4 staging/DQ, B5 observations and maintenance. No client is attached,
+    live execution is off and every job needs the live assembly (oracle_live), and RSS refuses to fetch, so neither a mock
+    response nor an unapproved request ever reaches production data."""
+    from types import SimpleNamespace
+    from .execution_runtime import _configured_accounts
+    from .oracle_execution import OracleExecution, oracle_adapters
+    from .oracle_foods import OracleFoodService
+    from .oracle_ingestion import OracleIngestionService
+    from .oracle_observations import OracleObservationService
+    from .oracle_planner import OracleQueryPlanner
+    from .oracle_rss import OracleExecutionController, OracleRssService
+    from .oracle_tracking import OracleTrackingService
+    execution = OracleExecution(repo, _configured_accounts()[1], clock)
+    OracleQueryPlanner(execution)
+    ingestion, observations = OracleIngestionService(execution), OracleObservationService(execution)
+    controller = OracleExecutionController(execution, oracle_adapters({}), ingestion, observations)
+    foods = OracleFoodService(execution)
+    controller.rss = OracleRssService(execution, foods, observations)  # no fetcher: refuses to fetch
+    return SimpleNamespace(foods=foods, tracking=OracleTrackingService(execution), planner=execution.planner, rss=controller.rss,
+                           execution=execution, ingestion=ingestion, observations=observations, controller=controller)
 
 
 def oracle_maintenance(backend, at=None):

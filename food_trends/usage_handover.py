@@ -197,7 +197,7 @@ def handover(repo, source, destination, now=None, allow_operational=False):
     destination = _destination(destination, allow_operational)
     now = utc(now or datetime.now(timezone.utc))
     ownership = RuntimeOwnership(repo)
-    with ownership.held('RUNTIME_TEST') as lease:  # production and Shadow-owned targets are refused here
+    with ownership.held(ownership.runtime_mode()) as lease:  # unapproved production and Shadow-owned targets are refused here
         writer = writer_for(repo, ownership, lease)
         with writer() as tx:
             t = _Tx(tx)

@@ -34,6 +34,7 @@ from .execution import ExecutionSettings
 from .execution_runtime import LEGACY_SCHEDULER_FLAGS, _configured_accounts, _grants
 from .food_service import FoodError, dump
 from .oracle_execution import ACTIVE_STATES, WriterDraining, _states, _Tx, release_reasons, utc_value
+from .production_access import approved
 from .query_planner import digest
 from .target_db import iso, utc
 from .target_schema import TARGET_SCHEMA_VERSION
@@ -125,8 +126,8 @@ def oracle_live_readiness(repo, registry_path, environ=None, now=None):
     env, now = _env(environ), utc(now or datetime.now(timezone.utc))
     blockers = []
     settings = getattr(repo.db, 'settings', None)
-    if settings is not None and settings.environment == 'production':
-        blockers.append('ORACLE_PRODUCTION_LOCKED')
+    if settings is not None and settings.environment == 'production' and not approved(repo.db):
+        blockers.append('ORACLE_PRODUCTION_LOCKED')  # only the declared, approved production schema (production_access)
     version = repo.schema_version()
     if version != TARGET_SCHEMA_VERSION:
         blockers.append('TARGET_SCHEMA_VERSION_MISMATCH')
@@ -197,7 +198,7 @@ def transfer_writer(repo, source, registry_path, environ=None, now=None):
     if source != RSS_SOURCE and env.get(LEGACY_SCHEDULER_FLAGS[source], 'true').lower() not in ('false', '0', 'no'):
         raise FoodError('기존 SQLite 수집기 스케줄러를 먼저 끄세요(%s=false).' % LEGACY_SCHEDULER_FLAGS[source], 409)
     ownership = RuntimeOwnership(repo)
-    with ownership.held('RUNTIME_TEST') as lease, writer_for(repo, ownership, lease)() as tx:
+    with ownership.held(ownership.runtime_mode()) as lease, writer_for(repo, ownership, lease)() as tx:
         t = _Tx(tx)
         state = writer_state(t, source, scope)
         if state['state'] == 'RELEASING':
@@ -302,7 +303,7 @@ def release_writer(repo, source, registry_path, clock=None, wait_seconds=0, slee
     if source not in LIVE_SOURCES:
         raise FoodError('알 수 없는 수집원입니다.')
     settings = getattr(repo.db, 'settings', None)
-    if settings is not None and settings.environment == 'production':
+    if settings is not None and settings.environment == 'production' and not approved(repo.db):
         raise FoodError('운영 Oracle의 Writer는 별도 승인 전까지 바꿀 수 없습니다(ORACLE_PRODUCTION_LOCKED).', 403)
     _, accounts = _configured_accounts()
     scope = _scope(source, accounts)

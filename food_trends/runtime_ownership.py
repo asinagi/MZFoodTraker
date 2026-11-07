@@ -1,7 +1,6 @@
 """ORACLE-RUNTIME-2 R3: exclusive write ownership of one target database (Shadow vs the Oracle runtime).
 
-The target records one owning mode (IDLE, SHADOW, RUNTIME_TEST; RUNTIME_PRODUCTION is never granted)
-with a mode epoch, and one lease row per participating process. Exclusion is enforced by the database,
+The target records one owning mode (IDLE, SHADOW, RUNTIME_TEST, RUNTIME_PRODUCTION) with a mode epoch, and one lease row per participating process. Exclusion is enforced by the database,
 not by process memory:
 
 - Every Shadow or runtime write transaction first takes LOCK TABLE runtime_ownership IN SHARE MODE and
@@ -18,6 +17,10 @@ not by process memory:
 
 Reads, status and comparisons need no ownership. Lease time is wall-clock process liveness, independent
 of the domain clocks the services use.
+
+Production (ORACLE-PRODUCTION-CUTOVER-1): a target labelled production grants SHADOW and RUNTIME_PRODUCTION only with a
+verified production access (production_access.verify: the declared schema and an approval record), and never RUNTIME_TEST;
+RUNTIME_PRODUCTION is refused on every other target, and a test-labelled Oracle target must be a *_TEST schema.
 """
 import uuid
 from contextlib import contextmanager
@@ -63,18 +66,28 @@ class RuntimeOwnership:
         settings = getattr(self.db, 'settings', None)
         return settings.environment if settings is not None else 'standin'
 
+    def runtime_mode(self):
+        """The runtime mode this target calls for: RUNTIME_PRODUCTION on production, RUNTIME_TEST elsewhere."""
+        return 'RUNTIME_PRODUCTION' if self.environment() == 'production' else 'RUNTIME_TEST'
+
     # Checks and SQL
 
     def _allowed(self, mode):
         if mode not in MODES or mode == 'IDLE':
             raise OwnershipRefused('ownership_mode_invalid')
-        if mode == 'RUNTIME_PRODUCTION':
-            raise OwnershipRefused('runtime_production_disabled')
+        from .production_access import approved
         environment = self.environment()
         if environment == 'production':
-            raise OwnershipRefused('production_target_requires_approval')
+            if mode == 'RUNTIME_TEST':
+                raise OwnershipRefused('runtime_test_refused_on_production')
+            if not approved(self.db):
+                raise OwnershipRefused('production_target_requires_approval')
+        elif mode == 'RUNTIME_PRODUCTION':
+            raise OwnershipRefused('runtime_production_disabled')
         if mode == 'RUNTIME_TEST' and environment not in ('test', 'standin'):
             raise OwnershipRefused('runtime_test_requires_test_environment')
+        if environment == 'test' and not str(getattr(self.db.settings, 'user', '')).upper().endswith('_TEST'):
+            raise OwnershipRefused('test_environment_requires_test_schema')  # a test label never opens another schema
         if self.repo.schema_version() != TARGET_SCHEMA_VERSION:
             raise OwnershipRefused('target_schema_version_mismatch')
 
