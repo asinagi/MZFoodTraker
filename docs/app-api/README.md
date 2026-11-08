@@ -320,7 +320,7 @@ python3.12 -m food_trends.app_api --database <경로> --cors-origin http://local
 python3.12 -m food_trends.app_api --database <경로> --observation-origin mock            # B3 Mock 수집으로 만든 테스트 DB
 ```
 
-- DB를 읽기 전용으로 열고 쓰기·마이그레이션·외부 호출을 하지 않습니다. 스키마가 최신(v11)이 아니면 시작하지 않습니다. **현재 운영 DB는 마이그레이션 전(v0)이라 이 서버로 열 수 없으며, 운영 DB 마이그레이션은 이번 작업 범위가 아닙니다.**
+- DB를 읽기 전용으로 열고 쓰기·마이그레이션·외부 호출을 하지 않습니다. 스키마가 최신(v11)이 아니면 시작하지 않습니다. 운영 SQLite 원본(v0)은 보관용이라 이 서버로 열 수 없습니다. **운영 데이터는 아래 Oracle 운영 서버(`--store oracle-production`)가 제공합니다.**
 - 루프백(`127.0.0.1`)에만 바인딩합니다. 실기기는 `adb reverse tcp:8020 tcp:8020`으로만 접속할 수 있고, 다른 기기 공개는 [ACCESS.md](ACCESS.md) §6의 별도 과제입니다.
 - 기본으로 `live_api` 회차만 집계합니다. Mock 수집 회차가 섞인 DB에서도 Mock 행은 값에 들어가지 않습니다.
 - 읽을 저장소는 `--store`로 명시합니다(기본 `sqlite`). 어느 저장소든 응답 계약은 같으므로 앱 코드는 바꿀 필요가 없습니다.
@@ -329,9 +329,42 @@ python3.12 -m food_trends.app_api --database <경로> --observation-origin mock 
 | --- | --- | --- |
 | `sqlite` (기본) | `--database`로 지정한 최신 스키마(v11) SQLite DB | 개발·검증 |
 | `oracle-test` | 백엔드 개발 PC의 `ORACLE_TEST_*` 환경변수가 가리키는 개발용 Oracle 테스트 스키마. 요청마다 읽기 전용 트랜잭션 (`python-oracledb` 필요) | 백엔드의 Oracle 동등성 확인 |
-| `oracle-production` | — | 운영 Oracle 전환 승인 전이라 시작을 거부합니다 |
+| `oracle-production` | 운영 Oracle 스키마 `MZ_APP`(백엔드 운영 PC의 `data\oracle-prod\oracle-prod.env`: 선언된 운영 스키마와 승인 기록이 있어야 열림). 요청마다 읽기 전용 트랜잭션 | **실제 운영 데이터** (아래 절) |
 
 Oracle 테스트 스키마의 접속 정보는 앱 개발자에게 제공하지 않습니다. 화면 개발은 Mock 서버 또는 SQLite 서버로 충분합니다.
+
+### 실제 운영 서버 (Oracle 운영 스키마, 읽기 전용)
+
+ORACLE-PRODUCTION-CUTOVER-1부터 운영 데이터의 주 저장소는 Oracle 운영 스키마 `MZ_APP`입니다(기존 SQLite 데이터 이관 + 실제 수집 데이터). 관리 서버와 앱 API가 **같은 스키마**를 읽고, 앱 API는 읽기 전용 트랜잭션만 씁니다(DML·DDL 없음).
+
+백엔드 운영 PC(Windows, Oracle은 WSL2·Podman 컨테이너)에서:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\ops\start-oracle.ps1    # Oracle 시작·운영 스키마 응답 확인
+powershell -ExecutionPolicy Bypass -File scripts\ops\start-backend.ps1   # 관리 서버 :8000 + 앱 API :8020 (중복 실행 거부)
+powershell -ExecutionPolicy Bypass -File scripts\ops\status.ps1          # 상태 확인
+powershell -ExecutionPolicy Bypass -File scripts\ops\verify.ps1          # 비파괴 점검(앱 API 응답을 OpenAPI로 검증)
+powershell -ExecutionPolicy Bypass -File scripts\ops\stop-backend.ps1    # 정지 → 재기동은 start-backend.ps1
+```
+
+앱 API만 직접 띄울 때(운영 환경변수를 불러온 셸에서): `py -3.12 -m food_trends.app_api --store oracle-production --port 8020`.
+
+| 항목 | Mock 서버 | 실제 운영 서버 |
+| --- | --- | --- |
+| Base URL (백엔드 PC 자신) | `http://127.0.0.1:8030/api/v1` | `http://127.0.0.1:8020/api/v1` |
+| Android 에뮬레이터(같은 PC) | `http://10.0.2.2:8030/api/v1` | `http://10.0.2.2:8020/api/v1` |
+| Android 실기기(USB) | `adb reverse tcp:8030 tcp:8030` 후 `127.0.0.1:8030` | `adb reverse tcp:8020 tcp:8020` 후 `http://127.0.0.1:8020/api/v1` |
+| 다른 PC·Mac·Wi-Fi 실기기 | `--host 0.0.0.0`으로 접속 가능 | **접속 불가**(루프백 전용). Mac·iOS 개발은 Mock 서버를 쓰고, 실데이터 확인은 백엔드 PC의 에뮬레이터·USB 실기기로 합니다 |
+| `meta.data_mode` | `mock` | `database`(`observation_origin: live_api`) |
+
+실데이터 확인:
+
+1. `GET /api/v1/health` → 200, `data_mode`가 `database`.
+2. `GET /api/v1/foods` → 승인된 음식 목록(현재 `두쫀쿠` 1개). `food_id`는 목록 응답에서 받으세요.
+3. `GET /api/v1/foods/{food_id}/timeline?period=7d&source=instagram_graph` → 기본 기간은 어제(KST)까지입니다. 오늘 수집분은 `end_date`에 오늘(KST)을 주면 보입니다.
+4. `GET /api/v1/sources/status` → 출처별 마지막 성공 수집 시각.
+
+연결 오류 대응: `503 STORAGE_UNAVAILABLE`이면 Oracle이 내려간 상태입니다(백엔드 담당자가 `start-oracle.ps1`; 앱 API는 재시작 없이 다시 연결됩니다). 연결 거부면 앱 API 프로세스가 없는 상태입니다(`start-backend.ps1`). `403 FORBIDDEN_HOST`면 도메인 이름 대신 IP·`localhost`를 쓰세요. 관리 서버(:8000)의 관리 토큰은 앱에 넣지 않습니다([ACCESS.md](ACCESS.md) §2).
 
 ### Mock에서 실제 서버로 바꿀 때
 

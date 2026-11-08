@@ -1,0 +1,64 @@
+{
+  "checked_at": "2026-11-07T15:39:34+00:00",
+  "schema": "MZ_APP",
+  "target_tables": 51,
+  "target_rows": 16699,
+  "rows_by_table": {
+    "source_contents": 986,
+    "rss_classifications": 370,
+    "rss_classification_history": 251,
+    "ingest_runs": 97,
+    "source_items": 555,
+    "item_snapshots": 840,
+    "run_items": 1085,
+    "quality_results": 10402,
+    "item_query_matches": 185,
+    "metric_observations": 900,
+    "runtime_ownership": 1,
+    "runtime_participants": 4,
+    "quota_accounts": 3,
+    "legacy_key_map": 991,
+    "migration_batches": 29
+  },
+  "keys_clean": true,
+  "natural_key_duplicates": 0,
+  "bad_key_format": 0,
+  "b7_batches": [
+    "COMPLETED"
+  ],
+  "b7_batch_keys": 1,
+  "api_parity": {
+    "live_api": {
+      "requests": 17,
+      "mismatches": 0
+    },
+    "mock": {
+      "requests": 17,
+      "mismatches": 0
+    }
+  },
+  "categories_equal": {
+    "food_identity": true,
+    "candidates_and_decisions": true,
+    "tracking_targets": true,
+    "query_planner": true,
+    "execution": true,
+    "runs_by_source_origin_coverage": true,
+    "items_by_source_origin_availability": true,
+    "run_items_by_quality": true,
+    "snapshots": true,
+    "search_evidence_by_status": true,
+    "food_mentions_by_status": true,
+    "metrics_by_code_state_coverage_origin": true,
+    "quality_by_outcome": true,
+    "entity_change_effects": true,
+    "aggregate_invalidations": true
+  },
+  "target_only_categories": {
+    "quota_usage_ledger": 0,
+    "quota_accounts_by_status": {
+      "IMPORTED": 3
+    },
+    "captions_held": 184
+  }
+}

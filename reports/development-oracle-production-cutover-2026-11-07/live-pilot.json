@@ -1,0 +1,142 @@
+{
+  "task": "ORACLE-PRODUCTION-CUTOVER-1 live pilot",
+  "started_at": "2026-11-07T23:25:50+00:00",
+  "schema": "MZ_APP",
+  "caps": {
+    "google_trends_rss": 1,
+    "instagram_graph": 5,
+    "youtube": 2,
+    "naver_datalab": 1
+  },
+  "pilot_settings": {
+    "B3_LIVE_ENABLED": "true",
+    "B3_EXCLUSIVE_SOURCES": "google_trends_rss,instagram_graph,youtube,naver_datalab",
+    "B3_AUTOMATIC_ENABLED": "false",
+    "INSTAGRAM_COLLECTION_ENABLED": "false",
+    "YOUTUBE_COLLECTION_ENABLED": "false",
+    "NAVER_DATALAB_ENABLED": "false",
+    "INSTAGRAM_MAX_PAGES": "1",
+    "INSTAGRAM_SEARCH_SOFT_LIMIT": "1",
+    "YOUTUBE_DAILY_SEARCH_LIMIT": "1",
+    "YOUTUBE_DAILY_VIDEO_LIMIT": "1",
+    "YOUTUBE_MAX_PAGES": "1",
+    "NAVER_DATALAB_DAILY_LIMIT": "1"
+  },
+  "usage_import": {
+    "legacy_usage_rows": 0,
+    "legacy_usage_accounts": [
+      "instagram_graph/ig:<INSTAGRAM_USER_ID>",
+      "naver_datalab/local-default",
+      "youtube/local-default"
+    ],
+    "consistent": true
+  },
+  "transfer": {
+    "google_trends_rss": "EXCLUSIVE",
+    "instagram_graph": "EXCLUSIVE",
+    "youtube": "EXCLUSIVE",
+    "naver_datalab": "EXCLUSIVE"
+  },
+  "readiness": {
+    "ready": true,
+    "blockers": [],
+    "sources": {
+      "google_trends_rss": [],
+      "instagram_graph": [],
+      "youtube": [],
+      "naver_datalab": []
+    }
+  },
+  "steps": {
+    "rss": {
+      "http": 200,
+      "success": true,
+      "item_count": 10,
+      "new_count": 10,
+      "candidates": 0,
+      "error": null
+    },
+    "food": {
+      "http": 200,
+      "food_id": "FOOD_3007c29a43654e0fb9571c2a2c8c1c86"
+    },
+    "tracking": {
+      "instagram_graph": "ACTIVE",
+      "youtube": "ACTIVE",
+      "naver_datalab": "ACTIVE"
+    },
+    "plans": 3,
+    "jobs_scheduled": {
+      "instagram_graph": 1,
+      "naver_datalab": 1,
+      "youtube": 1
+    },
+    "job_results": {
+      "instagram_graph:LIMITED:None": 1,
+      "naver_datalab:SUCCEEDED:None": 1,
+      "youtube:LIMITED:None": 1
+    },
+    "recorded_calls": {
+      "instagram_graph:SUCCEEDED:200": 3,
+      "naver_datalab:SUCCEEDED:200": 1,
+      "youtube:SUCCEEDED:200": 2
+    },
+    "maintenance": {
+      "entity_changes_reprocessed": 1,
+      "api_requests": 0
+    },
+    "b8": {
+      "/api/v1/health": {
+        "http": 200,
+        "contract_errors": 0
+      },
+      "/api/v1/foods": {
+        "http": 200,
+        "contract_errors": 0
+      },
+      "food_ids": [
+        true
+      ],
+      "/api/v1/foods/{food_id}": {
+        "http": 200,
+        "contract_errors": 0
+      },
+      "/api/v1/sources/status": {
+        "http": 200,
+        "contract_errors": 0
+      },
+      "/api/v1/foods/{food_id}/timeline": {
+        "http": 200,
+        "contract_errors": 0
+      },
+      "/api/v1/foods/{food_id}/metrics": {
+        "http": 200,
+        "contract_errors": 0
+      }
+    },
+    "sqlite_connections_in_live_round": 0
+  },
+  "provider_requests": {
+    "sent": {
+      "google_trends_rss": 1,
+      "instagram_graph": 3,
+      "youtube": 2,
+      "naver_datalab": 1
+    },
+    "total": 7,
+    "by_status": {
+      "google_trends_rss:200": 1,
+      "instagram_graph:200": 3,
+      "naver_datalab:200": 1,
+      "youtube:200": 2
+    },
+    "refused_by_cap": {}
+  },
+  "writers_after": {
+    "instagram_graph": "ORACLE",
+    "youtube": "ORACLE",
+    "naver_datalab": "ORACLE",
+    "google_trends_rss": "ORACLE"
+  },
+  "finished_at": "2026-11-07T23:26:20+00:00"
+}

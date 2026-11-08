@@ -1,0 +1,38 @@
+{
+  "oracle_restart_with_backend_running": {
+    "before": {
+      "app_foods": 200,
+      "admin_status": 200
+    },
+    "oracle_down": {
+      "app_foods": 503,
+      "app_health": 200,
+      "admin_status": 500
+    },
+    "oracle_back_without_backend_restart": {
+      "app_foods": 200,
+      "admin_status": 200,
+      "admin_candidates": 200
+    }
+  },
+  "full_restart_persistence": "persistence-before.json == persistence-after.json on schema, rows, foods, observations, sources, candidates, tracking",
+  "clean_oracle_stop": "podman stop -t 120: exit 143 (SIGTERM, instance shutdown complete), next start without crash recovery",
+  "duplicate_backend_start": "refused: admin already running; not started twice",
+  "oracle_stop_with_backend_running": "refused without -Force",
+  "misconfiguration_refusals": {
+    "production schema declared as MZ_TEST": "production_schema_is_a_test_or_system_account",
+    "approval record missing": "production_approval_missing",
+    "ORACLE_ALLOW_PRODUCTION=false": "oracle_production_runtime_disabled",
+    "--target-status oracle without approval": "production_approval_missing",
+    "ORACLE_TEST_* pointing at the production schema": "oracle_test_schema_required",
+    "legacy SQLite server on the operational v0 file": "MigrationRequired (does not start)"
+  },
+  "test_reset_against_production": "not run on the production schema (destructive helper); refusal proven by test_production_access with a fake account",
+  "destructive_scenarios_on_mz_test": [
+    "lease expiry and crashed worker (test_writer_release, test_oracle_live_e2e)",
+    "budget exhaustion (test_oracle_live, rehearsal)",
+    "writer transfer and release interrupted (test_writer_release)",
+    "reverse recovery (test_reverse_recovery, rehearsal)",
+    "Oracle unreachable -> 503 (test_app_oracle)"
+  ]
+}

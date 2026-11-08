@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-11-08T09:27:00+00:00",
+  "access": "read-only (mode=ro, query_only)",
+  "tables": 30,
+  "rows": 7701,
+  "schema_version": 0,
+  "integrity_check": "ok",
+  "foreign_key_errors": 0,
+  "sha256": "38b880f535dded56e84a11570a1f7793bed1668580950172a417687b689548c0",
+  "unchanged_since_task_start": true,
+  "main_file_modified_at": "2026-10-28T14:20:01",
+  "mtime_unchanged_by_check": true,
+  "wal_bytes": 0
+}

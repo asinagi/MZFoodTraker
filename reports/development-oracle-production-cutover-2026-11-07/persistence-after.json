@@ -1,0 +1,66 @@
+{
+  "checked_at": "2026-11-07T23:32:25+00:00",
+  "b8_health": "ok",
+  "b8_foods": [
+    [
+      "FOOD_3007c29a43654e0fb9571c2a2c8c1c86",
+      "두쫀쿠"
+    ]
+  ],
+  "b8_instagram_points": {
+    "FOOD_3007c29a43654e0fb9571c2a2c8c1c86": [
+      [
+        "2026-11-08",
+        28,
+        "OBSERVED"
+      ]
+    ]
+  },
+  "b8_sources": {
+    "google_trends_rss": "2026-11-07T23:26:02Z",
+    "instagram_graph": "2026-11-07T23:26:04Z",
+    "youtube": null,
+    "naver_datalab": null
+  },
+  "admin_status": {
+    "http": 200,
+    "latest_run_origin": "live_api",
+    "storage": "oracle_production"
+  },
+  "admin_candidates": {
+    "http": 200,
+    "count": 2
+  },
+  "admin_tracking": {
+    "http": 200,
+    "effective": [
+      "instagram_graph:BLOCKED",
+      "naver_datalab:BLOCKED",
+      "youtube:BLOCKED"
+    ]
+  },
+  "verification_candidate": [
+    [
+      "CAND_8b9fdb59e5c7419baa3806b4c51ef6ac",
+      "REJECTED"
+    ]
+  ],
+  "schema": "MZ_APP",
+  "rows": {
+    "rss_runs": 1,
+    "food_candidates": 2,
+    "food_entities": 1,
+    "food_aliases": 1,
+    "tracking_targets": 3,
+    "execution_jobs": 3,
+    "execution_calls": 6,
+    "ingest_runs": 101,
+    "source_items": 655,
+    "source_contents": 1086,
+    "item_snapshots": 940,
+    "food_mentions": 143,
+    "metric_observations": 911,
+    "quality_results": 11106
+  },
+  "failures": []
+}

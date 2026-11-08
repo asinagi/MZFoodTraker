@@ -1,0 +1,54 @@
+{
+  "rss_latest_run": {
+    "success": 1,
+    "http_status": 200,
+    "item_count": 10,
+    "new_count": 10,
+    "food_count": 0,
+    "review_count": 0,
+    "origin": "live_api"
+  },
+  "execution_runs_live": {
+    "instagram_graph:live_api": 1,
+    "naver_datalab:live_api": 1,
+    "youtube:live_api": 1
+  },
+  "ingest_runs_of_pilot": {
+    "google_trends_rss:COMPLETE:live_api": 1,
+    "instagram_graph:LIMITED:live_api": 1,
+    "naver_datalab:COMPLETE:live_api": 1,
+    "youtube:LIMITED:live_api": 1
+  },
+  "quality_of_pilot": {
+    "PASS": 656,
+    "WARN": 38,
+    "NOT_APPLICABLE": 10
+  },
+  "source_items_by_source_origin": {
+    "google_trends_rss|legacy_unknown": 370,
+    "instagram_graph|legacy_unknown": 185,
+    "youtube|live_api": 50,
+    "google_trends_rss|live_api": 10,
+    "instagram_graph|live_api": 40
+  },
+  "live_metrics": {
+    "instagram_graph|instagram.observed_posts|OBSERVED": 1
+  },
+  "food_mentions": {
+    "instagram_graph|ACTIVE": 143
+  },
+  "naver_values_stored": 0,
+  "youtube_mentions": 0,
+  "b8_instagram_today": {
+    "start_date": "2026-11-07",
+    "value": null,
+    "value_state": "NOT_OBSERVED",
+    "coverage": "NONE"
+  },
+  "integrity": {
+    "foreign_key_errors": 0,
+    "unresolved_payload_refs": 0,
+    "blocked_policy_rows": 0,
+    "expired_rows_in_target": 0
+  }
+}
