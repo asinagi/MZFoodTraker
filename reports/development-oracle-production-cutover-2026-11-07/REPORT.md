@@ -128,3 +128,7 @@
 | 이 보고서 커밋 | docs: 보고서·절차서·인계서·인수 점검·README·앱 API 가이드 |
 
 `main` 통합 결과는 아래 [통합 기록](#통합-기록).
+
+## 통합 기록
+
+통합 직전 다시 가져온 `origin/main`은 기준 `88b2eaf` 그대로였다. `main`을 `88b2eaf`에서 `9307d16`(보고 커밋, 위 작업 커밋 3개 포함)으로 fast-forward하고 `origin/main`에 push했다. 이 기록 커밋도 같은 방식으로 `main`에 fast-forward했다. 강제 push·reset hard·브랜치 삭제·커밋 재작성은 없었다. 작업 종료 시 운영 상태: Oracle 컨테이너 실행(healthy), 운영 스키마 `MZ_APP` v10, 관리 서버 `127.0.0.1:8000`·앱 API `127.0.0.1:8020/api/v1` 실행(수집기 없는 관리·관측 모드), 4개 수집원 Writer = Oracle 런타임.
