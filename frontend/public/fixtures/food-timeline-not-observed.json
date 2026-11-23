@@ -1,0 +1,291 @@
+{
+  "summary": "미관측과 정상 0 (RSS 0, Instagram 미추적)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods/FOOD_MOCK_HEUGIMJA/timeline",
+    "query": {
+      "period": "7d"
+    },
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "food": {
+        "food_id": "FOOD_MOCK_HEUGIMJA",
+        "canonical_name": "[MOCK] 흑임자 라떼",
+        "entity_kind": "DISH"
+      },
+      "period": {
+        "start_date": "2026-10-27",
+        "end_date": "2026-11-02",
+        "days": 7,
+        "timezone": "Asia/Seoul"
+      },
+      "granularity": "day",
+      "series": [
+        {
+          "source_code": "google_trends_rss",
+          "source_name": "Google 트렌드 RSS",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "metric": {
+            "metric_code": "confirmed_items",
+            "unit": "distinct_items",
+            "item_label": "트렌드 항목"
+          },
+          "points": [
+            {
+              "start_date": "2026-10-27",
+              "end_date": "2026-10-27",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-28",
+              "end_date": "2026-10-28",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-29",
+              "end_date": "2026-10-29",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 1,
+                "failed": 1
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-30",
+              "end_date": "2026-10-30",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-31",
+              "end_date": "2026-10-31",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-01",
+              "end_date": "2026-11-01",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-02",
+              "end_date": "2026-11-02",
+              "days": 1,
+              "value": 0,
+              "value_state": "OBSERVED",
+              "coverage": "COMPLETE",
+              "observed_days": 1,
+              "complete": true,
+              "runs": {
+                "successful": 2,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            }
+          ]
+        },
+        {
+          "source_code": "instagram_graph",
+          "source_name": "Instagram",
+          "availability": "INCLUDED",
+          "availability_reason": null,
+          "metric": {
+            "metric_code": "confirmed_items",
+            "unit": "distinct_items",
+            "item_label": "게시물"
+          },
+          "points": [
+            {
+              "start_date": "2026-10-27",
+              "end_date": "2026-10-27",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-28",
+              "end_date": "2026-10-28",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-29",
+              "end_date": "2026-10-29",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-30",
+              "end_date": "2026-10-30",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-10-31",
+              "end_date": "2026-10-31",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-01",
+              "end_date": "2026-11-01",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            },
+            {
+              "start_date": "2026-11-02",
+              "end_date": "2026-11-02",
+              "days": 1,
+              "value": null,
+              "value_state": "NOT_OBSERVED",
+              "coverage": "NONE",
+              "observed_days": 0,
+              "complete": true,
+              "runs": {
+                "successful": 0,
+                "failed": 0
+              },
+              "legacy_unknown_value": null
+            }
+          ]
+        },
+        {
+          "source_code": "youtube",
+          "source_name": "YouTube",
+          "availability": "POLICY_BLOCKED",
+          "availability_reason": "YouTube 영상의 음식 언급 추출·파생 지표는 현재 정책상 비활성입니다.",
+          "metric": null,
+          "points": []
+        },
+        {
+          "source_code": "naver_datalab",
+          "source_name": "NAVER 데이터랩",
+          "availability": "NOT_STORED",
+          "availability_reason": "NAVER 상대 검색 지수는 요청 범위 안에서만 의미가 있고 저장하지 않으므로 B8 집계에 포함하지 않습니다.",
+          "metric": null,
+          "points": []
+        }
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

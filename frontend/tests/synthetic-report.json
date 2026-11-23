@@ -1,0 +1,69 @@
+{
+  "food": "버터떡",
+  "aliases_searched": [
+    "버터떡"
+  ],
+  "source": "검증용 합성 입력 · 실제 식품안전나라 데이터 아님",
+  "fetched_at": "2026-11-16T00:00:00Z",
+  "counts": {
+    "products": 2,
+    "core": 2,
+    "derived": 0,
+    "with_raw_materials": 1
+  },
+  "first_permitted_on": "20260101",
+  "latest_permitted_on": "20260201",
+  "monthly_permits": {
+    "2026-01": 1,
+    "2026-02": 1
+  },
+  "monthly_permits_core": {
+    "2026-01": 1,
+    "2026-02": 1
+  },
+  "top_ingredients": [
+    {
+      "ingredient": "밀가루",
+      "products": 1,
+      "share": 1.0
+    },
+    {
+      "ingredient": "버터",
+      "products": 1,
+      "share": 1.0
+    },
+    {
+      "ingredient": "설탕",
+      "products": 1,
+      "share": 1.0
+    }
+  ],
+  "top_ingredients_basis": "core",
+  "products": [
+    {
+      "report_no": "TEST_002",
+      "name": "[TEST] 버터떡 믹스",
+      "maker": "가상 제조사 B",
+      "food_type": "곡류가공품",
+      "permitted_on": "20260201",
+      "usage": null,
+      "match": "core",
+      "raw_materials": null
+    },
+    {
+      "report_no": "TEST_001",
+      "name": "[TEST] 버터떡",
+      "maker": "가상 제조사",
+      "food_type": "빵류",
+      "permitted_on": "20260101",
+      "usage": null,
+      "match": "core",
+      "raw_materials": "밀가루, 버터(우유), 설탕"
+    }
+  ],
+  "notes": [
+    "이름 포함 검색이라 다른 음식이 섞일 수 있음: match=derived로 구분(추정 규칙).",
+    "share는 원재료 정보가 있는 제품 중 그 재료를 쓴 제품 비율(함량 아님).",
+    "permitted_on은 품목제조보고 허가(신고)일이며 실제 출시일과 다를 수 있음."
+  ]
+}

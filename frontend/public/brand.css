@@ -1,0 +1,24 @@
+/* Mobile app identity. Desktop keeps the same single-column app shell. */
+.mobile-app .brand-lockup{display:inline-flex;gap:10px;align-items:center;text-decoration:none;white-space:nowrap;color:var(--ink);font-weight:800;font-size:20px;letter-spacing:-.9px;min-height:44px}
+.mobile-app .brand-lockup img{display:block;flex:none;object-fit:contain}
+.mobile-app .welcome{display:none}
+.mobile-app.welcome-active .editorial-header,.mobile-app.welcome-active .screens,.mobile-app.welcome-active .app-data-header,.mobile-app.welcome-active .data-workspace{display:none!important}
+.mobile-app.welcome-active .welcome{display:flex;flex-direction:column;height:100%;min-height:0;overflow:auto;overscroll-behavior:contain;padding:env(safe-area-inset-top) 24px max(20px,env(safe-area-inset-bottom));scrollbar-width:thin}
+.welcome-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;min-height:300px;padding:40px 0}
+.welcome-app-icon{width:104px;height:104px;flex-shrink:0}
+.welcome-copy{text-align:center}
+.welcome-copy h1{font-size:54px;font-weight:800;line-height:1.1;letter-spacing:-.065em;white-space:nowrap}
+.welcome-copy h1 span{color:var(--focus)}
+.welcome-copy h1:focus{outline:none}
+.welcome-statement{font-size:20px;line-height:1.5;font-weight:500;letter-spacing:-.5px;margin-top:18px;word-break:keep-all;color:var(--muted)}
+.welcome-footer{flex-shrink:0;padding-top:16px}
+.welcome-entry{display:flex;flex-direction:column;gap:6px}
+.welcome-start{display:flex;justify-content:space-between;align-items:center;min-height:56px;background:var(--ink);color:var(--base);padding:14px 18px;font-size:16px;font-weight:600;border-radius:4px}
+.welcome-start>span:last-child{color:var(--accent);font-size:24px}
+.welcome-resume{display:flex;align-items:center;justify-content:center;gap:12px;min-height:48px;font-size:14px;color:var(--muted)}
+.welcome-demo{font-size:11px;line-height:1.5;text-align:center;color:var(--muted);margin-top:10px}
+.welcome-active .welcome-body{animation:brand-arrive .5s ease-out both}
+@keyframes brand-arrive{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:359px){.mobile-app.welcome-active .welcome{padding-left:20px;padding-right:20px}.welcome-copy h1{font-size:48px}.welcome-statement{font-size:18px}.welcome-body{gap:24px}}
+@media(max-height:650px){.welcome-body{padding:24px 0;gap:20px;min-height:260px}.welcome-app-icon{width:88px;height:88px}.welcome-copy h1{font-size:48px}.welcome-statement{font-size:18px;margin-top:14px}.welcome-footer{padding-top:8px}}
+@media(prefers-reduced-motion:reduce){.welcome-active .welcome-body{animation:none}}
