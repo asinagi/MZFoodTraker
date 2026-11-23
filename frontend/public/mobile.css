@@ -1,0 +1,61 @@
+/* Mobile service shell. The original v2.1 mockup remains the visual source. */
+html {height:100%;background:#F5F6F3}
+body.mobile-app {margin:0;height:100%;overflow:hidden;background:#F5F6F3;color:#202820}
+body.mobile-app:not(.snapshot-board):not(.render-phone) .studio,
+body.mobile-app .studio {width:100%;max-width:480px;margin:0 auto;padding:0!important;height:100%;height:100dvh;background:white;position:relative}
+.mobile-app .studio-header,.mobile-app .workspace-tabs,.mobile-app .review-controls,
+.mobile-app .preview-help,.mobile-app .preview-session-controls,.mobile-app .screen-label,
+.mobile-app .screen-caption,.mobile-app .board-footer,.mobile-app .status,.mobile-app .home-indicator,
+.mobile-app #demo-mail-next {display:none!important}
+body.mobile-app .screens {display:block;width:100%;max-width:none;margin:0;height:100%}
+body.mobile-app .screen-wrap {display:none!important;width:100%;height:100%}
+body.mobile-app .screen-wrap.view-active {display:block!important}
+body.mobile-app .phone {display:flex;flex-direction:column;width:100%;height:100%;height:100dvh;border:0;border-radius:0;box-shadow:none;overflow:hidden;padding-top:env(safe-area-inset-top)}
+.mobile-app .appbar {flex-shrink:0;min-height:56px;height:56px;padding:0 20px}
+body.mobile-app .app-content,body.mobile-app .auth-content,body.mobile-app .search-content {flex:1;min-height:0;height:auto!important;overflow-y:auto;overscroll-behavior-y:contain;max-width:none;width:100%;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.mobile-app .app-content {padding-bottom:28px}
+.mobile-app .auth-content {padding-bottom:max(28px,env(safe-area-inset-bottom));margin:0}
+.mobile-app .bottom-nav {position:relative;bottom:auto;flex-shrink:0;height:auto;min-height:72px;padding:8px 36px calc(8px + env(safe-area-inset-bottom));gap:32px}
+.mobile-app .detail-footer {position:relative;bottom:auto;flex-shrink:0;height:auto;padding:12px 20px calc(12px + env(safe-area-inset-bottom))}
+.mobile-app .sheet {max-height:calc(100% - 56px);overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0}
+.mobile-app .toast {bottom:100px;max-width:calc(100% - 32px)}
+.mobile-app .app-demo-label {font-size:12px;line-height:18px;color:#66705F;margin:0 0 12px}
+.mobile-app .home-intro {padding-top:20px}
+.mobile-app .app-data-link {margin:16px 0 24px}
+.mobile-app .app-data-link button {min-height:48px;width:100%;display:flex;align-items:center;justify-content:space-between;font:inherit;font-size:14px;color:#476438;border-top:1px solid #D9DED2;border-bottom:1px solid #D9DED2}
+.mobile-app .app-data-link small {display:block;font-size:12px;color:#66705F;margin-top:8px;line-height:18px}
+.mobile-app .app-account-tools {display:flex;flex-direction:column;margin:20px 0 28px}
+.mobile-app .app-account-tools a {min-height:52px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #D9DED2;font-size:16px;color:#202820;text-decoration:none}
+.mobile-app .app-demo-note {background:#F5F6F3;padding:12px 14px;border-radius:8px;color:#66705F;font-size:14px;line-height:20px;margin:0 0 20px}
+.mobile-app .app-demo-note button {font:inherit;color:#476438;min-height:44px;text-decoration:underline;text-underline-offset:4px}
+.mobile-app .app-auth-continue {margin-top:16px}
+.mobile-app .app-evidence-link {display:flex;justify-content:space-between;align-items:center;min-height:48px;margin:20px;font-size:14px;color:#476438;border-bottom:1px solid #D9DED2}
+.mobile-app .app-data-header {display:none;align-items:center;justify-content:space-between;min-height:56px;height:calc(56px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;border-bottom:1px solid #D9DED2;background:white}
+.mobile-app .app-data-header h1 {font-size:16px;line-height:24px;font-weight:600}
+.mobile-app .app-data-header button,.mobile-app .app-data-header a {height:44px;min-width:44px;display:grid;place-items:center;font:inherit;color:#202820}
+.mobile-app .app-data-header a {font-size:14px;text-decoration:none;padding:0 8px}
+.mobile-app.data-active .screens {display:none!important}
+.mobile-app.data-active .app-data-header {display:flex}
+.mobile-app .data-workspace {height:calc(100dvh - 56px - env(safe-area-inset-top));overflow-y:auto;overflow-x:hidden;margin:0;padding:16px 20px calc(28px + env(safe-area-inset-bottom));border:0;border-radius:0;scrollbar-width:thin}
+.mobile-app .data-workspace .dataset-head {flex-wrap:wrap;margin:16px 0}
+.mobile-app .data-workspace h2 {font-size:28px;line-height:36px}
+.mobile-app .data-workspace .eyebrow {font-size:12px}
+.mobile-app .data-workspace .food-cards,.mobile-app .data-workspace .review-data-cards,.mobile-app .data-workspace .comparison-cards {grid-template-columns:minmax(0,1fr)}
+.mobile-app .data-workspace .food-data-card {min-height:0;width:100%;max-width:none;padding:20px}
+.mobile-app .data-workspace .data-controls label {flex:1;min-width:120px}
+.mobile-app .data-workspace .data-controls input[type=search] {min-width:0;flex:1;width:100%}
+.mobile-app .data-workspace .data-controls button {flex-shrink:0}
+.mobile-app .data-workspace .data-table-wrap {max-width:100%;overflow:auto}
+.mobile-app .data-workspace .live-chart {background:#F5F6F3;padding:20px 12px;border-radius:12px}
+.mobile-app .data-workspace #food-observation {scroll-margin-top:16px}
+.mobile-app .data-workspace .review-data-cards article {padding:16px}
+.mobile-app .data-workspace input,.mobile-app .data-workspace select,.mobile-app .data-workspace textarea {font-size:16px}
+.mobile-app .integration-toast {bottom:24px;max-width:calc(100% - 32px);width:max-content;box-sizing:border-box}
+.mobile-app [hidden] {display:none!important}
+@media(min-width:481px){body.mobile-app .studio {box-shadow:0 0 0 1px #D9DED2}}
+@media(max-width:360px){.mobile-app .appbar{padding-left:16px;padding-right:16px}.mobile-app .data-workspace{padding-left:16px;padding-right:16px}}
+@media(prefers-reduced-motion:reduce){.mobile-app *{scroll-behavior:auto!important}}
+.mobile-app h1[tabindex="-1"]:focus,.mobile-app .back-title[tabindex="-1"]:focus {outline:none}
+
+.mobile-app .app-connection {padding:12px 0;border-bottom:1px solid #D9DED2;margin-bottom:20px}
+.mobile-app .app-connection summary {font-size:14px;line-height:24px;min-height:32px;color:#476438}

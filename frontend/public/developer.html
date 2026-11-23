@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MZ제조기 · 메뉴 검토 웹</title>
+
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="comparison.css">
+<style id="block-theme">:root{
+ --ink:#202820;--muted:#66705F;--line:#D9DED2;--primary:#476438;
+ --pistachio:#F0F7E4;--sky:#F5F6F3;--butter:#F5F6F3;--rose:#F5F6F3;
+ --base:#FFFFFF;--stage:#F5F6F3;
+ --action-bg:#F0F7E4;--action-text:#202820;--action-border:#769544;
+}
+.phone{border-radius:31px;box-shadow:0 0 0 1px rgba(38,54,43,.11),0 12px 35px rgba(38,54,43,.055)}
+.brand{color:var(--primary);font-size:20px;letter-spacing:-1.1px}.brand-mark{border-radius:3px;transform:none}
+.appbar-side{font-size:10px;letter-spacing:0}.appbar{padding:0 20px}
+.home-intro{padding:13px 20px 0}.home-intro h1{font-size:27px;line-height:1.22;font-weight:700;letter-spacing:-.9px}
+.search-field{border-radius:8px;border-color:#DEE6D7;height:48px;margin-top:19px;padding:0 14px;background:#fff;font-size:13px}
+.home-menu.pad{margin:20px 18px 0;padding:17px 16px 18px;background:var(--pistachio);border-radius:12px}
+.section-head h2{font-size:17px;letter-spacing:-.5px}.image-note{font-size:9px;color:#66705F}
+.section-title{display:flex;align-items:center;gap:8px;min-width:0}
+.round-icon{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:0;background:transparent;flex-shrink:0;color:var(--primary)}
+.round-icon .icon{width:16px;height:16px;stroke-width:1.7}
+.menu-grid{gap:12px;margin-top:14px}.menu-picture{height:142px;border-radius:8px}
+.menu-card-title{font-size:16px;margin-top:11px;letter-spacing:-.6px;line-height:1.3;align-items:flex-start;gap:2px}
+.menu-card-title .icon{width:13px;height:13px;margin-top:3px;color:var(--primary)}
+.menu-card-sub{font-size:11px;line-height:1.5;margin-top:5px;letter-spacing:-.25px;min-height:32px}
+.content-labels{margin-top:7px}.content-label{background:rgba(255,255,255,.72);font-size:9px;padding:5px 6px;border-radius:4px;line-height:1.3;color:var(--ink)}
+.content-label.neutral{border:0;background:rgba(255,255,255,.72);padding:5px 6px}
+.content-label .icon{width:11px;height:11px}
+.resume-section.pad{margin:15px 18px 20px;padding:15px 16px 16px;background:var(--butter);border-radius:12px}
+.resume-section .section-head{margin-bottom:11px}.resume-section .section-head h2{font-size:15px}.resume-section .section-head a{color:var(--ink);font-size:10px}
+.resume-card{background:transparent;border-radius:0;padding:0;gap:11px}.resume-card img{height:58px;width:58px;border-radius:6px}
+.resume-copy strong{font-size:14px;font-weight:600}.resume-copy .next-small{font-size:10px;gap:5px;margin-top:7px}.resume-copy .next-small .caption{font-size:9px;color:var(--muted)}
+.bottom-nav{border-top-color:#ECF0E9;height:78px;padding-top:9px}.nav-item{position:relative;isolation:isolate;gap:5px;font-size:10px}.nav-item.active{color:var(--primary);font-weight:700}
+.nav-item.active:before{content:'';position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:20px;height:2px;border-radius:1px;background:var(--primary)}
+.nav-item.active .icon.nav-bookmark{fill:none;stroke:var(--primary)}.nav-item .icon{height:22px;width:22px}
+.primary{background:var(--action-bg);color:var(--action-text);border:1px solid var(--action-border);border-radius:8px;font-size:14px;font-weight:600;height:48px;box-shadow:none}
+.detail-hero{height:169px;margin:0 18px;width:calc(100% - 36px);border-radius:10px}
+.detail-hero figcaption{font-size:9px;right:10px;bottom:9px;border-radius:4px;padding:4px 6px}
+.menu-heading{padding:16px 22px 14px}.menu-heading h1{font-size:27px;letter-spacing:-.7px}.menu-heading .eyebrow{font-size:10px;margin-bottom:6px}.menu-heading p{font-size:12px;margin-top:8px}
+.section-tabs{margin:0 18px;gap:27px;height:42px;border-color:var(--line)}.section-tabs a{font-size:12px}.section-tabs a:first-child{color:var(--primary)}.section-tabs a:first-child:after{background:var(--primary)}
+.detail .app-content>.pad:not(.menu-heading){padding:0 18px 18px}
+.evidence{padding:16px 16px 14px;background:var(--sky);border-radius:12px;margin-top:16px;scroll-margin-top:54px}
+.evidence .section-head h2{font-size:16px}.period{font-size:10px;color:var(--ink)}
+.metric-sub{margin-top:11px}.metric-sub p{font-size:9px;color:var(--muted)}.example-label{background:rgba(255,255,255,.76);font-size:10px;padding:4px 6px;border-radius:4px;color:var(--ink)}
+.chart{height:125px;margin-top:8px}.chart text{fill:var(--muted);font-size:10px}.chart line{stroke:#A0C5CC;stroke-width:.6}.chart .curve{stroke:var(--primary);stroke-width:2.3}.chart .last-point{fill:var(--primary)}
+.source-link{padding-top:8px;font-size:10px;color:var(--ink);border-top:1px solid rgba(49,88,61,.1);min-height:29px;margin-top:2px}
+.section-divider{display:none}
+.product-section{background:var(--pistachio);padding:16px;border-radius:12px;margin-top:16px;scroll-margin-top:54px}
+.product-section .section-head h2{font-size:16px}.product-section .count{color:var(--primary);font-size:11px}.product-section .section-head button{color:var(--ink);font-size:10px}
+.product-section .hint{font-size:11px;line-height:1.6;margin-top:9px}
+.product-list{margin-top:12px;gap:9px}.product-row{border:0;background:#fff;border-radius:6px;padding:13px 12px;gap:10px;min-height:75px}
+.product-icon{background:var(--pistachio);border-radius:12px;width:36px;height:39px}.product-icon .icon{width:19px;height:19px;color:var(--primary)}
+.product-copy strong{font-size:13px;line-height:1.45;letter-spacing:-.2px}.product-copy span{font-size:11px;line-height:1.5;margin-top:4px}.product-row>.icon{width:14px;height:14px;color:var(--primary)}
+.product-source{font-size:10px;line-height:1.5;margin-top:10px;color:var(--muted)}
+.check-section{background:var(--butter);border-radius:12px;padding:16px;margin-top:16px;margin-bottom:2px;scroll-margin-top:54px}
+.check-title{display:flex;align-items:center;gap:8px;font-size:16px;margin-bottom:14px}.check-group{background:transparent;border-radius:0;padding:0}.check-item{font-size:12px;gap:8px}.check-item+.check-item{margin-top:10px}.check-item .icon{width:15px;height:15px}
+.disclaimer{font-size:9px;line-height:1.6;padding-top:12px;margin-top:14px;border-top:1px solid rgba(49,88,61,.12)}
+.detail-footer{border-color:#D9DED2;padding:12px 20px 25px}.footer-helper{font-size:9px;margin-top:8px}
+.my-intro{padding:17px 20px 0}.my-intro h1{font-size:28px}.my-intro p{font-size:12px}.status-tabs{margin:23px 20px 0;gap:20px;border-color:var(--line)}.status-tabs button{font-size:12px}.status-tabs button.active{color:var(--primary)}.status-tabs button.active:after{background:var(--primary)}
+.saved-list{padding:18px 18px 0;gap:14px}.saved-card{border:0;background:var(--butter);border-radius:12px}
+.saved-main{padding:16px 16px 13px;gap:12px}.saved-main img{width:76px;height:76px;border-radius:6px}.saved-copy h2{font-size:16px}.saved-copy p{font-size:11px}.saved-copy .saved-date{font-size:9px}.saved-main>.icon{color:var(--primary)}
+.saved-next{margin:0 13px 13px;width:calc(100% - 26px);padding:12px 13px;border-radius:6px;background:rgba(255,255,255,.68)}.saved-next small{font-size:9px;margin-bottom:5px}.saved-next span{font-size:12px}.saved-next>.icon{color:var(--primary)}
+.my-foot{padding:20px 22px 22px}.my-foot p{font-size:10px}.my-foot a{font-size:11px;color:var(--primary)}.photo-hint{font-size:9px}
+.saved-resume-head{padding:18px 20px 17px}.saved-resume-head .row{gap:15px}.saved-resume-head img{height:76px;width:76px;border-radius:8px}.saved-resume-head h1{font-size:26px;letter-spacing:-.6px;margin-bottom:7px}.resume-state{font-size:11px}.resume-state button{color:var(--primary);font-size:10px}.saved-resume-head .resume-date{font-size:9px;margin-top:3px}
+.resume-detail-block{margin:0 18px;padding:16px;border-radius:12px}.resume-detail-block p{font-size:10px;margin-bottom:8px}.resume-detail-block h2{font-size:21px;letter-spacing:-.5px}.resume-detail-block .mini-link{padding-top:11px;margin-top:14px;font-size:11px}
+.resume-investigation{padding:15px 18px 20px}.review-product-block{background:var(--pistachio);padding:15px 16px 16px;border-radius:12px}.review-product-block .section-head h2{font-size:15px}.review-product-block .section-head button{font-size:10px;color:var(--ink)}.review-product-block .product-row{margin-top:10px!important}
+.memo-block{margin-top:15px;background:var(--rose);padding:15px 16px 17px;border-radius:12px}.memo-head{margin-bottom:8px}.memo-head p{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}.memo-head button{font-size:10px;color:var(--ink)}.memo-block strong{font-size:14px;line-height:1.55;font-weight:500}
+.resume-links{margin-top:15px;background:var(--sky);padding:16px;border-radius:12px}.resume-links h2{font-size:15px;margin-bottom:5px;display:flex;align-items:center;gap:8px}.resume-links a{font-size:11px;border-color:rgba(49,88,61,.12);padding:12px 0}.resume-links a:last-child{border:0;padding-bottom:0}
+.resume-investigation>.hint{font-size:9px!important;margin:12px 3px 8px!important;line-height:1.5}
+.sheet{border-radius:16px 16px 0 0}.sheet h2{font-size:22px;letter-spacing:-.5px}.sheet-head .success-icon{background:var(--pistachio);color:var(--primary);border-radius:6px}.sheet-intro{font-size:14px}.sheet-hint{font-size:12px}.radio-row input{accent-color:var(--primary)}
+.product-sheet .product-type{background:var(--pistachio);border-radius:4px}.product-sheet .sheet-note{border-radius:8px;background:var(--butter);color:var(--ink)}.sheet .primary{border-radius:8px}.empty-illustration:before{background:var(--rose)}
+.screen-caption strong{color:var(--primary)}.board-footer{border-color:#D7E0CD}.board-footer .number{color:var(--primary)}
+.studio-title{font-size:40px;letter-spacing:-1.4px}.snapshot-board .studio-title{font-size:38px}.studio-kicker{color:var(--primary);letter-spacing:.8px}.swatches{gap:8px}.swatches span{width:24px;height:24px;border-radius:4px}
+.studio-intro p{font-size:14px;line-height:1.7}.screen-label b{font-size:16px}.screen-label span{font-size:11px}
+.snapshot-board .review-controls{display:none}.snapshot-board .screens{margin-top:34px}
+.render-phone .phone{border-radius:0;box-shadow:none}
+@media(max-width:435px){
+ .home-intro h1{font-size:27px}.menu-grid{gap:10px}.menu-picture{height:142px}.menu-card-title{font-size:15px}.menu-card-sub{font-size:11px;min-height:33px}.home-menu.pad{padding-left:15px;padding-right:15px}.section-head h2{font-size:16px}.section-title{gap:6px}.round-icon{width:18px;height:18px}.image-note{font-size:8px}.content-label{font-size:8.5px;padding:5px}.content-label .icon{width:10px;height:10px}.resume-copy strong{font-size:13px}.resume-copy .next-small{font-size:9px;gap:4px}.resume-copy .next-small .caption{font-size:8px}.resume-card img{width:55px;height:55px}.resume-section .section-head h2{font-size:14px}.period{font-size:9px}.evidence .section-head h2{font-size:15px}.metric-sub p{font-size:8.5px}.saved-main img{width:68px;height:72px}.saved-copy h2{font-size:15px}.saved-copy p{font-size:11px}.saved-resume-head h1{font-size:25px}.resume-state{font-size:11px}.review-product-block .section-head h2{font-size:14px}.memo-block strong{font-size:12px}.studio-title{font-size:29px}
+}
+
+.product-section .product-icon,.review-product-block .product-icon{background:transparent;width:28px;height:32px;border-radius:0}
+
+/* Revision 04: restrained controls and a lighter action surface. */
+.primary:hover{background:#CDE1AC}.primary:active{background:#C2D69F}
+.primary[data-saved=true]{background:#EEF4E7}
+.secondary-button{border-radius:8px;border-color:#858E7B}
+.saved-editor textarea{border-radius:8px;border-color:#858E7B}
+.toast{border-radius:6px}
+.empty-illustration:before,.empty-illustration:after{border-radius:5px}
+.review-controls button{border-radius:6px}
+.review-controls button.active{background:var(--pistachio);color:var(--ink);border-color:var(--action-border)}
+.nav-item.active .icon{stroke-width:2.2}
+</style><style id="account-expansion">/* Account screens use the same typography, palette, and geometry as revision 04. */
+.account-screen [hidden]{display:none!important}
+.account-screen .auth-content{height:730px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:21px 22px 36px}
+.account-screen .auth-content::-webkit-scrollbar{display:none}
+.auth-bar-spacer{width:44px;flex-shrink:0}
+.auth-intro h1{font-size:27px;line-height:1.24;font-weight:700;letter-spacing:-.8px}
+.auth-intro p{font-size:13px;line-height:1.65;color:var(--muted);margin-top:12px;letter-spacing:-.15px}
+.auth-intro .auth-kicker{font-size:11px;font-weight:600;letter-spacing:0;color:var(--primary);margin:0 0 9px}
+.auth-form{margin-top:29px}
+.auth-field+.auth-field{margin-top:20px}
+.auth-field>label{display:block;font-size:13px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.auth-field input:not([type=checkbox]){display:block;width:100%;min-width:0;height:49px;padding:0 13px;background:#fff;border:1px solid #858E7B;border-radius:8px;color:var(--ink);font-size:15px;line-height:1.4;outline-offset:2px}
+.auth-field input::placeholder{color:#68766B;font-size:13px}
+.auth-field input[aria-invalid=true]{border-color:#A23934}
+.auth-input-wrap{position:relative}
+.auth-input-wrap input{padding-right:59px!important}
+.auth-password-toggle{position:absolute;right:5px;top:3px;height:43px;min-width:47px;font-size:11px;font-weight:500;color:var(--muted);text-decoration:underline;text-underline-offset:3px;border-radius:4px}
+.auth-field-hint{font-size:11px;line-height:1.55;color:var(--muted);margin-top:7px}
+.auth-error{font-size:12px;line-height:1.55;color:#A23934;background:#F9EFED;border-radius:6px;padding:10px 12px;margin-top:15px}
+.auth-error[hidden]{display:none}
+.auth-form>.primary{margin-top:25px;height:49px}
+.auth-form .primary[disabled]{background:#E7EBE1;color:#697663;border-color:#D0D8C9;cursor:default}
+.auth-links{display:flex;justify-content:flex-end;align-items:center;margin-top:10px}
+.auth-text-button{font-size:12px;line-height:1.5;font-weight:500;color:var(--primary);min-height:42px;padding:8px 0;text-decoration:underline;text-underline-offset:3px}
+.auth-signup-prompt{border-top:1px solid var(--line);margin-top:22px;padding-top:17px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}
+.auth-signup-prompt .auth-text-button{font-weight:600;font-size:13px}
+.auth-dismiss{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;color:var(--muted);font-size:12px;margin-top:16px;gap:5px}
+.auth-dismiss .icon{width:15px;height:15px}
+.auth-form.compact{margin-top:23px}
+.auth-form.compact .auth-field+.auth-field{margin-top:16px}
+.auth-consents{margin:23px 0 0;padding:14px 0 0;border:0;border-top:1px solid var(--line)}
+.auth-consents legend{float:left;font-size:12px;font-weight:600;margin-bottom:7px;padding:0}
+.auth-consent-row{clear:both;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px}
+.auth-consent-row label{display:flex;align-items:center;gap:9px;line-height:1.5;font-size:12px;flex:1;min-height:42px}
+.auth-consent-row input{width:17px;height:17px;margin:0;accent-color:var(--primary);flex-shrink:0}
+.auth-consent-row button{color:var(--muted);font-size:11px;text-decoration:underline;text-underline-offset:3px;min-height:42px;min-width:36px}
+.auth-form.compact>.primary{margin-top:18px}
+.auth-footer-copy{font-size:11px;line-height:1.55;color:var(--muted);margin-top:16px}
+.auth-info-block{border-radius:12px;background:var(--sky);padding:16px;margin-top:23px}
+.auth-info-block .auth-mini-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;line-height:1.5;margin-bottom:8px}
+.auth-info-block .auth-mini-title .icon{width:18px;height:18px}
+.auth-info-block strong{display:block;font-size:15px;font-weight:600;line-height:1.5;word-break:break-word}
+.auth-info-block p{font-size:12px;color:var(--muted);line-height:1.65;margin-top:8px}
+.auth-info-block .auth-text-button{min-height:34px;font-size:11px;padding:7px 0 0}
+.auth-code-field input{font-size:23px!important;letter-spacing:7px;font-weight:600;padding-left:16px!important}
+.auth-code-field input::placeholder{font-size:13px;letter-spacing:0;font-weight:400}
+.auth-code-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px;font-size:11px;color:var(--muted)}
+.auth-code-meta .auth-text-button{min-height:36px;font-size:11px}
+.auth-bullet-list{padding:0;margin:12px 0 0;list-style:none}
+.auth-bullet-list li{font-size:12px;line-height:1.7;padding-left:14px;position:relative;color:var(--muted)}
+.auth-bullet-list li:before{content:'·';position:absolute;left:0;color:var(--primary);font-weight:700}
+.auth-bullet-list li+li{margin-top:8px}
+.auth-next-actions{display:grid;gap:10px;margin-top:27px}
+.auth-next-actions .primary,.auth-next-actions .secondary-button{height:49px}
+.auth-confirm-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:8px;background:var(--sky);color:var(--primary);margin-bottom:20px}
+.auth-confirm-icon .icon{width:22px;height:22px}
+.account-home .auth-content{height:678px;padding:17px 20px 28px}
+.account-home .auth-intro h1{font-size:28px}
+.account-identity{background:var(--pistachio);border-radius:12px;padding:18px;margin-top:22px}
+.account-identity .identity-label{font-size:11px;color:var(--muted);margin-bottom:8px}
+.account-identity h2{font-size:18px;line-height:1.4;letter-spacing:-.3px;word-break:break-word;font-weight:600}
+.account-identity .identity-note{font-size:12px;line-height:1.6;color:var(--muted);margin-top:10px}
+.account-identity .primary{margin-top:15px;background:#fff;font-size:13px}
+.account-settings{margin-top:20px}
+.account-settings h2{font-size:12px;color:var(--muted);font-weight:500;line-height:1.5;margin-bottom:8px}
+.account-settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:51px;border-bottom:1px solid var(--line);width:100%;text-align:left;font-size:14px;line-height:1.45}
+.account-settings-row .icon{width:16px;height:16px;color:var(--muted)}
+.account-signout{min-height:47px;font-size:13px;color:var(--primary);display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:13px}
+.account-signout .icon{width:16px;height:16px}
+.account-delete-link{font-size:11px;color:#7D5F5B;text-decoration:underline;text-underline-offset:3px;min-height:37px}
+.auth-document-tag{display:inline-block;font-size:10px;font-weight:500;padding:4px 6px;background:var(--sky);border-radius:4px;margin-bottom:13px}
+.policy-notice{background:var(--butter);border-radius:12px;padding:14px 15px;font-size:12px;line-height:1.65;color:var(--ink);margin-top:20px}
+.policy-outline{margin:24px 0 0;padding:0;list-style:none;counter-reset:policy}
+.policy-outline li{counter-increment:policy;display:grid;grid-template-columns:22px 1fr;gap:7px;padding:14px 0;border-bottom:1px solid var(--line)}
+.policy-outline li:before{content:counter(policy,decimal-leading-zero);font-size:10px;color:var(--primary);padding-top:3px}
+.policy-outline h2{font-size:14px;font-weight:600;line-height:1.5}
+.policy-outline p{font-size:11px;line-height:1.7;color:var(--muted);margin-top:5px}
+.policy-close{margin-top:24px}
+.withdraw-summary{background:var(--rose);border-radius:12px;padding:17px;margin-top:24px}
+.withdraw-summary h2{font-size:14px;font-weight:600;line-height:1.5}
+.withdraw-summary ul{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:11px}
+.withdraw-summary li{display:flex;align-items:center;gap:9px;font-size:12px;line-height:1.5}
+.withdraw-summary .icon{width:17px;height:17px}
+.withdraw-confirm-label{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.65;margin-top:23px}
+.withdraw-confirm-label input{width:17px;height:17px;accent-color:#A23934;flex-shrink:0;margin:2px 0 0}
+.danger-button{display:flex;align-items:center;justify-content:center;height:49px;width:100%;border:1px solid #A23934;border-radius:8px;color:#A23934;background:white;font-size:14px;font-weight:600;margin-top:22px}
+.danger-button:disabled{color:#9E817D;border-color:#D3BCB8;cursor:default}
+.withdraw-cancel{margin-top:10px}
+.account-screen .toast{bottom:36px}
+.account-home .toast{bottom:94px}
+@media(max-width:435px){.account-screen .auth-content{padding-left:20px;padding-right:20px}.auth-intro h1{font-size:26px}.auth-field input:not([type=checkbox]){font-size:15px}.account-identity h2{font-size:17px}}
+@media(max-width:355px){.auth-intro h1{font-size:24px}.auth-consent-row label{font-size:11px}.auth-code-meta{gap:5px}.auth-signup-prompt{font-size:11px}.auth-signup-prompt .auth-text-button{font-size:12px}}
+
+[hidden]{display:none!important}
+.screen-wrap{display:none}
+.screen-wrap.view-active{display:block}
+body.single .screen-wrap:not(.view-active){display:none!important}
+body.single .screen-wrap.view-active{display:block!important}
+body[data-view=all] .screen-wrap[data-board]{display:block}
+.render-phone .screen-wrap{display:none!important}.render-phone .screen-wrap.render-target{display:block!important}
+.preview-help{font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px;max-width:860px}
+.preview-session-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0 3px;font-size:11px;color:var(--muted)}
+.preview-session-controls button{border:1px solid #CAD3C3;padding:8px 10px;border-radius:5px;background:#fff;font-size:11px}
+.preview-session-controls select{font:inherit;max-width:235px;background:#fff;border:1px solid #CAD3C3;border-radius:5px;padding:8px;color:var(--ink)}
+#preview-session{margin-left:auto;font-size:11px}
+#demo-mail-next{border:1px solid var(--action-border);background:var(--pistachio);border-radius:6px;padding:9px 12px;font-size:12px;margin-top:10px}
+.render-phone .preview-help,.render-phone .preview-session-controls,.render-phone #demo-mail-next,.snapshot-board .preview-help,.snapshot-board .preview-session-controls,.snapshot-board #demo-mail-next{display:none!important}
+.account-entry{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:flex-end;font-size:12px;font-weight:600;color:var(--primary)}
+.account-entry .icon{width:22px;height:22px}
+.guest-home-note{margin:15px 18px 20px;padding:16px;background:var(--butter);border-radius:12px}
+.guest-home-note h2{font-size:14px;line-height:1.4;letter-spacing:-.2px}
+.guest-home-note p{font-size:11px;line-height:1.65;color:var(--muted);margin-top:7px}
+.guest-home-note button{margin-top:8px;min-height:34px;text-decoration:underline;text-underline-offset:3px;font-size:12px;color:var(--primary)}
+.saved-gate{margin:35px 18px 0;background:var(--sky);padding:24px 18px;border-radius:12px}
+.saved-gate h2{font-size:23px;line-height:1.3;letter-spacing:-.7px}
+.saved-gate p{font-size:13px;line-height:1.6;margin-top:13px;color:var(--muted)}
+.saved-gate .primary{margin-top:23px}
+.saved-gate .secondary-button{margin-top:10px;background:transparent;font-size:13px}
+.preview-empty{display:block;padding:50px 26px 20px}
+.saved-list:empty{display:none}
+.state-message{padding:20px 18px;margin:18px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.state-message h2{font-size:18px;line-height:1.35;letter-spacing:-.4px}
+.state-message p{font-size:12px;line-height:1.65;color:var(--muted);margin-top:9px}
+.state-message button{margin-top:16px}
+.block-state{padding:21px 0 13px;font-size:12px;line-height:1.65}
+.block-state button{display:block;text-decoration:underline;text-underline-offset:3px;font-weight:600;min-height:38px}
+.detail-save-error{padding:9px 12px;background:#F9EFED;border:1px solid #CCA39D;border-radius:8px;font-size:11px;line-height:1.5;color:#A23934;position:absolute;left:20px;right:20px;bottom:115px;z-index:21}
+.detail-save-error button{font-weight:600;text-decoration:underline;text-underline-offset:3px;min-height:30px}
+.remove-review{font-size:11px;color:#A23934;min-height:40px;text-decoration:underline;text-underline-offset:3px;margin:10px 0 0}
+.editor-label{display:block;font-size:12px;margin:20px 0 8px}
+.phone.show-confirm .confirm-shade,.phone.show-confirm .remove-sheet{display:block}
+.remove-sheet p{font-size:13px;color:var(--muted);line-height:1.65;margin-top:16px}
+.remove-sheet .danger-button{margin-top:24px}
+.remove-sheet .secondary-button{margin-top:10px}
+.search-content{height:678px;overflow:auto;scrollbar-width:none;padding:14px 20px 24px}
+.search-input-form{display:flex;gap:8px;margin-bottom:23px;align-items:center}
+.search-input-wrap{display:flex;align-items:center;border:1px solid #858E7B;border-radius:8px;height:48px;padding:0 10px;flex:1;min-width:0;gap:7px}
+.search-input-wrap .icon{width:18px;height:18px;color:var(--muted)}
+.search-input-wrap input{border:0;outline:0;min-width:0;flex:1;font-size:14px;background:white;color:var(--ink);height:43px;width:100%}
+.search-input-wrap:focus-within{outline:2px solid var(--primary);outline-offset:2px}
+.search-clear{width:30px;height:40px;display:grid;place-items:center}
+.search-submit{height:48px;padding:0 12px;background:var(--pistachio);border:1px solid var(--action-border);border-radius:8px;font-size:13px;font-weight:600}
+.search-content h1{font-size:21px;line-height:1.4;letter-spacing:-.4px;margin-bottom:17px}
+.search-result{width:100%;display:flex;align-items:center;gap:13px;padding:14px 0;border-bottom:1px solid var(--line);text-align:left}
+.search-result img{width:76px;height:76px;object-fit:cover;border-radius:6px}
+.search-result>span{flex:1;min-width:0}.search-result strong{display:block;font-size:16px;line-height:1.4;letter-spacing:-.4px}
+.search-result small{display:block;font-size:11px;line-height:1.6;color:var(--muted);margin-top:6px}
+.search-result>.icon{width:16px;height:16px}
+.search-content .state-message{margin:20px 0;border:0;background:var(--sky)}
+.search-loading .skeleton-row{height:104px;padding:14px 0;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.skeleton-thumb{width:76px;height:76px;background:#E9EEE3;border-radius:6px;flex-shrink:0}
+.skeleton-lines{flex:1}.skeleton-lines span{display:block;height:12px;background:#E9EEE3;border-radius:3px;margin:9px 0}.skeleton-lines span:last-child{width:68%}
+.loading-caption{font-size:12px;color:var(--muted);margin:15px 0}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}.compare-grid strong{font-size:14px;line-height:1.5}
+.snapshot-board .screens{row-gap:30px}
+.auth-content .auth-info-block:last-child{margin-bottom:18px}
+@media(max-width:435px){#preview-session{margin-left:0;width:100%}.review-controls{gap:6px}.review-controls button{font-size:11px;padding:8px 9px}.search-content{padding-left:18px;padding-right:18px}.search-submit{padding:0 9px}.preview-help{font-size:11px}}
+</style><style id="visual-v2">
+/* MZ제조기 v2 · 확정 검토용 — neutral surfaces, food objects, one lime accent. */
+:root{
+ --base:#FFFFFF;--stage:#F5F6F3;--surface:#F5F6F3;--surface-alt:#ECEEE8;
+ --ink:#202820;--muted:#66705F;--line:#D9DED2;--control-border:#858E7B;
+ --accent:#D7EEA5;--accent-pressed:#C4DF8A;--accent-soft:#F0F7E4;--accent-border:#769544;
+ --primary:#476438;--focus:#476438;--action-bg:var(--accent);--action-text:var(--ink);--action-border:var(--accent-border);
+ --pistachio:var(--accent-soft);--sky:var(--surface);--butter:var(--surface);--rose:var(--surface);
+ --error:#A23934;--error-soft:#F9EFED;--warning:#776225;--warning-soft:#F5F0E3;
+}
+body{background:var(--stage);color:var(--ink)}
+.phone{background:var(--base);box-shadow:0 0 0 1px var(--line),0 12px 30px rgba(32,40,32,.035);border-radius:28px}
+.phone h1,.phone h2,.phone h3,.phone strong{font-weight:600}
+.phone button:focus-visible,.phone a:focus-visible,.phone input:focus-visible,.phone textarea:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.phone button,.phone a{touch-action:manipulation}
+.phone input,.phone textarea{color:var(--ink);caret-color:var(--focus)}
+.phone input::placeholder,.phone textarea::placeholder{color:var(--muted)}
+.status{padding-left:24px;padding-right:24px;background:var(--base)}
+.clock{font-size:12px;font-weight:600}
+.appbar{padding:0 20px;background:var(--base);height:52px}
+.brand{font-size:21px;line-height:28px;letter-spacing:-.8px;font-weight:600;color:var(--ink);gap:0}
+.brand-mark{display:none}
+.back-title{font-size:16px;line-height:24px;font-weight:600}
+.icon-button{width:44px;height:44px;border-radius:8px}
+.account-entry{font-size:14px;line-height:20px;min-height:44px;min-width:44px;color:var(--focus)}
+.account-entry .icon{width:24px;height:24px}
+.pad{padding-left:20px;padding-right:20px}
+.primary,.sheet .primary{height:48px;min-height:48px;border-radius:8px;border:1px solid var(--accent-border);background:var(--accent);color:var(--ink);font-size:16px;line-height:24px;font-weight:600;letter-spacing:-.2px;box-shadow:none}
+.primary:hover{background:var(--accent-pressed)}
+.primary:active{background:var(--accent-pressed)}
+.primary[data-saved=true]{background:var(--accent-soft)}
+.primary .icon{width:20px;height:20px}
+.secondary-button{height:48px;min-height:48px;border-radius:8px;border:1px solid var(--control-border);background:var(--base);font-size:16px;line-height:24px;font-weight:500}
+.section-head{gap:12px;align-items:center;min-height:28px}
+.section-head h2,.evidence .section-head h2,.product-section .section-head h2{font-size:20px;line-height:28px;letter-spacing:-.55px;font-weight:600}
+.section-head a,.section-head button{font-size:12px;line-height:18px;color:var(--focus);min-height:44px;flex-shrink:0}
+.section-title{gap:8px}
+.section-title .round-icon,.check-title .round-icon{display:none}
+.round-icon{width:20px;height:20px;border-radius:0;background:transparent;color:var(--focus)}
+.round-icon .icon{width:18px;height:18px}
+
+/* Discovery: one food-led feature, then a compact second menu. */
+.home-intro{padding:20px 20px 0}
+.home-intro h1{font-size:32px;line-height:40px;font-weight:600;letter-spacing:-1.1px}
+.search-field{height:52px;min-height:52px;margin-top:22px;padding:0 14px;border:1px solid var(--control-border);background:var(--surface);border-radius:8px;font-size:16px;line-height:24px;gap:10px}
+.search-field svg{width:20px;height:20px}
+.search-field span{letter-spacing:-.3px}
+.home-menu.pad{margin:28px 20px 0;padding:0;background:transparent;border-radius:0}
+.home-menu .section-head{margin-bottom:14px}
+.home-menu .section-title{gap:0}
+.image-note{font-size:12px;line-height:18px;color:var(--muted);text-align:right}
+.menu-grid{display:flex;flex-direction:column;gap:12px;margin:0}
+.menu-card{display:grid;grid-template-columns:90px minmax(0,1fr);grid-template-areas:'picture title' 'picture subtitle' 'picture labels';column-gap:14px;align-items:center;position:relative;min-height:132px;padding:14px 16px;background:var(--surface);border-radius:12px;overflow:hidden;border:1px solid transparent}
+.menu-card:focus-visible{outline-offset:2px}
+.menu-card:first-child{display:block;min-height:272px;padding:173px 20px 18px}
+.menu-picture,.menu-picture.cookie,.menu-picture.butter{grid-area:picture;height:98px;width:90px;position:relative;border-radius:0;background:transparent;overflow:visible}
+.menu-picture img,.menu-picture.butter img,.menu-picture.cookie img{width:100%;height:100%;object-fit:contain;object-position:center}
+.menu-card:first-child .menu-picture{position:absolute;top:2px;left:20px;width:calc(100% - 40px);height:171px}
+.menu-card:first-child .menu-picture img{transform:scale(1.42);transform-origin:center}
+.menu-card-title{grid-area:title;align-self:end;display:flex;align-items:center;gap:8px;font-size:18px;line-height:26px;font-weight:600;letter-spacing:-.6px;margin:0;white-space:normal}
+.menu-card-title .icon{width:15px;height:15px;flex-shrink:0;margin:0;color:var(--focus)}
+.menu-card-sub{grid-area:subtitle;font-size:14px;line-height:20px;color:var(--muted);letter-spacing:-.2px;min-height:0;margin-top:4px}
+.content-labels{grid-area:labels;margin-top:8px}
+.content-label,.content-label.neutral{background:var(--surface-alt);border:0;border-radius:4px;padding:3px 6px;color:var(--muted);font-size:12px;line-height:18px;gap:4px;font-weight:400}
+.content-label .icon{width:12px;height:12px}
+.resume-section.pad{margin:28px 20px 28px;background:transparent;padding:0;border-radius:0}
+.resume-section .section-head{margin-bottom:12px}
+.resume-section .section-head h2{font-size:20px;line-height:28px}
+.resume-section .section-head a{font-size:12px;line-height:18px}
+.resume-card{padding:14px;background:var(--surface);border-radius:12px;gap:14px}
+.resume-card img{height:72px;width:72px;object-fit:contain;border-radius:0;background:transparent}
+.resume-copy strong{font-size:18px;line-height:26px;letter-spacing:-.4px}
+.resume-copy .next-small{font-size:14px;line-height:20px;gap:0;display:block;margin-top:5px}
+.resume-copy .next-small .caption{display:block;font-size:12px;line-height:18px;color:var(--muted);margin-bottom:2px}
+.guest-home-note{margin:28px 20px 32px;padding:20px 0 0;background:transparent;border-radius:0;border-top:1px solid var(--line)}
+.guest-home-note h2{font-size:18px;line-height:26px;font-weight:600;letter-spacing:-.4px}
+.guest-home-note p{font-size:14px;line-height:20px;color:var(--muted);margin-top:8px}
+.guest-home-note button{font-size:14px;line-height:20px;min-height:44px;margin-top:8px;color:var(--focus)}
+
+/* Menu detail: neutral object stage, data card, and separate product rows. */
+.detail .app-content{height:628px}
+.detail-hero{height:220px;margin:4px 20px 0;width:calc(100% - 40px);border-radius:12px;background:var(--surface);overflow:hidden}
+.detail-hero img{width:100%;height:100%;object-fit:contain;object-position:center;padding:8px 16px 24px}
+.detail-hero img{transform:scale(1.28);transform-origin:center}
+.detail-hero figcaption{font-size:12px;line-height:18px;color:var(--muted);right:12px;bottom:9px;padding:0;border-radius:0;background:transparent}
+.menu-heading{padding:20px 20px 24px}
+.menu-heading .eyebrow{font-size:12px;line-height:18px;margin-bottom:8px;color:var(--muted)}
+.menu-heading h1{font-size:32px;line-height:40px;font-weight:600;letter-spacing:-.8px}
+.menu-heading p{font-size:14px;line-height:20px;margin-top:10px;color:var(--muted);letter-spacing:-.1px}
+.section-tabs{margin:0 20px;height:48px;gap:26px;border-color:var(--line);background:var(--base)}
+.section-tabs a{font-size:14px;line-height:20px;min-height:44px;font-weight:500;color:var(--muted)}
+.section-tabs a.current{color:var(--focus);font-weight:600}
+.section-tabs a.current:after{height:2px;background:var(--focus);border-radius:0}
+.detail .app-content>.pad:not(.menu-heading){padding:0 20px 24px}
+.evidence{padding:18px 16px 12px;background:var(--surface);border-radius:12px;margin-top:24px;scroll-margin-top:56px}
+.period{font-size:12px;line-height:18px;color:var(--muted);gap:0;white-space:nowrap}
+.period .icon{display:none}
+.metric-sub{margin-top:14px;gap:8px;align-items:flex-start}
+.metric-sub p{font-size:12px;line-height:18px;color:var(--muted);flex:1}
+.example-label{background:var(--surface-alt);font-size:12px;line-height:18px;padding:3px 6px;border-radius:4px;color:var(--muted);white-space:nowrap}
+.chart{height:145px;margin:12px 0 4px}
+.chart text{font-size:12px;fill:var(--muted)}
+.chart line{stroke:#C6CFC0;stroke-width:.7}
+.chart .curve{stroke:var(--focus);stroke-width:2.3}
+.chart .last-point{fill:var(--focus)}
+.source-link{min-height:44px;font-size:12px;line-height:18px;border-top:1px solid var(--line);padding-top:0;margin-top:0;color:var(--focus)}
+.source-link .icon{width:15px;height:15px}
+.section-divider{display:none}
+.product-section{background:transparent;padding:0;border-radius:0;margin-top:32px;scroll-margin-top:56px}
+.product-section .count{font-size:12px;line-height:18px;color:var(--muted);margin-left:5px;vertical-align:2px}
+.product-section .section-head button{font-size:12px;line-height:18px;color:var(--focus);min-height:44px}
+.product-section .hint{font-size:14px;line-height:20px;margin-top:8px;color:var(--muted)}
+.product-list{margin-top:16px;gap:12px}
+.product-row{padding:16px 14px;min-height:92px;border:1px solid var(--line);border-radius:8px;background:var(--surface);gap:12px}
+.product-section .product-icon,.review-product-block .product-icon,.product-icon{width:24px;height:28px;border-radius:0;background:transparent;color:var(--focus)}
+.product-icon .icon{width:22px;height:22px;color:var(--focus)}
+.product-copy strong{font-size:16px;line-height:24px;font-weight:600;letter-spacing:-.25px}
+.product-copy span{font-size:12px;line-height:18px;color:var(--muted);margin-top:6px}
+.product-row>.icon{width:15px;height:15px;color:var(--focus)}
+.product-source{font-size:12px;line-height:18px;color:var(--muted);margin-top:12px}
+.check-section{background:transparent;border-radius:0;padding:24px 0 0;border-top:1px solid var(--line);margin-top:32px;margin-bottom:8px;scroll-margin-top:56px}
+.check-title{font-size:20px;line-height:28px;font-weight:600;letter-spacing:-.5px;margin-bottom:14px}
+.check-group{padding:0;background:transparent;border-radius:0}
+.check-item{font-size:14px;line-height:20px;min-height:36px;gap:10px}
+.check-item+.check-item{margin-top:4px}
+.check-item .icon{width:18px;height:18px;color:var(--muted)}
+.disclaimer{font-size:12px;line-height:18px;margin-top:18px;padding:14px;border:0;border-radius:8px;background:var(--warning-soft);color:var(--warning)}
+.detail-footer{height:128px;padding:12px 20px 26px;border-color:var(--line);background:var(--base)}
+.footer-helper{font-size:12px;line-height:18px;margin-top:8px;color:var(--muted)}
+.detail-save-error{bottom:136px;font-size:14px;line-height:20px;padding:12px 14px;background:var(--error-soft);color:var(--error);border-color:#CCA39D}
+.detail-save-error button{min-height:44px;font-size:14px;color:var(--error)}
+.full-content .detail .detail-footer{height:auto;min-height:128px}
+
+/* Personal review: the next action has the only larger lime-tinted surface. */
+.my-intro{padding:20px 20px 0}
+.my-intro h1{font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.8px}
+.my-intro p{font-size:14px;line-height:20px;color:var(--muted);margin-top:10px}
+.status-tabs{margin:24px 20px 0;gap:18px;height:48px}
+.status-tabs button{font-size:14px;line-height:20px;min-height:44px;font-weight:500}
+.status-tabs button small{font-size:12px;line-height:18px;margin-left:5px}
+.status-tabs button.active{font-weight:600;color:var(--focus)}
+.saved-list{padding:20px 20px 0;gap:12px}
+.saved-card{border:0;background:var(--surface);border-radius:12px}
+.saved-main{padding:16px 16px 14px;gap:14px;align-items:center}
+.saved-main img{width:64px;height:64px;object-fit:contain;border-radius:0;background:transparent}
+.saved-copy h2{font-size:18px;line-height:26px;font-weight:600;letter-spacing:-.4px;margin-bottom:7px}
+.saved-copy p{font-size:14px;line-height:20px;color:var(--muted)}
+.saved-copy .saved-date{font-size:12px;line-height:18px;margin-top:6px;color:var(--muted)}
+.saved-main>.icon{width:16px;height:16px}
+.saved-next{margin:0 16px 0;width:calc(100% - 32px);padding:12px 0 16px;border-top:1px solid var(--line);border-radius:0;background:transparent;min-height:64px}
+.saved-next small{font-size:12px;line-height:18px;color:var(--muted);margin-bottom:4px}
+.saved-next span{font-size:14px;line-height:20px;font-weight:500}
+.saved-next>.icon{width:18px;height:18px}
+.my-foot{padding:24px 20px 28px;gap:12px;align-items:center}
+.my-foot p{font-size:12px;line-height:18px}
+.my-foot a{font-size:14px;line-height:20px;min-height:44px}
+.saved-resume-head{padding:20px 20px 24px}
+.saved-resume-head .row{gap:16px}
+.saved-resume-head img{width:100px;height:100px;object-fit:contain;border-radius:12px;background:var(--surface)}
+.saved-resume-head h1{font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.6px;margin-bottom:2px}
+.saved-resume-head p{font-size:12px;line-height:18px}
+.resume-state{font-size:14px;line-height:20px;gap:10px;flex-wrap:wrap}
+.resume-state button{font-size:12px;line-height:18px;min-height:44px}
+.saved-resume-head .resume-date{font-size:12px;line-height:18px;margin-top:0}
+.resume-detail-block{margin:0 20px;padding:20px;border-radius:12px;background:var(--accent-soft);border:1px solid #D4DFBF}
+.resume-detail-block p{font-size:12px;line-height:18px;color:var(--muted);margin-bottom:8px}
+.resume-detail-block h2{font-size:22px;line-height:30px;font-weight:600;letter-spacing:-.5px}
+.resume-detail-block .mini-link{min-height:44px;margin-top:16px;padding-top:12px;font-size:14px;line-height:20px;border-color:#CCD8BA;color:var(--focus)}
+.resume-investigation{padding:28px 20px 24px}
+.review-product-block{padding:0;background:transparent;border-radius:0}
+.review-product-block .section-head h2{font-size:20px;line-height:28px}
+.review-product-block .section-head button{font-size:12px;line-height:18px;min-height:44px;color:var(--focus)}
+.review-product-block .product-row{margin-top:12px!important}
+.memo-block{margin-top:28px;padding:18px;background:var(--surface);border-radius:12px}
+.memo-head{margin-bottom:8px}
+.memo-head p{font-size:14px;line-height:20px;font-weight:500;gap:8px}
+.memo-head button{font-size:14px;line-height:20px;min-height:44px;color:var(--focus)}
+.memo-block strong{font-size:16px;line-height:24px;font-weight:400}
+.resume-links{margin-top:28px;padding:0;background:transparent;border-radius:0}
+.resume-links h2{font-size:20px;line-height:28px;font-weight:600;margin-bottom:8px;gap:8px}
+.resume-links a{padding:14px 0;min-height:52px;font-size:14px;line-height:20px;border-color:var(--line)}
+.resume-links a:last-child{padding-bottom:14px;border-bottom:1px solid var(--line)}
+.resume-investigation>.hint{font-size:12px!important;line-height:18px!important;margin:14px 0 0!important}
+.remove-review{font-size:12px;line-height:18px;min-height:44px;margin-top:14px;color:var(--error)}
+.saved-gate{margin:28px 20px 0;padding:24px 20px;background:var(--surface);border-radius:12px}
+.saved-gate h2{font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.8px}
+.saved-gate p{font-size:16px;line-height:24px;margin-top:14px}
+.saved-gate .primary{margin-top:24px}
+.saved-gate .secondary-button{background:white;font-size:16px;margin-top:12px}
+.preview-empty{padding:44px 24px 28px}
+.preview-empty h2{font-size:24px;line-height:32px;font-weight:600;margin-top:24px}
+.preview-empty p{font-size:16px;line-height:24px;margin-top:12px}
+.preview-empty .primary{margin-top:28px}
+.empty-illustration:before{background:var(--accent-soft)}
+.empty-illustration:after{border-color:var(--control-border);border-radius:6px}
+
+/* Forms and settings: calm surfaces; readable field labels and real hit areas. */
+.account-screen .auth-content{padding:24px 20px 36px}
+.auth-intro h1{font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.8px}
+.auth-intro p{font-size:16px;line-height:24px;color:var(--muted);margin-top:14px}
+.auth-intro .auth-kicker{font-size:12px;line-height:18px;letter-spacing:0;font-weight:500;color:var(--muted);margin-bottom:12px}
+.auth-form,.auth-form.compact{margin-top:28px}
+.auth-field+.auth-field,.auth-form.compact .auth-field+.auth-field{margin-top:22px}
+.auth-field>label{font-size:14px;line-height:20px;font-weight:500;margin-bottom:8px}
+.auth-field input:not([type=checkbox]){height:52px;border-color:var(--control-border);font-size:16px;line-height:24px;padding:0 14px;border-radius:8px;background:var(--base)}
+.auth-field input::placeholder{font-size:14px;color:var(--muted)}
+.auth-input-wrap input{padding-right:64px!important}
+.auth-password-toggle{right:4px;top:4px;min-width:52px;height:44px;font-size:12px;line-height:18px;color:var(--focus);border-radius:4px}
+.auth-field-hint{font-size:12px;line-height:18px;margin-top:8px;color:var(--muted)}
+.auth-error{font-size:14px;line-height:20px;margin-top:16px;padding:12px 14px;background:var(--error-soft);color:var(--error);border-radius:8px}
+.auth-field input[aria-invalid=true]{border-color:var(--error)}
+.auth-form>.primary,.auth-form.compact>.primary{height:48px;min-height:48px;margin-top:24px}
+.auth-form .primary[disabled]{background:var(--surface-alt);color:var(--muted);border-color:var(--line)}
+.auth-links{margin-top:8px}
+.auth-text-button{font-size:14px;line-height:20px;min-height:44px;color:var(--focus)}
+.auth-signup-prompt{margin-top:20px;padding-top:16px;font-size:14px;line-height:20px;border-color:var(--line)}
+.auth-signup-prompt .auth-text-button{font-size:14px;line-height:20px;font-weight:500}
+.auth-dismiss{min-height:48px;font-size:14px;line-height:20px;margin-top:12px;color:var(--muted)}
+.auth-consents{margin-top:24px;padding-top:16px;border-color:var(--line)}
+.auth-consents legend{font-size:14px;line-height:20px;font-weight:500;margin-bottom:8px}
+.auth-consent-row{min-height:48px;gap:6px}
+.auth-consent-row label{font-size:14px;line-height:20px;min-height:48px;gap:9px}
+.auth-consent-row input,.withdraw-confirm-label input{width:20px;height:20px;accent-color:var(--focus)}
+.auth-consent-row button{font-size:12px;line-height:18px;min-height:44px;min-width:44px;color:var(--focus)}
+.auth-footer-copy{font-size:12px;line-height:18px;margin-top:16px}
+.auth-info-block{background:var(--surface);border-radius:12px;padding:18px;margin-top:24px}
+.auth-info-block .auth-mini-title{font-size:12px;line-height:18px;font-weight:500;color:var(--muted);margin-bottom:8px}
+.auth-info-block strong{font-size:18px;line-height:26px;font-weight:600;color:var(--ink)}
+.auth-info-block p{font-size:14px;line-height:20px;margin-top:10px;color:var(--muted)}
+.auth-info-block .auth-text-button{min-height:44px;font-size:14px;line-height:20px;padding:8px 0 0}
+.auth-code-field input{font-size:24px!important;letter-spacing:7px;font-weight:500}
+.auth-code-field input::placeholder{font-size:14px;letter-spacing:0}
+.auth-code-meta{font-size:12px;line-height:18px;gap:8px;margin-top:10px}
+.auth-code-meta .auth-text-button{font-size:12px;line-height:18px;min-height:44px}
+.auth-bullet-list{margin-top:20px}
+.auth-bullet-list li{font-size:14px;line-height:20px;color:var(--muted)}
+.auth-bullet-list li+li{margin-top:10px}
+.auth-next-actions{gap:12px;margin-top:28px}
+.auth-next-actions .primary,.auth-next-actions .secondary-button{height:48px}
+.auth-confirm-icon{width:32px;height:32px;border-radius:0;background:transparent;color:var(--focus);margin-bottom:20px;place-items:start}
+.auth-confirm-icon .icon{width:28px;height:28px}
+.account-home .auth-content{padding:20px 20px 28px}
+.account-home .auth-intro h1{font-size:28px;line-height:36px}
+.account-identity{padding:20px;border-radius:12px;background:var(--surface);margin-top:24px}
+.account-identity .identity-label{font-size:12px;line-height:18px;margin-bottom:8px}
+.account-identity h2{font-size:20px;line-height:28px;font-weight:600;letter-spacing:-.3px}
+.account-identity .identity-note{font-size:14px;line-height:20px;margin-top:12px}
+.account-identity .primary{font-size:16px;background:var(--accent);margin-top:18px}
+.account-settings{margin-top:28px}
+.account-settings h2{font-size:12px;line-height:18px;margin-bottom:8px;color:var(--muted)}
+.account-settings-row{font-size:16px;line-height:24px;min-height:56px;border-color:var(--line)}
+.account-signout{min-height:52px;font-size:16px;line-height:24px;color:var(--focus);margin-top:16px}
+.account-delete-link{min-height:44px;font-size:12px;line-height:18px;color:var(--error)}
+.auth-document-tag{font-size:12px;line-height:18px;padding:3px 6px;border-radius:4px;background:var(--surface-alt);color:var(--muted);margin-bottom:14px}
+.policy-notice{font-size:14px;line-height:20px;margin-top:24px;padding:16px;background:var(--warning-soft);color:var(--warning);border-radius:8px}
+.policy-outline{margin-top:28px}
+.policy-outline li{padding:16px 0;grid-template-columns:24px 1fr;gap:8px;border-color:var(--line)}
+.policy-outline li:before{font-size:12px;line-height:18px;color:var(--muted);padding-top:3px}
+.policy-outline h2{font-size:18px;line-height:26px;font-weight:600}
+.policy-outline p{font-size:14px;line-height:20px;margin-top:8px;color:var(--muted)}
+.policy-close{margin-top:28px}
+.withdraw-summary{padding:18px;background:var(--surface);border-radius:12px;margin-top:24px}
+.withdraw-summary h2{font-size:18px;line-height:26px;font-weight:600}
+.withdraw-summary ul{gap:12px;margin-top:14px}
+.withdraw-summary li{font-size:14px;line-height:20px;gap:10px}
+.withdraw-summary .icon{width:18px;height:18px;color:var(--muted)}
+.withdraw-confirm-label{font-size:14px;line-height:20px;gap:10px;margin-top:24px;min-height:44px}
+.danger-button{height:48px;min-height:48px;border-radius:8px;font-size:16px;line-height:24px;font-weight:500;color:var(--error);border-color:var(--error);background:var(--base);margin-top:24px}
+.danger-button:disabled{color:#967A72;border-color:#C7B8B1}
+.withdraw-cancel{margin-top:12px}
+
+/* Search, sheets, and error states. */
+.search-content{padding:20px 20px 28px}
+.search-input-form{gap:8px;margin-bottom:28px;align-items:center}
+.search-input-wrap{height:52px;gap:8px;border-color:var(--control-border);background:var(--base);padding:0 8px 0 12px;border-radius:8px}
+.search-input-wrap input{height:48px;font-size:16px;line-height:24px;background:transparent}
+.search-input-wrap .icon{width:20px;height:20px}
+.search-clear{min-width:44px;width:44px;min-height:44px;height:44px;border-radius:6px}
+.search-submit{min-width:52px;height:48px;min-height:48px;font-size:14px;line-height:20px;background:var(--accent);border-color:var(--accent-border);border-radius:8px;padding:0 12px}
+.search-content h1{font-size:20px;line-height:28px;font-weight:600;margin-bottom:14px}
+.search-result{padding:16px 0;gap:16px;min-height:120px;border-color:var(--line)}
+.search-result img{width:88px;height:88px;border-radius:8px;background:var(--surface);object-fit:contain;padding:4px}
+.search-result strong{font-size:18px;line-height:26px;font-weight:600;letter-spacing:-.4px}
+.search-result small{font-size:14px;line-height:20px;margin-top:7px;color:var(--muted)}
+.search-result>.icon{width:16px;height:16px}
+.state-message{padding:22px 20px;margin:24px 20px;background:var(--surface);border-radius:12px;border:0}
+.state-message h2{font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.6px}
+.state-message p{font-size:16px;line-height:24px;color:var(--muted);margin-top:12px}
+.state-message button{margin-top:24px}
+.search-content .state-message{margin:24px 0;background:var(--surface)}
+.block-state{font-size:14px;line-height:20px;padding:20px 0 12px;color:var(--muted)}
+.block-state button{font-size:14px;line-height:20px;min-height:44px;color:var(--focus)}
+.loading-caption{font-size:14px;line-height:20px;color:var(--muted)}
+.skeleton-thumb,.skeleton-lines span{background:var(--surface-alt)}
+.sheet{max-height:calc(100% - 52px);overflow-y:auto;scrollbar-width:none;border-radius:16px 16px 0 0;padding:12px 20px 32px;background:var(--base)}
+.sheet::-webkit-scrollbar{display:none}
+.sheet-handle{background:var(--line);margin-bottom:25px}
+.sheet h2{font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.8px;padding-right:16px}
+.sheet-head{gap:9px}
+.sheet-head .success-icon{width:22px;height:22px;border-radius:0;background:transparent;color:var(--focus)}
+.sheet-head .success-icon .icon{width:21px;height:21px}
+.sheet-intro{font-size:18px;line-height:26px;margin-top:18px}
+.sheet-hint{font-size:14px;line-height:20px;margin-top:8px;color:var(--muted)}
+.radio-list{margin:24px 0}
+.radio-row{min-height:56px;font-size:16px;line-height:24px;gap:12px;padding:8px 0;border-color:var(--line)}
+.radio-row input{width:20px;height:20px;accent-color:var(--focus)}
+.sheet .later{min-height:48px;font-size:14px;line-height:20px;margin-top:8px}
+.close-sheet{width:44px;height:44px;right:10px;top:16px;border-radius:8px}
+.product-sheet .product-type{font-size:12px;line-height:18px;padding:3px 6px;border-radius:4px;background:var(--surface-alt);margin-bottom:14px}
+.product-sheet h3{font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.6px;margin-bottom:24px;padding-right:5px}
+.product-sheet dl div{grid-template-columns:76px 1fr;gap:12px;margin:16px 0}
+.product-sheet dt{font-size:14px;line-height:20px;color:var(--muted)}
+.product-sheet dd{font-size:16px;line-height:24px}
+.hint{font-size:12px;line-height:18px;color:var(--muted)}
+.product-sheet .sheet-note{font-size:14px;line-height:20px;padding:14px;margin-top:20px;border-radius:8px;background:var(--surface);color:var(--muted)}
+.product-sheet .primary,.source-sheet .primary{margin-top:24px}
+.source-sheet p{font-size:16px;line-height:24px;margin:18px 0;color:var(--muted)}
+.source-sheet strong{color:var(--ink)}
+.compare-grid strong{font-size:16px;line-height:24px;font-weight:600}
+.compare-grid p{font-size:14px;line-height:20px}
+.editor-label{font-size:14px;line-height:20px;margin:24px 0 8px}
+.saved-editor textarea{font-size:16px;line-height:24px;min-height:130px;border-color:var(--control-border);border-radius:8px;padding:12px 14px}
+.saved-editor .primary{margin-top:24px}
+.remove-sheet p{font-size:16px;line-height:24px;margin-top:18px}
+.remove-sheet .secondary-button{margin-top:12px}
+.toast{font-size:14px;line-height:20px;background:var(--surface-alt);color:var(--ink);border:1px solid var(--control-border);border-radius:8px;padding:12px 14px;bottom:138px}
+.bottom-nav{height:78px;padding:10px 34px 20px;gap:44px;border-color:var(--line);background:var(--base)}
+.nav-item{font-size:12px;line-height:18px;gap:2px;min-height:44px;font-weight:400;color:var(--muted)}
+.nav-item.active{font-weight:600;color:var(--focus)}
+.nav-item .icon{width:22px;height:22px}
+.nav-item.active:before{top:-7px;width:20px;height:2px;border-radius:0;background:var(--focus)}
+.nav-item.active .icon{stroke-width:2}
+
+/* Review canvas only, separate from app screens. */
+.studio-kicker{color:var(--focus);letter-spacing:.6px;font-weight:500}
+.studio-title,.snapshot-board .studio-title{font-size:40px;line-height:48px;font-weight:600;letter-spacing:-1.2px}
+.studio-intro p{font-size:16px;line-height:24px;color:var(--muted)}
+.swatches span{width:22px;height:22px;border-radius:4px;border:1px solid var(--line)}
+.review-controls button{font-size:12px;min-height:44px;border-color:var(--control-border);border-radius:6px}
+.review-controls button.active{background:var(--accent);border-color:var(--accent-border);color:var(--ink)}
+.preview-session-controls button,.preview-session-controls select{font-size:12px;min-height:44px;border-color:var(--control-border)}
+.preview-help,.screen-caption,.board-footer{font-size:12px;line-height:18px;color:var(--muted)}
+.screen-caption strong,.board-footer .number{color:var(--focus);font-weight:500}
+.board-footer{border-color:var(--line)}
+.screen-label b{font-size:16px;line-height:24px;font-weight:600}
+.screen-label span{font-size:12px;line-height:18px}
+.render-phone .phone{border-radius:0;box-shadow:none}
+@media(max-width:435px){
+ .home-intro h1{font-size:32px;line-height:40px}.menu-card-title{font-size:18px;line-height:26px}.menu-card-sub{font-size:14px;line-height:20px}.content-label{font-size:12px;line-height:18px;padding:3px 6px}.content-label .icon{width:12px;height:12px}.image-note{font-size:12px;line-height:18px}.home-menu.pad{padding:0}
+ .section-head h2,.evidence .section-head h2,.review-product-block .section-head h2{font-size:20px;line-height:28px}.period,.metric-sub p{font-size:12px;line-height:18px}.saved-main img{width:64px;height:64px}.saved-copy h2{font-size:18px;line-height:26px}.saved-copy p{font-size:14px;line-height:20px}.saved-resume-head h1{font-size:28px;line-height:36px}.resume-state{font-size:14px;line-height:20px}.memo-block strong{font-size:16px;line-height:24px}.resume-copy strong{font-size:18px;line-height:26px}.resume-copy .next-small{font-size:14px;line-height:20px}.resume-copy .next-small .caption{font-size:12px;line-height:18px}.resume-card img{width:72px;height:72px}.resume-section .section-head h2{font-size:20px;line-height:28px}
+ .auth-intro h1{font-size:28px;line-height:36px}.auth-field input:not([type=checkbox]){font-size:16px}.account-identity h2{font-size:20px;line-height:28px}.auth-consent-row label{font-size:14px;line-height:20px}.auth-signup-prompt,.auth-signup-prompt .auth-text-button{font-size:14px;line-height:20px}.studio-title{font-size:30px;line-height:38px}
+}
+@media(max-width:355px){
+ .home-intro h1{font-size:30px;line-height:38px}.menu-card{grid-template-columns:70px minmax(0,1fr);column-gap:12px;padding:14px 12px}.menu-picture{width:70px;height:86px}.menu-card:first-child{padding-left:16px;padding-right:16px}.menu-card:first-child .menu-picture{left:16px;width:calc(100% - 32px)}.menu-card-title{font-size:18px;line-height:26px}.menu-card-sub{font-size:14px;line-height:20px}.home-menu .section-head{gap:8px}.image-note{max-width:80px}
+ .section-tabs{gap:22px}.evidence{padding-left:14px;padding-right:14px}.evidence .section-head{gap:8px;flex-wrap:wrap}.product-section .section-head{flex-wrap:wrap;row-gap:0}.product-copy strong{font-size:16px;line-height:24px}.product-row{padding:14px 12px;gap:10px}.product-icon{width:20px!important}.saved-main{gap:10px;padding:14px 12px}.saved-main img{width:64px;height:64px}.saved-resume-head img{width:82px;height:96px}.saved-resume-head .row{gap:12px}.resume-state{gap:8px}.resume-detail-block{padding:18px}.review-product-block .section-head{flex-wrap:wrap;row-gap:0}
+ .auth-consent-row{align-items:flex-start}.auth-consent-row label{font-size:14px;line-height:20px;padding:4px 0}.auth-consent-row input{margin-top:1px}.auth-consent-row button{flex-shrink:0}.auth-signup-prompt{align-items:flex-start;gap:10px}.auth-signup-prompt>span{padding-top:12px}.auth-code-meta{flex-wrap:wrap;gap:0}.search-input-form{gap:6px}.search-input-wrap{padding-left:10px;gap:6px}.search-clear{min-width:44px;width:44px}.search-result{gap:12px}.search-result img{width:72px;height:80px}.sheet h2{font-size:26px;line-height:34px}
+}
+
+</style><link rel="stylesheet" href="web.css"></head>
+<body>
+<svg class="sprite" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 4.5 4.5"></path></symbol>
+<symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4Z"></path></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"></path></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"></path></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8Z"></path><path d="M14 3v5h5M9 13h6m-6 4h6"></path></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"></path></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6m0-10v.1"></path></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M14 3h7v7m-1-6L10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"></path></symbol>
+<symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 7h14l1 14H4L5 7Zm4 0V5a3 3 0 0 1 6 0v2"></path></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="m3 7 9-5 9 5v10l-9 5-9-5Zm0 0 9 5 9-5M12 12v10m-4-18 9 5"></path></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"></path><circle cx="8" cy="7" r="2.5" fill="white"></circle><circle cx="16" cy="17" r="2.5" fill="white"></circle></symbol>
+<symbol id="i-signal" viewBox="0 0 18 14"><path d="M2 11V9m4 2V7m4 4V4m4 7V1"></path></symbol>
+<symbol id="i-wifi" viewBox="0 0 18 14"><path d="M1 4a12 12 0 0 1 16 0M4 7a7.5 7.5 0 0 1 10 0M7 10a3 3 0 0 1 4 0M9 12v.2"></path></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 21v-2a7 7 0 0 1 14 0v2"></path></symbol></defs></svg>
+<main class="studio">
+  <header class="studio-header">
+    <div class="studio-top"><div class="studio-kicker">MZ MAKER / WORKSPACE</div><div class="studio-date">프론트엔드 개발본 · 2026.11.16</div></div>
+    <h1 class="studio-title">다음 메뉴를 발견하는 곳</h1>
+    <div class="studio-intro"><p>관심 있는 메뉴를 찾고, 제품 근거를 비교하고, 검토를 이어가세요.<br>화면 예시와 연결된 데이터를 구분해서 보여드립니다.</p><div class="swatches" aria-label="검토용 팔레트"><span style="background:#FFFFFF"></span><span style="background:#F5F6F3"></span><span style="background:#D7EEA5"></span><span style="background:#202820"></span></div></div>
+  </header>
+  <nav class="review-controls" aria-label="디자인 화면 선택"><button class="active" data-view="home">메뉴 찾기</button><button data-view="detail">메뉴 상세</button><button data-view="saved">내 검토</button><button data-view="login">로그인</button><button data-view="account">내 계정</button></nav><p class="preview-help">화면 흐름을 확인하는 시안입니다. 로그인·가입·메일 발송은 실제 서비스와 연결되지 않습니다. 예시값으로 확인해 주세요. 가입 확인 코드: 123456. 이 탐색 시안의 검토 기록은 현재 열린 화면에서만 유지됩니다. 영구 보관은 데이터 검토함을 이용하세요. 실제 이메일·비밀번호를 입력하지 마세요.</p><div class="preview-session-controls"><button data-preview-guest>비회원으로 시작</button><button data-preview-member>기존 기록 예시</button><button data-preview-new>첫 로그인 예시</button><label for="scenario-picker" class="sr-only">개별 화면과 상태</label><select id="scenario-picker"><option value="">개별 화면·상태 보기</option value="screen=signup">회원가입</option><option value="screen=verify">이메일 확인</option><option value="screen=reset">비밀번호 재설정</option><option value="screen=reset-confirm">재설정 안내</option><option value="screen=reset-new">새 비밀번호</option><option value="screen=account&session=member">내 계정</option><option value="screen=withdraw&session=member">탈퇴 확인</option><option value="screen=search&q=버터떡">검색 결과</option><option value="screen=search&q=레몬티&state=no-results">검색 결과 없음</option><option value="screen=search&q=버터떡&state=error">검색 실패</option><option value="screen=login&error=login">로그인 오류</option><option value="screen=verify&error=verify">코드 만료</option><option value="screen=detail&session=new&error=save">저장 실패</option><option value="screen=saved&session=member&error=saved">검토 조회 실패</option><option value="screen=terms">이용약관 목차</option><option value="screen=privacy">개인정보 안내 목차</option></select><span id="preview-session">비회원 상태</span></div><button id="demo-mail-next" data-reset-open hidden>메일 링크를 연 상태로 계속하기 · 시안</button>
+  <section id="data-workspace" aria-label="데이터 연결"></section><div class="screens">
+    <section class="screen-wrap home" data-screen="home" data-board>
+      <div class="screen-label"><b>01 · 메뉴 찾기</b><span>사진으로 빠르게 발견</span></div>
+      <div class="phone" id="phone-home">
+        <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon"><use href="#i-signal"></use></svg><svg class="icon"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+        <header class="appbar"><div class="brand"><span class="brand-mark"></span>MZ제조기</div><button class="account-entry" data-account-entry aria-label="로그인">로그인</button></header>
+        <div class="app-content">
+          <section class="home-intro pad"><h1>우리 가게의<br>다음 메뉴 찾기</h1><button class="search-field" data-search=""><svg class="icon"><use href="#i-search"></use></svg><span>궁금한 메뉴를 검색해 보세요</span></button></section>
+          <section class="home-menu pad"><div class="section-head"><div class="section-title"><span class="round-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span><h2>메뉴 둘러보기</h2></div><span class="image-note">메뉴 연출 이미지</span></div>
+            <div class="menu-grid">
+              <a class="menu-card" href="#" data-open-detail="butter"><div class="menu-picture butter"><img data-photo="butter" alt="버터떡과 단면을 보여주는 메뉴 연출 이미지"></div><h3 class="menu-card-title">버터떡<svg class="icon small"><use href="#i-next"></use></svg></h3><p class="menu-card-sub">생지와 믹스를 함께 살펴봐요</p><div class="content-labels"><span class="content-label"><svg class="icon tiny"><use href="#i-doc"></use></svg>제품 기록 2건</span></div></a>
+              <a class="menu-card" href="#" data-open-detail="cookie"><div class="menu-picture cookie"><img data-photo="cookie" alt="카다이프와 피스타치오 속이 보이는 두바이 쫀득 쿠키 연출 이미지"></div><h3 class="menu-card-title">두바이 쫀득 쿠키<svg class="icon small"><use href="#i-next"></use></svg></h3><p class="menu-card-sub">메뉴와 확인할 정보를 살펴봐요</p><div class="content-labels"><span class="content-label"><svg class="icon tiny"><use href="#i-doc"></use></svg>제품 기록 미확인</span></div></a>
+            </div>
+          </section>
+          <section class="resume-section pad" id="home-member-resume"><div class="section-head"><h2>이어서 검토</h2><a href="#" data-go="saved">내 검토<svg class="icon tiny"><use href="#i-next"></use></svg></a></div><button class="resume-card" data-resume="cookie"><img data-photo="cookie" alt="두바이 쫀득 쿠키"><div class="resume-copy"><strong>두바이 쫀득 쿠키</strong><div class="next-small"><span class="caption">다음 확인</span>조리·보관 조건 확인</div></div><svg class="icon"><use href="#i-next"></use></svg></button></section>
+          <section class="guest-home-note" id="home-guest-note"><h2>둘러보고, 필요할 때 담아두세요</h2><p>메뉴와 자료는 바로 살펴볼 수 있어요.<br>검토를 저장할 때 로그인해 주세요.</p><button data-account-entry>로그인</button></section><section class="guest-home-note" id="home-first-note" hidden><h2>첫 메뉴를 검토에 담아보세요</h2><p>마음에 드는 메뉴의 상세에서<br>‘내 검토에 담기’를 누르면 시작할 수 있어요.</p></section>
+        </div>
+        <nav class="bottom-nav" aria-label="앱 메뉴"><button class="nav-item active" data-go="home"><svg class="icon"><use href="#i-search"></use></svg>메뉴 찾기</button><button class="nav-item" data-go="saved"><svg class="icon nav-bookmark"><use href="#i-bookmark"></use></svg>내 검토</button></nav><div class="home-indicator"></div>
+        <div class="toast" role="status">이 시안에서는 메뉴 카드를 눌러 상세를 볼 수 있어요.</div>
+      </div>
+      <p class="screen-caption"><strong>메뉴의 모습이 먼저 보이게.</strong> 큰 음식 이미지와 작은 메뉴 행에 제품 기록을 연결하고, 로그인 전에도 둘러볼 수 있어요.</p>
+    </section>
+    <section class="screen-wrap detail" data-screen="detail" data-board>
+      <div class="screen-label"><b>02 · 메뉴 상세</b><span>인상에서 근거로 연결</span></div>
+      <div class="phone" id="phone-detail">
+        <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon"><use href="#i-signal"></use></svg><svg class="icon"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+        <header class="appbar"><button class="icon-button" aria-label="이전 화면으로 돌아가기" data-detail-back><svg class="icon"><use href="#i-back"></use></svg></button><span class="back-title">메뉴 살펴보기</span><button class="icon-button" aria-label="검토에 담기" data-save=""><svg class="icon"><use href="#i-bookmark"></use></svg></button></header>
+        <div class="app-content" id="detail-scroll">
+          <figure class="detail-hero"><img id="detail-photo" data-photo="butter" alt="버터떡 메뉴 연출 이미지"><figcaption>메뉴 연출 이미지</figcaption></figure>
+          <section class="menu-heading pad"><div class="eyebrow">디저트</div><h1 id="detail-menu-name">버터떡</h1><p>검색 관심과 제품 기록을 함께 살펴봐요.</p></section>
+          <nav class="section-tabs" aria-label="상세 정보"><a href="#interest" data-anchor="interest">검색 관심</a><a href="#products" data-anchor="products">관련 제품</a><a href="#checks" data-anchor="checks">확인할 것</a></nav>
+          <div class="pad">
+            <section class="evidence" id="interest"><div class="section-head"><div class="section-title"><span class="round-icon" aria-hidden="true"><svg class="icon"><use href="#i-doc"></use></svg></span><h2>검색 관심 흐름</h2></div><span class="period">최근 3개월<svg class="icon tiny"><use href="#i-down"></use></svg></span></div><div class="metric-sub"><p>선택한 기간의 최고 관심도 = 100</p><span class="example-label">가상 데이터</span></div>
+              <div class="block-state" id="source-load-error" hidden role="alert">검색 관심 자료를 불러오지 못했어요.<br>관련 제품은 아래에서 계속 볼 수 있어요.<button data-source-retry>검색 관심 다시 불러오기</button></div><svg class="chart" viewBox="0 0 346 131" role="img" aria-label="디자인 확인을 위한 가상 검색 관심 그래프. 실제 유행의 근거가 아닙니다."><line x1="27" y1="14" x2="337" y2="14"></line><line x1="27" y1="57" x2="337" y2="57"></line><line x1="27" y1="100" x2="337" y2="100"></line><text x="0" y="17">100</text><text x="6" y="60">50</text><text x="12" y="103">0</text><path d="M28 85 L54 77 L80 62 L105 54 L131 14 L157 28 L182 43 L208 54 L234 60 L260 63 L286 73 L312 68 L337 63" class="curve"></path><circle cx="337" cy="63" r="3.2" class="last-point"></circle><text x="27" y="121">8월</text><text x="172" y="121">9월</text><text x="319" y="121">10월</text></svg>
+              <button class="source-link" data-source="" style="width:100%"><span><svg class="icon tiny"><use href="#i-info"></use></svg>자료 출처 · 조회 조건</span><svg class="icon"><use href="#i-next"></use></svg></button>
+            </section>
+            <div class="section-divider"></div>
+            <section class="product-section" id="products"><div class="section-head"><div class="section-title"><span class="round-icon" aria-hidden="true"><svg class="icon"><use href="#i-box"></use></svg></span><h2>관련 제품 <span class="count" id="product-count">2</span></h2></div><button data-compare="">두 제품 비교<svg class="icon tiny"><use href="#i-next"></use></svg></button></div><p class="hint">메뉴와 관련된 제품 기록이에요.<br>구매 가능 여부와 조리 조건은 추가 확인이 필요해요.</p><div class="product-list" id="product-list">
+              <button class="product-row" data-product="dough"><span class="product-icon"><svg class="icon"><use href="#i-box"></use></svg></span><span class="product-copy"><strong>버터떡 휘낭시에 생지</strong><span>모구모구 F&amp;B · 빵류</span></span><svg class="icon"><use href="#i-next"></use></svg></button>
+              <button class="product-row" data-product="mix"><span class="product-icon"><svg class="icon"><use href="#i-bag"></use></svg></span><span class="product-copy"><strong>겉바속쫀 상하이 버터떡 믹스</strong><span>(주)에버헬스케어 농업회사법인</span></span><svg class="icon"><use href="#i-next"></use></svg></button>
+            </div><p class="product-source">식품안전나라 C002 · 제안서에 수록된 제품 기록</p></section>
+            <div class="section-divider"></div>
+            <section class="check-section" id="checks"><h2 class="check-title"><span class="round-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>도입 전, 더 확인할 것</h2><div class="check-group"><div class="check-item"><svg class="icon"><use href="#i-search"></use></svg>구매처와 공급 조건 확인</div><div class="check-item"><svg class="icon"><use href="#i-box"></use></svg>조리 방법과 보관 조건</div><div class="check-item"><svg class="icon"><use href="#i-doc"></use></svg>우리 매장의 장비와 운영 방식</div></div><p class="disclaimer">검색 관심은 판매량이나 수익을 뜻하지 않아요.<br>실제 공급 조건은 판매처에 확인해 주세요.</p></section>
+          </div>
+        </div>
+        <div class="detail-save-error" id="detail-save-error" hidden role="alert">메뉴를 저장하지 못했어요. 보고 있던 내용은 그대로예요.<br><button data-save-retry>다시 저장하기</button></div><footer class="detail-footer"><button class="primary" data-save=""><svg class="icon"><use href="#i-bookmark"></use></svg><span>내 검토에 담기</span></button><p class="footer-helper">제품을 고르지 않아도 메뉴만 저장할 수 있어요.</p></footer><div class="home-indicator"></div>
+        <div class="shade" data-close-sheet=""></div>
+        <section class="sheet save-sheet" aria-label="저장 완료와 다음 확인"><div class="sheet-handle"></div><button class="close-sheet" aria-label="닫기" data-close-sheet=""><svg class="icon"><use href="#i-x"></use></svg></button><div class="sheet-head"><span class="success-icon"><svg class="icon"><use href="#i-check"></use></svg></span><h2>검토에 담았어요</h2></div><p class="sheet-intro">다음엔 무엇을 확인할까요?</p><p class="sheet-hint">지금 정하지 않아도 메뉴는 저장되어 있어요.</p><div class="radio-list"><label class="radio-row"><input type="radio" name="next-step" value="구매처 확인하기" checked="">구매처 확인하기</label><label class="radio-row"><input type="radio" name="next-step" value="조리·보관 조건 확인">조리·보관 조건 확인</label><label class="radio-row"><input type="radio" name="next-step" value="우리 매장과 맞는지 확인">우리 매장과 맞는지 확인</label></div><button class="primary" data-save-next="">다음 확인사항 남기기</button><button class="later" data-later="">나중에 정하기</button></section>
+        <section class="sheet product-sheet" aria-label="제품 정보"><div class="sheet-handle"></div><button class="close-sheet" aria-label="닫기" data-close-sheet=""><svg class="icon"><use href="#i-x"></use></svg></button><span class="product-type"><svg class="icon tiny"><use href="#i-doc"></use></svg>제품 기록</span><h3 id="product-name">버터떡 휘낭시에 생지</h3><dl><div><dt>제조업체</dt><dd id="product-maker">모구모구 F&amp;B</dd></div><div><dt>식품 유형</dt><dd id="product-type">빵류</dd></div><div><dt>원재료</dt><dd id="product-ingredients">전란·백설탕·버터·쌀가루 등</dd></div><div><dt>보고일</dt><dd id="product-date">2026.03.13</dd></div></dl><p class="hint">식품안전나라 C002 · 제안서 수록 기록<br>보고일은 출시일과 달라요.</p><p class="sheet-note">메뉴의 연출 사진은 이 제품의 실제 사진이 아니에요. 구매 가능 여부와 공급 조건은 별도로 확인해 주세요.</p><button class="primary" data-save-product="">이 제품을 검토 후보로 담기</button></section>
+        <section class="sheet source-sheet" aria-label="자료 안내"><div class="sheet-handle"></div><button class="close-sheet" aria-label="닫기" data-close-sheet=""><svg class="icon"><use href="#i-x"></use></svg></button><h2 id="source-title">자료 출처와 조회 조건</h2><div id="source-content"><p><strong>현재 화면은 디자인 시안이에요.</strong><br>검색 관심 그래프는 화면 구성을 위한 가상 데이터이며 실제 관심 추이가 아닙니다.</p><p>실서비스에서는 조회 키워드·조회 기간·기기·연령 등 조건과 Naver DataLab 출처를 함께 제공해요. 검색 관심과 판매량을 구분해서 표시합니다.</p></div><button class="primary" data-close-sheet="">확인했어요</button></section>
+        <div class="toast" role="status"></div>
+      </div>
+      <p class="screen-caption"><strong>저장할 때 로그인하고 원래 메뉴로.</strong> 제품 후보와 검토 맥락을 이어서 저장할 수 있어요.</p>
+    </section>
+    <section class="screen-wrap saved" data-screen="saved" data-board>
+      <div class="screen-label"><b>03 · 내 검토</b><span>사진으로 기억하고 이어가기</span></div>
+      <div class="phone" id="phone-saved">
+        <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon"><use href="#i-signal"></use></svg><svg class="icon"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+        <header class="appbar only-main"><div class="brand"><span class="brand-mark"></span>MZ제조기</div><button class="account-entry" data-account-entry aria-label="로그인">로그인</button></header>
+        <header class="appbar only-resume"><button class="icon-button" aria-label="내 검토로 돌아가기" data-back-saved=""><svg class="icon"><use href="#i-back"></use></svg></button><span class="back-title">검토 이어보기</span><span style="width:44px" aria-hidden="true"></span></header>
+        <div class="app-content only-main"><section class="my-intro pad"><h1>내 검토</h1><p>남겨둔 메뉴, 다음 확인부터 이어가요.</p></section><section class="saved-gate" id="saved-guest"><h2>내 메뉴 기록을<br>이어서 확인하세요</h2><p>로그인하면 관심 있는 메뉴와 메모를<br>내 검토에 모아둘 수 있어요.</p><button class="primary" data-saved-login>로그인하고 내 검토 보기</button><button class="secondary-button" data-go="home">메뉴부터 둘러보기</button></section><div id="saved-member" hidden><nav class="status-tabs" aria-label="검토 상태"><button class="active" data-filter="active">검토 중<small>0</small></button><button data-filter="paused">보류<small>0</small></button><button data-filter="done">검토 마침<small>0</small></button></nav><div class="saved-list" id="saved-list"></div><div class="preview-empty" id="saved-empty" hidden><div class="empty-illustration"><svg class="icon"><use href="#i-bookmark"></use></svg></div><h2 id="empty-title">아직 담아둔 메뉴가 없어요</h2><p id="empty-copy">궁금한 메뉴를 찾고 검토에 담아보세요.</p><button class="primary" data-empty-action>메뉴 둘러보기</button></div><section class="state-message" id="saved-load-error" hidden role="alert"><h2>내 검토를 불러오지 못했어요</h2><p>저장한 메뉴가 없는 것은 아니에요.<br>잠시 후 다시 확인해 주세요.</p><button class="primary" data-saved-retry>다시 시도</button></section><div class="my-foot"><p>새 메뉴가 궁금해졌나요?</p><a href="#" data-go="home">메뉴 찾기<svg class="icon small"><use href="#i-arrow"></use></svg></a></div></div></div>
+        <div class="app-content only-resume"><section class="saved-resume-head"><div class="row"><img id="resume-photo" data-photo="butter" alt="버터떡"><div><h1 id="resume-title">버터떡</h1><div class="resume-state"><span id="resume-status">검토 중</span><button data-status-info="">상태 변경</button></div><p class="resume-date">최근 확인 10.26</p></div></div></section><section class="resume-detail-block"><p>다음 확인</p><h2 id="resume-next-title">구매처 확인하기</h2><button class="mini-link" style="width:100%" data-edit-next="">다음 확인사항 바꾸기<svg class="icon tiny"><use href="#i-next"></use></svg></button></section><div class="resume-investigation"><section class="review-product-block"><div class="section-head"><h2>살펴보는 제품</h2><button data-other-products="">다른 후보 보기</button></div><button class="product-row" style="margin-top:12px" data-resume-product=""><span class="product-icon"><svg class="icon"><use href="#i-box"></use></svg></span><span class="product-copy"><strong id="resume-product-name">버터떡 휘낭시에 생지</strong><span id="resume-product-maker">모구모구 F&amp;B · 생지 후보</span></span><svg class="icon"><use href="#i-next"></use></svg></button></section><div class="memo-block"><div class="memo-head"><p><span class="round-icon" aria-hidden="true"><svg class="icon"><use href="#i-doc"></use></svg></span>내 메모</p><button data-edit-memo="">수정</button></div><strong id="resume-memo">소량 구매가 가능한지 확인하기</strong></div><section class="resume-links"><h2><span class="round-icon" aria-hidden="true"><svg class="icon"><use href="#i-search"></use></svg></span>자료 다시 확인</h2><a href="#" data-other-products="">관련 제품 기록<svg class="icon small"><use href="#i-next"></use></svg></a><a href="#" data-recheck="">검색 관심과 조회 조건<svg class="icon small"><use href="#i-next"></use></svg></a></section><p class="hint" style="margin:15px 0 25px">저장한 내용과 현재 자료를 구분해 확인해요.</p><button class="remove-review" data-remove-review>내 검토에서 삭제</button></div></div>
+        <nav class="bottom-nav" aria-label="앱 메뉴"><button class="nav-item" data-go="home"><svg class="icon"><use href="#i-search"></use></svg>메뉴 찾기</button><button class="nav-item active" data-back-saved=""><svg class="icon nav-bookmark"><use href="#i-bookmark"></use></svg>내 검토</button></nav><div class="home-indicator"></div><div class="toast" role="status"></div>
+        <div class="shade" data-close-editor=""></div><section class="sheet saved-editor" aria-label="검토 기록 수정"><div class="sheet-handle"></div><button class="close-sheet" aria-label="닫기" data-close-editor=""><svg class="icon"><use href="#i-x"></use></svg></button><h2 id="saved-editor-title">내 메모 수정</h2><div id="saved-editor-fields"></div><p class="auth-error" id="edit-error" role="alert" hidden></p><button class="primary" data-apply-editor="">변경사항 남기기</button></section>
+      <div class="shade confirm-shade" data-cancel-remove></div><section class="sheet remove-sheet" aria-label="검토 삭제 확인"><div class="sheet-handle"></div><h2>이 검토를 삭제할까요?</h2><p><strong id="remove-menu-name">버터떡</strong>에 남긴 제품 후보, 메모와 다음 확인사항이 내 검토에서 삭제돼요.</p><button class="danger-button" data-confirm-remove>검토 삭제하기</button><button class="secondary-button" data-cancel-remove>계속 검토하기</button></section></div>
+      <p class="screen-caption"><strong>비회원·첫 검토·기존 기록을 구분.</strong> 메모와 다음 확인사항을 수정하고, 필요 없는 검토를 삭제할 수 있어요.</p>
+    </section>
+<section class="screen-wrap account-screen" data-screen="login" data-board>
+  <div class="screen-label"><b>04 · 로그인</b><span>저장하던 메뉴로 돌아가기</span></div>
+  <div class="phone auth-phone" id="phone-login">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">로그인</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><p class="auth-kicker">MZ제조기</p><h1>검토하던 메뉴를<br>계속 이어가세요</h1><p id="login-context">저장한 메뉴와 메모를 한곳에 모아보세요.</p></section>
+<form class="auth-form" id="form-login" novalidate><div class="auth-field"><label for="login-email">이메일</label><input id="login-email" name="login-email" type="email" value="owner@example.com" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required></div><div class="auth-field"><label for="login-password">비밀번호</label><div class="auth-input-wrap"><input id="login-password" name="login-password" type="password" value="MZ-menu-preview-2026!" autocomplete="current-password" maxlength="128" required><button type="button" class="auth-password-toggle" data-toggle-password="login-password" aria-controls="login-password" aria-label="비밀번호 표시" aria-pressed="false">표시</button></div></div><p class="auth-error" id="login-error" role="alert" hidden></p><button class="primary" type="submit">로그인</button><div class="auth-links"><button type="button" class="auth-text-button" data-auth-page="reset">비밀번호를 잊었나요?</button></div></form>
+<div class="auth-signup-prompt"><span>처음 이용하시나요?</span><button type="button" class="auth-text-button" data-auth-page="signup">이메일로 회원가입</button></div>
+<button class="auth-dismiss" type="button" data-auth-dismiss>로그인 없이 둘러보기<svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>저장할 때 로그인.</strong> 둘러보기는 열어두고, 로그인 후에는 시작했던 검토로 돌아갑니다.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="signup" data-board>
+  <div class="screen-label"><b>05 · 회원가입</b><span>필요한 정보만 입력</span></div>
+  <div class="phone auth-phone" id="phone-signup">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">회원가입</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><h1>계정 만들기</h1><p>이메일로 가입하고,<br>관심 있는 메뉴를 검토에 담아보세요.</p></section>
+<form class="auth-form compact" id="form-signup" novalidate><div class="auth-field"><label for="signup-email">이메일</label><input id="signup-email" name="signup-email" type="email" placeholder="name@example.com" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required></div><div class="auth-field"><label for="signup-password">비밀번호</label><div class="auth-input-wrap"><input id="signup-password" name="signup-password" type="password" placeholder="15자 이상 입력" autocomplete="new-password" minlength="15" maxlength="128" required aria-describedby="signup-password-hint"><button type="button" class="auth-password-toggle" data-toggle-password="signup-password" aria-controls="signup-password" aria-label="비밀번호 표시" aria-pressed="false">표시</button></div><p class="auth-field-hint" id="signup-password-hint">15자 이상 입력해 주세요.</p></div><div class="auth-field"><label for="signup-password-confirm">비밀번호 확인</label><div class="auth-input-wrap"><input id="signup-password-confirm" name="signup-password-confirm" type="password" placeholder="비밀번호 다시 입력" autocomplete="new-password" maxlength="128" required><button type="button" class="auth-password-toggle" data-toggle-password="signup-password-confirm" aria-controls="signup-password-confirm" aria-label="비밀번호 확인 표시" aria-pressed="false">표시</button></div></div><fieldset class="auth-consents"><legend>가입에 필요한 동의</legend><div class="auth-consent-row"><label for="signup-terms"><input id="signup-terms" name="signup-terms" type="checkbox" required>[필수] 이용약관에 동의해요</label><button type="button" data-policy="terms" aria-label="이용약관 보기">보기</button></div><div class="auth-consent-row"><label for="signup-privacy"><input id="signup-privacy" name="signup-privacy" type="checkbox" required>[필수] 개인정보 수집·이용에 동의해요</label><button type="button" data-policy="privacy" aria-label="개인정보 수집 및 이용 내용 보기">보기</button></div></fieldset><p class="auth-error" id="signup-error" role="alert" hidden></p><button class="primary" type="submit">이메일 확인하기</button></form><p class="auth-footer-copy">입력한 이메일을 확인한 뒤 가입이 완료돼요.</p></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>이메일과 비밀번호로 시작.</strong> 매장 정보와 사업자 인증은 가입 필수 항목으로 추가하지 않았어요.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="verify">
+  <div class="screen-label"><b>06 · 이메일 확인</b><span>가입 완료 전 확인</span></div>
+  <div class="phone auth-phone" id="phone-verify">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">이메일 확인</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><h1>이메일을 확인해 주세요</h1><p>아래 이메일로 보낸<br>6자리 확인 코드를 입력해 주세요.</p></section>
+<div class="auth-info-block"><p class="auth-mini-title"><svg class="icon" aria-hidden="true"><use href="#i-doc"></use></svg>확인할 이메일</p><strong id="verify-email">owner@example.com</strong><button type="button" class="auth-text-button" data-verify-change-email>이메일 주소 바꾸기</button></div>
+<form class="auth-form" id="form-verify" novalidate><div class="auth-field auth-code-field"><label for="verify-code">확인 코드</label><input id="verify-code" name="verify-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6자리 숫자" aria-describedby="verify-code-hint" required><p class="auth-field-hint" id="verify-code-hint">메일에 표시된 코드의 유효시간을 확인해 주세요.</p></div><div class="auth-code-meta"><span>메일이 도착하지 않았나요?</span><button type="button" class="auth-text-button" data-verify-resend>코드 다시 받기</button></div><p class="auth-error" id="verify-error" role="alert" hidden></p><button class="primary" type="submit">확인하고 시작하기</button></form>
+<ul class="auth-bullet-list"><li>스팸메일함을 함께 확인해 주세요.</li><li>다시 받은 코드가 있다면 가장 최근 코드를 입력해 주세요.</li></ul></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>메일 주소 오류와 재전송 경로.</strong> 확인을 마치면 가입 전 선택했던 메뉴의 검토를 이어갑니다.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="reset">
+  <div class="screen-label"><b>07 · 비밀번호 재설정</b><span>가입 이메일 입력</span></div>
+  <div class="phone auth-phone" id="phone-reset">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">비밀번호 재설정</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><h1>비밀번호 재설정</h1><p>가입할 때 사용한 이메일을 입력해 주세요.<br>비밀번호를 바꾸는 방법을 안내해 드릴게요.</p></section><form class="auth-form" id="form-reset" novalidate><div class="auth-field"><label for="reset-email">가입한 이메일</label><input id="reset-email" name="reset-email" type="email" placeholder="name@example.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" required></div><p class="auth-error" id="reset-error" role="alert" hidden></p><button class="primary" type="submit">재설정 안내 받기</button></form><div class="auth-info-block"><p class="auth-mini-title">이메일 주소가 기억나지 않나요?</p><p>가입할 때 받았던 MZ제조기 이메일이 있는지 먼저 확인해 보세요.</p></div><button class="auth-dismiss" type="button" data-auth-page="login">로그인으로 돌아가기<svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>로그인 실패 후 복구.</strong> 이메일 입력과 재설정 안내를 구분하고 가입 여부를 공개하지 않아요.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="reset-confirm">
+  <div class="screen-label"><b>08 · 재설정 안내</b><span>메일 링크 다음 단계</span></div>
+  <div class="phone auth-phone" id="phone-reset-confirm">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">재설정 안내</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><div class="auth-confirm-icon"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 6 9 7 9-7"></path></svg></div><h1>안내 메일을<br>확인해 주세요</h1><p>입력한 이메일로 가입된 계정이 있다면<br>비밀번호 재설정 안내를 받을 수 있어요.</p></section><div class="auth-info-block"><p class="auth-mini-title">입력한 이메일</p><strong id="reset-target-email">owner@example.com</strong><p>메일의 재설정 링크에서 새 비밀번호를 정해 주세요.</p></div><ul class="auth-bullet-list"><li>스팸메일함을 함께 확인해 주세요.</li><li>링크가 만료됐거나 메일이 없다면 안내를 다시 요청할 수 있어요.</li></ul><div class="auth-next-actions"><button class="primary" type="button" data-auth-page="login">로그인으로 돌아가기</button><button class="secondary-button" type="button" data-auth-page="reset">안내 메일 다시 요청하기</button></div></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>재설정 안내는 중립적으로.</strong> 실제 메일 발송은 연결되지 않은 화면 흐름 시안입니다. <button type="button" class="auth-text-button" data-reset-open>메일 링크 이후 화면 보기</button></p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="reset-new">
+  <div class="screen-label"><b>09 · 새 비밀번호</b><span>메일에서 본인 확인 후</span></div>
+  <div class="phone auth-phone" id="phone-reset-new">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">새 비밀번호</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><h1>새 비밀번호 설정</h1><p>앞으로 로그인할 때 사용할<br>새 비밀번호를 입력해 주세요.</p></section><form class="auth-form" id="form-reset-new" novalidate><div class="auth-field"><label for="reset-new-password">새 비밀번호</label><div class="auth-input-wrap"><input id="reset-new-password" name="reset-new-password" type="password" placeholder="15자 이상 입력" autocomplete="new-password" minlength="15" maxlength="128" required aria-describedby="reset-new-password-hint"><button type="button" class="auth-password-toggle" data-toggle-password="reset-new-password" aria-controls="reset-new-password" aria-label="새 비밀번호 표시" aria-pressed="false">표시</button></div><p class="auth-field-hint" id="reset-new-password-hint">15자 이상 입력해 주세요.</p></div><div class="auth-field"><label for="reset-new-confirm">새 비밀번호 확인</label><div class="auth-input-wrap"><input id="reset-new-confirm" name="reset-new-confirm" type="password" placeholder="비밀번호 다시 입력" autocomplete="new-password" maxlength="128" required><button type="button" class="auth-password-toggle" data-toggle-password="reset-new-confirm" aria-controls="reset-new-confirm" aria-label="새 비밀번호 확인 표시" aria-pressed="false">표시</button></div></div><p class="auth-error" id="reset-new-error" role="alert" hidden></p><button class="auth-text-button" id="reset-expired-action" type="button" data-auth-page="reset" hidden>재설정 안내 다시 요청하기</button><button class="primary" type="submit">비밀번호 변경하기</button></form><div class="auth-info-block"><p class="auth-mini-title">다음 로그인부터 적용돼요</p><p>변경을 마치면 로그인 화면에서 새 비밀번호로 다시 로그인해 주세요.</p></div></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>설정과 로그인 단계를 분리.</strong> 새 비밀번호를 확인한 뒤 로그인 흐름으로 돌아갑니다.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="account" data-board>
+  <div class="screen-label"><b>10 · 내 계정</b><span>계정과 기록 관리</span></div>
+  <div class="phone auth-phone account-home" id="phone-account">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">내 계정</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><h1>내 계정</h1></section><section class="account-identity" id="account-identity"><p class="identity-label">이메일 계정</p><h2 id="account-email">owner@example.com</h2><p class="identity-note">저장한 메뉴와 메모를<br>이 계정으로 이어서 확인해요.</p><button class="primary" type="button" data-account-login hidden>로그인 / 회원가입</button></section>
+<section class="account-settings" aria-label="내 기록"><h2>내 기록</h2><button class="account-settings-row" type="button" data-go="saved"><span>내 검토 보기</span><svg class="icon" aria-hidden="true"><use href="#i-next"></use></svg></button></section>
+<section class="account-settings" data-member-tools aria-label="계정 관리"><h2>계정 관리</h2><button class="account-settings-row" type="button" data-auth-page="reset"><span>비밀번호 재설정</span><svg class="icon" aria-hidden="true"><use href="#i-next"></use></svg></button></section>
+<section class="account-settings" aria-label="서비스 안내"><h2>서비스 안내</h2><button class="account-settings-row" type="button" data-policy="terms"><span>이용약관</span><svg class="icon" aria-hidden="true"><use href="#i-next"></use></svg></button><button class="account-settings-row" type="button" data-policy="privacy"><span>개인정보 처리 안내</span><svg class="icon" aria-hidden="true"><use href="#i-next"></use></svg></button></section>
+<div data-member-tools><button class="account-signout" type="button" data-logout><span>로그아웃</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></button><button class="account-delete-link" type="button" data-withdraw>회원 탈퇴</button></div></div>
+    <nav class="bottom-nav" aria-label="앱 메뉴" data-account-nav><button class="nav-item" data-go="home"><svg class="icon"><use href="#i-search"></use></svg>메뉴 찾기</button><button class="nav-item" data-go="saved"><svg class="icon nav-bookmark"><use href="#i-bookmark"></use></svg>내 검토</button></nav>
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>계정은 헤더에서 진입.</strong> 자주 쓰는 하단 메뉴는 메뉴 찾기와 내 검토 두 개를 유지합니다.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="terms">
+  <div class="screen-label"><b>11 · 이용약관</b><span>원문을 담을 안내 화면</span></div>
+  <div class="phone auth-phone" id="phone-terms">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">이용약관</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><span class="auth-document-tag">내용 구성안</span><h1>이용약관</h1><p>서비스를 이용하기 전에<br>안내할 항목을 정리했어요.</p></section><div class="policy-notice">검토를 위한 목차 시안이에요.<br>확정된 이용약관 원문은 아직 작성하지 않았어요.</div><ol class="policy-outline"><li><div><h2>서비스 이용 범위</h2><p>메뉴 탐색·자료 조회·개인 검토 기록 기능의 제공 범위</p></div></li><li><div><h2>계정과 이용자 책임</h2><p>가입, 계정 관리, 허용되는 이용 방식</p></div></li><li><div><h2>제공 정보의 성격</h2><p>자료의 출처·조회 조건과 실제 구매 조건 확인에 관한 안내</p></div></li><li><div><h2>서비스 변경과 이용 종료</h2><p>변경 안내, 이용 제한, 탈퇴 처리에 관한 기준</p></div></li><li><div><h2>문의와 분쟁 처리</h2><p>운영 주체와 문의 방법, 분쟁 처리 절차</p></div></li></ol><button class="secondary-button policy-close" type="button" data-auth-back>이전 화면으로</button></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>정책 화면과 진입 경로를 확보.</strong> 운영 조건이 정해진 뒤 원문 검토가 필요한 구성안입니다.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="privacy">
+  <div class="screen-label"><b>12 · 개인정보 안내</b><span>항목·목적·보관 기준 확인</span></div>
+  <div class="phone auth-phone" id="phone-privacy">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">개인정보 안내</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><span class="auth-document-tag">내용 구성안</span><h1>개인정보 처리 안내</h1><p>어떤 정보를 왜 사용하는지<br>확인할 수 있는 화면이에요.</p></section><div class="policy-notice">검토를 위한 목차 시안이에요.<br>실제 수집 항목과 보관 기준 등은 서비스 운영 전에 확정해야 해요.</div><ol class="policy-outline"><li><div><h2>수집하는 정보</h2><p>계정 정보·검토 기록 등 항목별 필수 여부와 수집 방법</p></div></li><li><div><h2>정보를 사용하는 목적</h2><p>로그인, 기록 저장, 계정 관리 등 항목별 이용 목적</p></div></li><li><div><h2>보관과 파기 기준</h2><p>보관 기간, 탈퇴 후 처리, 파기 시점과 방법</p></div></li><li><div><h2>처리 위탁과 제공</h2><p>사용하는 외부 서비스와 정보 전달 여부</p></div></li><li><div><h2>이용자의 권리와 문의</h2><p>열람·수정·삭제 요청 방법과 담당 연락처</p></div></li></ol><button class="secondary-button policy-close" type="button" data-auth-back>이전 화면으로</button></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>실제 운영 정보를 임의로 만들지 않았어요.</strong> 수집과 보관 기준을 확정할 때 채워야 할 항목을 표시했습니다.</p>
+</section>
+
+<section class="screen-wrap account-screen" data-screen="withdraw">
+  <div class="screen-label"><b>13 · 회원 탈퇴</b><span>내용 확인과 본인 확인</span></div>
+  <div class="phone auth-phone" id="phone-withdraw">
+    <div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon" aria-hidden="true"><use href="#i-signal"></use></svg><svg class="icon" aria-hidden="true"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div>
+    <header class="appbar"><button class="icon-button" type="button" aria-label="이전 화면" data-auth-back><svg class="icon" aria-hidden="true"><use href="#i-back"></use></svg></button><span class="back-title">회원 탈퇴</span><span class="auth-bar-spacer" aria-hidden="true"></span></header>
+    <div class="auth-content"><section class="auth-intro"><h1>탈퇴하기 전에<br>확인해 주세요</h1><p>탈퇴하면 이 계정으로 저장한<br>검토와 메모를 더 이상 사용할 수 없어요.</p></section><div class="withdraw-summary"><h2>함께 정리되는 정보</h2><ul><li><svg class="icon" aria-hidden="true"><use href="#i-doc"></use></svg>계정 정보</li><li><svg class="icon" aria-hidden="true"><use href="#i-bookmark"></use></svg>내 검토에 저장한 메뉴와 제품 후보</li><li><svg class="icon" aria-hidden="true"><use href="#i-doc"></use></svg>작성한 메모와 다음 확인사항</li></ul></div><form class="auth-form" id="form-withdraw" novalidate><div class="auth-field"><label for="withdraw-password">현재 비밀번호</label><div class="auth-input-wrap"><input id="withdraw-password" name="withdraw-password" type="password" placeholder="본인 확인을 위해 입력" autocomplete="current-password" maxlength="128" required><button type="button" class="auth-password-toggle" data-toggle-password="withdraw-password" aria-controls="withdraw-password" aria-label="현재 비밀번호 표시" aria-pressed="false">표시</button></div></div><label class="withdraw-confirm-label" for="withdraw-confirm"><input id="withdraw-confirm" name="withdraw-confirm" type="checkbox" required><span>계정과 검토 기록을 더 이상 사용할 수 없다는 내용을 확인했어요.</span></label><p class="auth-error" id="withdraw-error" role="alert" hidden></p><button class="danger-button" type="submit">회원 탈퇴하기</button><button class="secondary-button withdraw-cancel" type="button" data-auth-page="account">계속 이용하기</button></form></div>
+
+    <div class="home-indicator"></div><div class="toast" role="status"></div>
+  </div>
+  <p class="screen-caption"><strong>계정 화면에서 바로 삭제하지 않아요.</strong> 영향 범위와 비밀번호를 확인하는 별도 단계를 거칩니다.</p>
+</section>
+
+<section class="screen-wrap" data-screen="search"><div class="screen-label"><b>14 · 메뉴 검색</b><span>입력 · 결과 · 다시 시도</span></div><div class="phone" id="phone-search"><div class="status"><span class="clock">9:41</span><span class="status-symbols"><svg class="icon"><use href="#i-signal"></use></svg><svg class="icon"><use href="#i-wifi"></use></svg><span class="battery"></span></span></div><header class="appbar"><button class="icon-button" aria-label="메뉴 찾기로 돌아가기" data-search-back><svg class="icon"><use href="#i-back"></use></svg></button><span class="back-title">메뉴 검색</span><span style="width:44px"></span></header><div class="search-content"><form class="search-input-form" id="form-search"><label class="sr-only" for="search-query">찾을 메뉴</label><div class="search-input-wrap"><svg class="icon"><use href="#i-search"></use></svg><input id="search-query" type="search" placeholder="메뉴 이름으로 검색" autocomplete="off"><button type="button" class="search-clear" data-search-clear aria-label="검색어 지우기"><svg class="icon"><use href="#i-x"></use></svg></button></div><button class="search-submit" type="submit">검색</button></form><div id="search-results"><h1 id="search-count">메뉴 둘러보기</h1><div id="search-result-list"></div></div><div class="state-message" id="search-empty" hidden><h2>검색 결과가 없어요</h2><p><strong id="search-empty-query"></strong> 메뉴를 찾지 못했어요.<br>메뉴 이름을 짧게 바꾸거나 다른 이름으로 검색해 보세요.</p><button class="secondary-button" data-search-clear>검색어 다시 입력하기</button></div><div class="state-message" id="search-error" hidden role="alert"><h2>검색 결과를 불러오지 못했어요</h2><p>검색어는 그대로 남아 있어요.<br>잠시 후 같은 조건으로 다시 시도해 주세요.</p><button class="primary" data-search-retry>다시 시도</button></div><div class="search-loading" id="search-loading" hidden aria-live="polite"><p class="loading-caption">메뉴를 찾고 있어요…</p><div class="skeleton-row" aria-hidden="true"><span class="skeleton-thumb"></span><span class="skeleton-lines"><span></span><span></span></span></div><div class="skeleton-row" aria-hidden="true"><span class="skeleton-thumb"></span><span class="skeleton-lines"><span></span><span></span></span></div></div></div><nav class="bottom-nav" aria-label="앱 메뉴"><button class="nav-item" data-go="home"><svg class="icon"><use href="#i-search"></use></svg>메뉴 찾기</button><button class="nav-item" data-go="saved"><svg class="icon nav-bookmark"><use href="#i-bookmark"></use></svg>내 검토</button></nav><div class="home-indicator"></div><div class="toast" role="status"></div></div><p class="screen-caption"><strong>검색 결과와 실패를 구분.</strong> 예시 메뉴 두 개를 검색하고, 검색어를 유지한 채 다시 시도할 수 있어요.</p></section>
+  </div>
+  <footer class="board-footer"><p>고충실도 디자인 시안 · 사진은 생성한 메뉴 연출 이미지 · 차트와 개인 기록은 가상 예시<br>제품 이름·제조업체·보고일은 초안 발표 자료의 사례를 사용했어요. 실서비스 데이터는 연결하지 않았어요.</p><span class="number">V2 / REVIEW</span></footer>
+</main>
+<script type="application/json" id="photo-assets">{"butter":"assets/asset-5.png","cookie":"assets/asset-6.png"}</script>
+<script src="app.js"></script><script src="data-core.js"></script><script src="integration.js"></script><script type="text/plain" id="font-license">Copyright (c) 2021, Kil Hyung-jin (https://github.com/orioncactus/pretendard),
+with Reserved Font Name Pretendard.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+https://scripts.sil.org/OFL
+
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.</script></body></html>
