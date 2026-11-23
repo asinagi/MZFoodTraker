@@ -1,7 +1,11 @@
-# 식품안전나라 공공데이터 연동 (1단계)
+# 식품안전나라 공공데이터 연동
 
-유행 음식의 **공급 쪽 정보**를 식약처 공공데이터로 보강하는 독립 모듈입니다.
-기존 수집·추적·Oracle·B8 코드는 수정하지 않았고, 기존 DB에도 쓰지 않습니다.
+유행 음식의 **공급 쪽 정보**를 식약처 공공데이터로 보강합니다.
+
+- 1단계 `food_trends/foodsafety.py`: 음식 이름으로 조회·정제·분석하는 독립 모듈
+- 2단계 `food_trends/public_supply.py`: 승인된 음식(FOOD_ID)과 별칭에 연결하고 앱 API `GET /api/v1/foods/{food_id}/public-supply`로 제공
+
+기존 DB(SQLite·Oracle)는 읽기만 하며 스키마·마이그레이션은 바꾸지 않습니다.
 
 | 파일 | 역할 |
 | --- | --- |
@@ -95,9 +99,29 @@ python -m food_trends.foodsafety 카다이프 --ingredient
 - 허가(신고)일은 실제 출시일과 다를 수 있습니다.
 - 품목제조보고 대상 제품만 나옵니다. 매장에서 직접 만들어 파는 메뉴(즉석판매)는 대부분 포함되지 않습니다.
 
+## 2단계: FOOD_ID 연결과 앱 API
+
+```bash
+# 승인된 음식 전체 (B8과 같은 저장소를 읽기 전용으로 엶)
+python -m food_trends.public_supply --store sqlite --database data/trends.sqlite3
+python -m food_trends.public_supply --store oracle-production
+# 한 음식만, 캐시 무시
+python -m food_trends.public_supply --store oracle-production --food FOOD_... --refresh
+```
+
+- 음식 목록: `FoodAnalytics.foods()` (B8 음식 목록과 같은 기준: 승인된 활성 음식, 활성 별칭). 병합된 음식은 대상 음식으로만 조회.
+- 저장: `data/foodsafety/by_food/<FOOD_ID>.json` (git 제외). 음식 하나가 실패해도 나머지는 계속하고, 실패 목록은 출력에 남김.
+- 앱 API: `python -m food_trends.app_api ...`가 위 폴더를 읽기만 함(`--public-supply-dir`로 변경). 외부 호출 없음.
+  - `state=NOT_COLLECTED`: 아직 sync하지 않은 음식 (0건과 다름)
+  - 병합된 이전 음식 ID로 요청하면 대상 음식의 기록을 반환
+  - 음식 상세(`/foods/{food_id}`) 응답은 바꾸지 않고 하위 경로를 추가함 (1.x 규칙: 추가만)
+- Mock 서버: `FOOD_MOCK_DUJJONKU`·`FOOD_MOCK_YAKGWA`에 가상 값(`[MOCK]` 표시), 나머지는 NOT_COLLECTED.
+  예시: `docs/app-api/examples/food-public-supply*.json`
+- 테스트: `tests/test_public_supply.py` (11개, 외부 접속 없음)
+
 ## 다음 단계 후보 (팀 합의 필요)
 
-1. Oracle에 `FOOD_PUBLIC_INFO` 같은 별도 테이블로 저장 (FOOD_ID 기준)
-2. B8 음식 상세 API에 공급 추이·핵심 원재료 항목 추가
+1. 파일 기록 대신 Oracle 테이블로 저장 (스키마 버전·이관·대조 범위 결정 필요)
+2. 승인·별칭 변경 시 자동 sync (지금은 명령으로 수동 실행)
 3. 재료별 가격·판매처: 네이버 쇼핑 검색 API (공공데이터 아님, 가격은 저장하지 않고 조회 시 사용)
 4. 핵심 원재료를 근거로 AI 기본 레시피 생성

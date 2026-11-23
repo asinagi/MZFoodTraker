@@ -1,0 +1,152 @@
+{
+  "summary": "공공데이터 공급·원재료 (식품안전나라, 가상 값)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods/FOOD_MOCK_DUJJONKU/public-supply",
+    "query": {},
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "fetched_at": "2026-11-03T02:00:00Z",
+      "searched_names": [
+        "두쫀쿠"
+      ],
+      "counts": {
+        "products": 24,
+        "core_products": 21,
+        "derived_products": 3,
+        "with_raw_materials": 24
+      },
+      "first_permitted_on": "2026-06-03",
+      "latest_permitted_on": "2026-10-20",
+      "monthly_permits": [
+        {
+          "month": "2026-06",
+          "products": 2,
+          "core_products": 2
+        },
+        {
+          "month": "2026-07",
+          "products": 6,
+          "core_products": 5
+        },
+        {
+          "month": "2026-08",
+          "products": 9,
+          "core_products": 8
+        },
+        {
+          "month": "2026-09",
+          "products": 5,
+          "core_products": 4
+        },
+        {
+          "month": "2026-10",
+          "products": 2,
+          "core_products": 2
+        }
+      ],
+      "ingredient_basis": "core",
+      "top_ingredients": [
+        {
+          "ingredient": "카카오",
+          "products": 19,
+          "share": 0.905,
+          "estimated": false
+        },
+        {
+          "ingredient": "캔디류(마시멜로 추정)",
+          "products": 14,
+          "share": 0.667,
+          "estimated": true
+        },
+        {
+          "ingredient": "면류(카다이프 추정)",
+          "products": 13,
+          "share": 0.619,
+          "estimated": true
+        },
+        {
+          "ingredient": "버터",
+          "products": 11,
+          "share": 0.524,
+          "estimated": false
+        },
+        {
+          "ingredient": "피스타치오",
+          "products": 8,
+          "share": 0.381,
+          "estimated": false
+        }
+      ],
+      "recent_products": [
+        {
+          "name": "[MOCK] 가상 두쫀쿠 A",
+          "maker": "[MOCK] 가상제과",
+          "food_type": "과자",
+          "permitted_on": "2026-10-20",
+          "match": "core"
+        },
+        {
+          "name": "[MOCK] 가상 두쫀쿠 말차",
+          "maker": "[MOCK] 가상베이커리",
+          "food_type": "과자",
+          "permitted_on": "2026-10-02",
+          "match": "core"
+        },
+        {
+          "name": "[MOCK] 가상 두쫀쿠 케이크",
+          "maker": "[MOCK] 가상디저트",
+          "food_type": "빵류",
+          "permitted_on": "2026-09-15",
+          "match": "derived"
+        },
+        {
+          "name": "[MOCK] 가상 두쫀쿠 B",
+          "maker": "[MOCK] 가상제과",
+          "food_type": "과자",
+          "permitted_on": "2026-08-11",
+          "match": "core"
+        },
+        {
+          "name": "[MOCK] 가상 두쫀쿠 C",
+          "maker": "[MOCK] 가상식품",
+          "food_type": "당류가공품",
+          "permitted_on": "2026-06-03",
+          "match": "core"
+        }
+      ],
+      "food": {
+        "food_id": "FOOD_MOCK_DUJJONKU",
+        "canonical_name": "[MOCK] 두쫀쿠",
+        "entity_kind": "PRODUCT"
+      },
+      "state": "AVAILABLE",
+      "provider": {
+        "name": "식품안전나라 (식품의약품안전처)",
+        "datasets": [
+          "I1250",
+          "C002"
+        ],
+        "origin": "mock"
+      },
+      "notes": [
+        "품목제조보고 대상 제품만 포함합니다. 매장에서 직접 만들어 파는 메뉴(즉석판매)는 대부분 없습니다.",
+        "이름 포함 검색이라 다른 음식이 섞일 수 있어 derived(파생)로 구분합니다(이름 규칙 기반 추정).",
+        "share는 그 재료를 쓴 제품의 비율이며 함량이 아닙니다. estimated=true는 식품유형 표기로 미루어 본 해석입니다.",
+        "permitted_on은 품목제조보고 허가(신고)일이며 실제 출시일과 다를 수 있습니다."
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}

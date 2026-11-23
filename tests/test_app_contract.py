@@ -115,7 +115,7 @@ class OpenApiDocument(unittest.TestCase):
     def test_document_is_structurally_valid(self):
         doc = json.loads((DOCS / 'openapi.json').read_text(encoding='utf-8'))
         self.assertEqual(document_problems(doc), [])
-        self.assertEqual(len(doc['paths']), 7)
+        self.assertEqual(len(doc['paths']), 8)  # 7 B8 routes + /foods/{food_id}/public-supply (식품안전나라)
         self.assertTrue(all(p.startswith(contract.BASE_PATH + '/') for p in doc['paths']))
         self.assertEqual(doc['security'], [])
 

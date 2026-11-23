@@ -167,6 +167,16 @@ HTTP 상태 코드로 **큰 분류**(요청 문제인지 서버 문제인지, �
 | 주별 추이 그래프 | `GET /api/v1/foods/{food_id}/timeline?period=90d&granularity=week` | 주 단위 점 (`complete`) |
 | 플랫폼별 지표 | `GET /api/v1/foods/{food_id}/metrics?period=7d` | `sources[].metrics[].current/previous/change`, `provider_values` |
 | 데이터 갱신 상태 | `GET /api/v1/sources/status` | `data_through`, `sources[].last_successful_run_at`, `window_stats` |
+| 공공데이터 공급·원재료 (음식 상세 하위) | `GET /api/v1/foods/{food_id}/public-supply` | `state`, `counts`, `monthly_permits[]`, `top_ingredients[]`, `recent_products[]` |
+
+### 공공데이터 공급·원재료 (식품안전나라)
+
+- 식약처 식품안전나라 품목제조보고(I1250)·원재료(C002)로 본 **공급** 정보입니다. 관심도(관측) 수치와 다른 종류라 합산하지 마세요.
+- `state=NOT_COLLECTED`는 아직 조회하지 않은 음식입니다(0건과 다름). `AVAILABLE`이면서 `counts.products=0`이 정상 0건입니다.
+- `monthly_permits`는 신고가 있는 달만 들어 있습니다. 그래프에서 빠진 달은 0으로 그리세요.
+- `top_ingredients[].share`는 그 재료를 쓴 제품 비율(0~1)이며 함량이 아닙니다. `estimated=true`(예: 마시멜로·카다이프 추정)는 화면에 '추정'으로 표시하세요.
+- `notes`는 해석 주의사항입니다. 상세 화면 하단에 함께 보여주세요.
+- 실제 서버는 미리 조회해 둔 파일(`python -m food_trends.public_supply`)만 읽고 외부 호출을 하지 않습니다. Mock 서버는 `FOOD_MOCK_DUJJONKU`·`FOOD_MOCK_YAKGWA`에 가상 값을 줍니다.
 
 ### 파라미터
 

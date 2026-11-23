@@ -30,6 +30,8 @@ tags:
     description: "출처별 순위"
   - name: "Sources"
     description: "데이터 갱신·수집 범위"
+  - name: "PublicData"
+    description: "공공데이터 보강 (식품안전나라 공급·원재료)"
 security: []
 paths:
   "/api/v1/health":
@@ -1642,6 +1644,170 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           $ref: "#/components/responses/Unavailable"
+  "/api/v1/foods/{food_id}/public-supply":
+    get:
+      operationId: "getFoodPublicSupply"
+      tags:
+        - "PublicData"
+      summary: "음식별 공공데이터 공급·원재료"
+      description: "식품안전나라(식약처) 품목제조보고·원재료로 본 신고 제품 수, 월별 신고 건수, 핵심 원재료, 최근 신고 제품. 서버는 미리 조회해 둔 기록만 읽으며(외부 호출 없음) 아직 조회하지 않은 음식은 state=NOT_COLLECTED입니다."
+      parameters:
+        - $ref: "#/components/parameters/FoodId"
+      responses:
+        "200":
+          description: "성공"
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/PublicSupplyResponse"
+              examples:
+                "food-public-supply-not-collected":
+                  summary: "공공데이터 미수집 음식 (NOT_COLLECTED)"
+                  value:
+                    data:
+                      food:
+                        food_id: "FOOD_MOCK_MALATANG"
+                        canonical_name: "[MOCK] 마라탕"
+                        entity_kind: "DISH"
+                      state: "NOT_COLLECTED"
+                      provider:
+                        name: "식품안전나라 (식품의약품안전처)"
+                        datasets:
+                          - "I1250"
+                          - "C002"
+                        origin: "mock"
+                      fetched_at: null
+                      searched_names: []
+                      counts: null
+                      first_permitted_on: null
+                      latest_permitted_on: null
+                      monthly_permits: []
+                      ingredient_basis: null
+                      top_ingredients: []
+                      recent_products: []
+                      notes:
+                        - "품목제조보고 대상 제품만 포함합니다. 매장에서 직접 만들어 파는 메뉴(즉석판매)는 대부분 없습니다."
+                        - "이름 포함 검색이라 다른 음식이 섞일 수 있어 derived(파생)로 구분합니다(이름 규칙 기반 추정)."
+                        - "share는 그 재료를 쓴 제품의 비율이며 함량이 아닙니다. estimated=true는 식품유형 표기로 미루어 본 해석입니다."
+                        - "permitted_on은 품목제조보고 허가(신고)일이며 실제 출시일과 다를 수 있습니다."
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+                "food-public-supply":
+                  summary: "공공데이터 공급·원재료 (식품안전나라, 가상 값)"
+                  value:
+                    data:
+                      fetched_at: "2026-11-03T02:00:00Z"
+                      searched_names:
+                        - "두쫀쿠"
+                      counts:
+                        products: 24
+                        core_products: 21
+                        derived_products: 3
+                        with_raw_materials: 24
+                      first_permitted_on: "2026-06-03"
+                      latest_permitted_on: "2026-10-20"
+                      monthly_permits:
+                        - month: "2026-06"
+                          products: 2
+                          core_products: 2
+                        - month: "2026-07"
+                          products: 6
+                          core_products: 5
+                        - month: "2026-08"
+                          products: 9
+                          core_products: 8
+                        - month: "2026-09"
+                          products: 5
+                          core_products: 4
+                        - month: "2026-10"
+                          products: 2
+                          core_products: 2
+                      ingredient_basis: "core"
+                      top_ingredients:
+                        - ingredient: "카카오"
+                          products: 19
+                          share: 0.905
+                          estimated: false
+                        - ingredient: "캔디류(마시멜로 추정)"
+                          products: 14
+                          share: 0.667
+                          estimated: true
+                        - ingredient: "면류(카다이프 추정)"
+                          products: 13
+                          share: 0.619
+                          estimated: true
+                        - ingredient: "버터"
+                          products: 11
+                          share: 0.524
+                          estimated: false
+                        - ingredient: "피스타치오"
+                          products: 8
+                          share: 0.381
+                          estimated: false
+                      recent_products:
+                        - name: "[MOCK] 가상 두쫀쿠 A"
+                          maker: "[MOCK] 가상제과"
+                          food_type: "과자"
+                          permitted_on: "2026-10-20"
+                          match: "core"
+                        - name: "[MOCK] 가상 두쫀쿠 말차"
+                          maker: "[MOCK] 가상베이커리"
+                          food_type: "과자"
+                          permitted_on: "2026-10-02"
+                          match: "core"
+                        - name: "[MOCK] 가상 두쫀쿠 케이크"
+                          maker: "[MOCK] 가상디저트"
+                          food_type: "빵류"
+                          permitted_on: "2026-09-15"
+                          match: "derived"
+                        - name: "[MOCK] 가상 두쫀쿠 B"
+                          maker: "[MOCK] 가상제과"
+                          food_type: "과자"
+                          permitted_on: "2026-08-11"
+                          match: "core"
+                        - name: "[MOCK] 가상 두쫀쿠 C"
+                          maker: "[MOCK] 가상식품"
+                          food_type: "당류가공품"
+                          permitted_on: "2026-06-03"
+                          match: "core"
+                      food:
+                        food_id: "FOOD_MOCK_DUJJONKU"
+                        canonical_name: "[MOCK] 두쫀쿠"
+                        entity_kind: "PRODUCT"
+                      state: "AVAILABLE"
+                      provider:
+                        name: "식품안전나라 (식품의약품안전처)"
+                        datasets:
+                          - "I1250"
+                          - "C002"
+                        origin: "mock"
+                      notes:
+                        - "품목제조보고 대상 제품만 포함합니다. 매장에서 직접 만들어 파는 메뉴(즉석판매)는 대부분 없습니다."
+                        - "이름 포함 검색이라 다른 음식이 섞일 수 있어 derived(파생)로 구분합니다(이름 규칙 기반 추정)."
+                        - "share는 그 재료를 쓴 제품의 비율이며 함량이 아닙니다. estimated=true는 식품유형 표기로 미루어 본 해석입니다."
+                        - "permitted_on은 품목제조보고 허가(신고)일이며 실제 출시일과 다를 수 있습니다."
+                    meta:
+                      api_version: "1.0.0"
+                      data_mode: "mock"
+                      observation_origin: "mock"
+                      generated_at: "2026-11-03T03:00:00Z"
+                      timezone: "Asia/Seoul"
+                      notice: "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/FoodNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   "/api/v1/trends/rankings":
     get:
       operationId: "listRankings"
@@ -2852,6 +3018,217 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/FoodDetail"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    PublicSupplyCounts:
+      type: "object"
+      required:
+        - "core_products"
+        - "derived_products"
+        - "products"
+        - "with_raw_materials"
+      properties:
+        products:
+          type: "integer"
+          minimum: 0
+          description: "별칭 검색 결과를 품목보고번호로 중복 제거한 신고 제품 수"
+        core_products:
+          type: "integer"
+          minimum: 0
+          description: "이름상 그 음식 자체(맛·포장 변형 포함)로 보이는 제품 수"
+        derived_products:
+          type: "integer"
+          minimum: 0
+          description: "그 음식 맛·스타일의 다른 제품(케이크·스프레드 등) 수"
+        with_raw_materials:
+          type: "integer"
+          minimum: 0
+          description: "원재료 정보가 있는 제품 수"
+      description: "신고 제품 수. state가 NOT_COLLECTED이면 null."
+      nullable: true
+    PublicSupplyMonth:
+      type: "object"
+      required:
+        - "core_products"
+        - "month"
+        - "products"
+      properties:
+        month:
+          type: "string"
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+          description: "허가(신고) 월 (YYYY-MM, KST)"
+        products:
+          type: "integer"
+          minimum: 0
+          description: "그 달 신고된 제품 수"
+        core_products:
+          type: "integer"
+          minimum: 0
+          description: "그중 음식 자체로 보이는 제품 수"
+      description: "월별 신고 건수 = 공급 추이. 신고가 없는 달은 항목이 없습니다."
+    PublicSupplyIngredient:
+      type: "object"
+      required:
+        - "estimated"
+        - "ingredient"
+        - "products"
+        - "share"
+      properties:
+        ingredient:
+          type: "string"
+          description: "정제한 대표 재료명"
+        products:
+          type: "integer"
+          minimum: 0
+          description: "이 재료를 쓴 제품 수"
+        share:
+          type: "number"
+          minimum: 0
+          maximum: 1
+          description: "원재료 정보가 있는 제품 중 이 재료를 쓴 비율(0~1). 함량이 아닙니다."
+        estimated:
+          type: "boolean"
+          description: "식품유형 표기(예: 캔디류→마시멜로, 건면→카다이프)로 미루어 본 해석이면 true."
+      description: "핵심 원재료."
+    PublicSupplyProduct:
+      type: "object"
+      required:
+        - "food_type"
+        - "maker"
+        - "match"
+        - "name"
+        - "permitted_on"
+      properties:
+        name:
+          type: "string"
+          description: "신고 제품명"
+        maker:
+          type: "string"
+          description: "제조사(신고 업체)"
+        food_type:
+          type: "string"
+          description: "식품유형"
+        permitted_on:
+          type: "string"
+          format: "date"
+          description: "허가(신고)일. 실제 출시일과 다를 수 있습니다."
+          nullable: true
+        match:
+          type: "string"
+          enum:
+            - "core"
+            - "derived"
+            - "other"
+          description: "core=음식 자체·변형, derived=다른 제품(이름 규칙 기반 추정)"
+      description: "최근 신고 제품."
+    PublicSupplyProvider:
+      type: "object"
+      required:
+        - "datasets"
+        - "name"
+        - "origin"
+      properties:
+        name:
+          type: "string"
+          description: "제공 기관"
+        datasets:
+          type: "array"
+          items:
+            type: "string"
+          description: "사용한 공공데이터 서비스 ID (I1250 품목제조보고, C002 원재료)"
+        origin:
+          type: "string"
+          enum:
+            - "live_api"
+            - "mock"
+          description: "mock이면 가상 데이터입니다."
+      description: "데이터 출처."
+    PublicSupply:
+      type: "object"
+      required:
+        - "counts"
+        - "fetched_at"
+        - "first_permitted_on"
+        - "food"
+        - "ingredient_basis"
+        - "latest_permitted_on"
+        - "monthly_permits"
+        - "notes"
+        - "provider"
+        - "recent_products"
+        - "searched_names"
+        - "state"
+        - "top_ingredients"
+      properties:
+        food:
+          $ref: "#/components/schemas/FoodRef"
+        state:
+          type: "string"
+          enum:
+            - "AVAILABLE"
+            - "NOT_COLLECTED"
+          description: "AVAILABLE=조회 결과 있음(제품 0건 포함), NOT_COLLECTED=아직 조회하지 않음(0건과 다름)."
+        provider:
+          $ref: "#/components/schemas/PublicSupplyProvider"
+        fetched_at:
+          type: "string"
+          format: "date-time"
+          description: "공공데이터를 조회한 시각. NOT_COLLECTED이면 null. UTC, 초 단위 RFC 3339 (예: 2026-11-02T03:00:00Z)."
+          nullable: true
+        searched_names:
+          type: "array"
+          items:
+            type: "string"
+          description: "조회에 사용한 대표명·승인 별칭"
+        counts:
+          $ref: "#/components/schemas/PublicSupplyCounts"
+        first_permitted_on:
+          type: "string"
+          format: "date"
+          description: "가장 이른 허가(신고)일"
+          nullable: true
+        latest_permitted_on:
+          type: "string"
+          format: "date"
+          description: "가장 최근 허가(신고)일"
+          nullable: true
+        monthly_permits:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PublicSupplyMonth"
+          description: "월별 신고 건수(오름차순)"
+        ingredient_basis:
+          type: "string"
+          enum:
+            - "core"
+            - "all"
+            - null
+          description: "top_ingredients 계산 대상. core=음식 자체 제품, all=전체 제품"
+          nullable: true
+        top_ingredients:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PublicSupplyIngredient"
+          description: "사용 제품 수가 많은 순 최대 10개"
+        recent_products:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PublicSupplyProduct"
+          description: "최근 신고 제품 최대 5개(음식 자체 우선)"
+        notes:
+          type: "array"
+          items:
+            type: "string"
+          description: "화면에 함께 표시할 해석 주의사항"
+      description: "식품안전나라 공공데이터로 본 공급(업체 신고 제품)과 원재료. 관심도(관측) 수치와 합산하지 않습니다."
+    PublicSupplyResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          $ref: "#/components/schemas/PublicSupply"
         meta:
           $ref: "#/components/schemas/Meta"
     RunCounts:

@@ -203,8 +203,42 @@ def cached_dataset(directory):
     return Storage(copy)
 
 
+# Synthetic 식품안전나라 records for /foods/{food_id}/public-supply. Not real products, makers or counts:
+# every name is marked [MOCK]. Foods not listed here answer state=NOT_COLLECTED.
+def _mock_supply(suffix, name, months, ingredients, products):
+    total = sum(n for _, n, _ in months)
+    core = sum(c for _, _, c in months)
+    return {'record_version': 1, 'food_id': food_id(suffix), 'canonical_name': '[MOCK] ' + name, 'searched_names': [name],
+            'fetched_at': '2026-11-03T02:00:00Z',
+            'counts': {'products': total, 'core_products': core, 'derived_products': total - core, 'with_raw_materials': total},
+            'first_permitted_on': products[-1][3], 'latest_permitted_on': products[0][3],
+            'monthly_permits': [{'month': m, 'products': n, 'core_products': c} for m, n, c in months],
+            'ingredient_basis': 'core',
+            'top_ingredients': [{'ingredient': i, 'products': n, 'share': round(n / core, 3), 'estimated': '추정' in i}
+                                for i, n in ingredients],
+            'recent_products': [{'name': '[MOCK] ' + n, 'maker': '[MOCK] ' + m, 'food_type': t, 'permitted_on': d, 'match': k}
+                                for n, m, t, d, k in products]}
+
+
+MOCK_SUPPLY = (
+    _mock_supply('DUJJONKU', '두쫀쿠',
+                 (('2026-06', 2, 2), ('2026-07', 6, 5), ('2026-08', 9, 8), ('2026-09', 5, 4), ('2026-10', 2, 2)),
+                 (('카카오', 19), ('캔디류(마시멜로 추정)', 14), ('면류(카다이프 추정)', 13), ('버터', 11), ('피스타치오', 8)),
+                 (('가상 두쫀쿠 A', '가상제과', '과자', '2026-10-20', 'core'), ('가상 두쫀쿠 말차', '가상베이커리', '과자', '2026-10-02', 'core'),
+                  ('가상 두쫀쿠 케이크', '가상디저트', '빵류', '2026-09-15', 'derived'), ('가상 두쫀쿠 B', '가상제과', '과자', '2026-08-11', 'core'),
+                  ('가상 두쫀쿠 C', '가상식품', '당류가공품', '2026-06-03', 'core'))),
+    _mock_supply('YAKGWA', '약과',
+                 (('2026-05', 3, 3), ('2026-07', 4, 3), ('2026-09', 2, 2)),
+                 (('밀가루', 8), ('물엿', 7), ('식물성 기름', 6), ('계피', 3)),
+                 (('가상 꿀약과', '가상한과', '과자', '2026-09-21', 'core'), ('가상 미니약과', '가상한과', '과자', '2026-07-08', 'core'),
+                  ('가상 약과', '가상식품', '과자', '2026-05-12', 'core'))),
+)
+
+
 def mock_api(storage):
-    return AppApi(FoodAnalytics(SQLiteAnalyticsStore(storage), clock=lambda: MOCK_NOW, origin='mock'), data_mode='mock')
+    from .public_supply import StaticPublicSupply
+    return AppApi(FoodAnalytics(SQLiteAnalyticsStore(storage), clock=lambda: MOCK_NOW, origin='mock'), data_mode='mock',
+                  public_supply=StaticPublicSupply(MOCK_SUPPLY))
 
 
 # Screen-by-screen examples (docs/app-api/examples): (file, summary, method, path, query, headers, in_spec)
@@ -230,6 +264,8 @@ EXAMPLES = (
     ('food-metrics-insufficient', '신규 추적 음식 (기간 일부만 관측)', 'GET', F + 'FOOD_MOCK_BUTTERTTEOK/metrics', {'period': '7d'}, {}, True),
     ('food-metrics-legacy', '출처 불명 과거 데이터 별도 표시', 'GET', F + 'FOOD_MOCK_MALATANG/metrics',
      {'period': '30d', 'source': 'instagram_graph'}, {}, True),
+    ('food-public-supply', '공공데이터 공급·원재료 (식품안전나라, 가상 값)', 'GET', F + 'FOOD_MOCK_DUJJONKU/public-supply', {}, {}, True),
+    ('food-public-supply-not-collected', '공공데이터 미수집 음식 (NOT_COLLECTED)', 'GET', F + 'FOOD_MOCK_MALATANG/public-supply', {}, {}, True),
     ('rankings-instagram-7d', 'Instagram 7일 순위', 'GET', D + '/trends/rankings', {'source': 'instagram_graph', 'period': '7d'}, {}, True),
     ('rankings-rss-7d', 'Google 트렌드 RSS 7일 순위', 'GET', D + '/trends/rankings', {'source': 'google_trends_rss', 'period': '7d'}, {}, True),
     ('rankings-rss-30d-zero', 'Google 트렌드 RSS 30일 순위 (정상 관측 0 포함)', 'GET', D + '/trends/rankings',

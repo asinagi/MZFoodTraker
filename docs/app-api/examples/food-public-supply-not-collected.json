@@ -1,0 +1,52 @@
+{
+  "summary": "공공데이터 미수집 음식 (NOT_COLLECTED)",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/foods/FOOD_MOCK_MALATANG/public-supply",
+    "query": {},
+    "headers": {}
+  },
+  "status": 200,
+  "in_spec": true,
+  "response": {
+    "data": {
+      "food": {
+        "food_id": "FOOD_MOCK_MALATANG",
+        "canonical_name": "[MOCK] 마라탕",
+        "entity_kind": "DISH"
+      },
+      "state": "NOT_COLLECTED",
+      "provider": {
+        "name": "식품안전나라 (식품의약품안전처)",
+        "datasets": [
+          "I1250",
+          "C002"
+        ],
+        "origin": "mock"
+      },
+      "fetched_at": null,
+      "searched_names": [],
+      "counts": null,
+      "first_permitted_on": null,
+      "latest_permitted_on": null,
+      "monthly_permits": [],
+      "ingredient_basis": null,
+      "top_ingredients": [],
+      "recent_products": [],
+      "notes": [
+        "품목제조보고 대상 제품만 포함합니다. 매장에서 직접 만들어 파는 메뉴(즉석판매)는 대부분 없습니다.",
+        "이름 포함 검색이라 다른 음식이 섞일 수 있어 derived(파생)로 구분합니다(이름 규칙 기반 추정).",
+        "share는 그 재료를 쓴 제품의 비율이며 함량이 아닙니다. estimated=true는 식품유형 표기로 미루어 본 해석입니다.",
+        "permitted_on은 품목제조보고 허가(신고)일이며 실제 출시일과 다를 수 있습니다."
+      ]
+    },
+    "meta": {
+      "api_version": "1.0.0",
+      "data_mode": "mock",
+      "observation_origin": "mock",
+      "generated_at": "2026-11-03T03:00:00Z",
+      "timezone": "Asia/Seoul",
+      "notice": "가상 데이터입니다. 실제 유행 분석 결과가 아닙니다."
+    }
+  }
+}
