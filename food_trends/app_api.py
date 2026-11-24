@@ -16,6 +16,7 @@ import re
 import sys
 from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qsl, urlsplit
 from . import app_contract as contract
 from .analytics_reader import AnalyticsUnavailable, SQLiteAnalyticsStore, TargetAnalyticsStore
@@ -26,11 +27,13 @@ from .classifier import normalize
 ALLOW = 'GET, HEAD, OPTIONS'
 MIN_DAY = date(2000, 1, 1)
 FOOD_ID = re.compile(r'[A-Za-z0-9_-]{1,128}')
+PUBLIC_SUPPLY_DIR = Path(__file__).resolve().parent.parent / 'data' / 'foodsafety' / 'by_food'
 ROUTES = ((re.compile(r'/api/v1/health'), 'health', ()),
           (re.compile(r'/api/v1/foods'), 'foods', ('q', 'kind', 'sort', 'limit', 'cursor')),
           (re.compile(r'/api/v1/foods/([^/]+)'), 'food', ()),
           (re.compile(r'/api/v1/foods/([^/]+)/timeline'), 'timeline', ('period', 'end_date', 'granularity', 'source')),
           (re.compile(r'/api/v1/foods/([^/]+)/metrics'), 'metrics', ('period', 'end_date', 'source')),
+          (re.compile(r'/api/v1/foods/([^/]+)/public-supply'), 'public_supply', ()),
           (re.compile(r'/api/v1/trends/rankings'), 'rankings', ('source', 'metric', 'period', 'end_date', 'kind', 'include_zero', 'limit', 'cursor')),
           (re.compile(r'/api/v1/sources/status'), 'status', ('period',)))
 MOCK_NOTICE = '가상 데이터입니다. 실제 유행 분석 결과가 아닙니다.'
@@ -66,10 +69,11 @@ def host_allowed(host):
 
 
 class AppApi:
-    def __init__(self, analytics, data_mode='database'):
+    def __init__(self, analytics, data_mode='database', public_supply=None):
+        """public_supply: get(food_id) -> 식품안전나라 기록 또는 None (public_supply.FilePublicSupply). 없으면 모두 NOT_COLLECTED."""
         if data_mode not in ('database', 'mock'):
             raise ValueError('data_mode must be database or mock')
-        self.analytics, self.data_mode = analytics, data_mode
+        self.analytics, self.data_mode, self.public_supply = analytics, data_mode, public_supply
 
     def meta(self):
         notice = None
@@ -235,6 +239,17 @@ class AppApi:
         days, end = self._period(params, '7d'), self._end(params)
         return {'data': self.analytics.metrics(food_id, days, end, self._choice(params, 'source', list(contract.SOURCE_CODES)))}
 
+    def _public_supply(self, food_id, params):
+        from .public_supply import api_data
+        food = self.analytics.food(self._food_id(food_id))  # FoodNotFound -> 404; a merged ID resolves to its target
+        supply = self.public_supply
+        if supply is None and self.data_mode == 'mock':  # every mock-mode server (SQLite or target) serves the same synthetic records
+            from .app_mock import MOCK_SUPPLY
+            from .public_supply import StaticPublicSupply
+            supply = StaticPublicSupply(MOCK_SUPPLY)
+        record = supply.get(food['food_id']) if supply else None
+        return {'data': api_data(food, record, origin='mock' if self.data_mode == 'mock' else 'live_api')}
+
     def _rankings(self, params):
         source = self._choice(params, 'source', list(contract.SOURCE_CODES), required=True)
         self._choice(params, 'metric', [contract.METRIC_CODE], contract.METRIC_CODE)
@@ -363,6 +378,8 @@ def main(argv=None):
     parser.add_argument('--observation-origin', choices=('live_api', 'mock'), default='live_api',
                         help='집계에 넣을 관측 회차 origin. 운영은 live_api, Mock 수집 테스트 DB는 mock')
     parser.add_argument('--cors-origin', action='append', default=[], help='브라우저 웹앱 개발 Origin 허용 (여러 번 지정 가능)')
+    parser.add_argument('--public-supply-dir', default=str(PUBLIC_SUPPLY_DIR),
+                        help='식품안전나라 기록 폴더 (python -m food_trends.public_supply가 만든 파일, 읽기만 함)')
     args = parser.parse_args(argv)
     from pathlib import Path
     if args.store == 'sqlite':
@@ -378,7 +395,8 @@ def main(argv=None):
         print(json.dumps({'started': False, 'store': args.store, 'error': exc.reason}, ensure_ascii=False))
         return 2
     try:
-        api = AppApi(FoodAnalytics(store, origin=args.observation_origin))
+        from .public_supply import FilePublicSupply
+        api = AppApi(FoodAnalytics(store, origin=args.observation_origin), public_supply=FilePublicSupply(args.public_supply_dir))
         server = make_app_server(api, port=args.port, cors_origins=args.cors_origin)
         print('App API (read-only, %s): http://127.0.0.1:%d/api/v1/health' % (args.store, server.server_port), flush=True)
         try:

@@ -42,7 +42,8 @@ NOW = datetime(2026, 11, 2, 3, tzinfo=timezone.utc)  # 2026-11-02 12:00 KST
 KST = timezone(timedelta(hours=9))
 HOST = {'Host': '127.0.0.1:8020'}
 OPENAPI_PATHS = {'/api/v1/health', '/api/v1/foods', '/api/v1/foods/{food_id}', '/api/v1/foods/{food_id}/timeline',
-                 '/api/v1/foods/{food_id}/metrics', '/api/v1/trends/rankings', '/api/v1/sources/status'}
+                 '/api/v1/foods/{food_id}/metrics', '/api/v1/trends/rankings', '/api/v1/sources/status',
+                 '/api/v1/foods/{food_id}/public-supply'}  # 식품안전나라 공급·원재료 (파일 기록을 읽기만 함)
 NATURAL_KEYS = {'source_items': ('source_code', 'external_key'), 'run_items': ('ingest_run_id', 'item_key'), 'food_mentions': ('mention_key',),
                 'metric_observations': ('observation_key',), 'item_query_matches': ('ingest_run_id', 'item_key', 'query_ref'),
                 'quality_results': ('event_key',), 'tracking_slots': ('target_id', 'generation', 'due_slot'),
